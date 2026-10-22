@@ -37,7 +37,7 @@ function atualizarPainel() {
 }
 function mostrarAba(aba) {
   if (aba === "usuarios" && !ehAdministradorMestre) return;
-  ["chamados", "chat", "os", "vistorias", "condominios", "estoque", "usuarios", "dashboard"].forEach(nome => {
+  ["chamados", "chat", "os", "vistorias", "condominios", "estoque", "financeiro", "usuarios", "dashboard"].forEach(nome => {
     const sufixo = nome === "os" ? "OS" : nome[0].toUpperCase() + nome.slice(1);
     document.getElementById(`visao${sufixo}`).hidden = nome !== aba;
     if (document.getElementById(`aba${sufixo}`)) document.getElementById(`aba${sufixo}`).classList.toggle("ativa", nome === aba);
@@ -48,15 +48,17 @@ function mostrarAba(aba) {
   if (aba === "condominios") BookCondominios.atualizarTotais();
   if (aba === "dashboard") atualizarDashboard();
   if (aba === "estoque") mostrarEstoque();
+  if (aba === "financeiro") BookFinance.load();
   if (aba === "chat") mostrarConversasChat();
 }
 
 function mostrarEstoque() {
   const dados = lerEstoque(), colunas = dados.colunas || [], tabela = document.getElementById("tabelaEstoque");
-  tabela.innerHTML = `<thead><tr><th>Material</th><th>Quantidade</th><th>Valor unitário (R$)</th>${colunas.map(c => `<th>${escapar(c.nome)} <button class="remover-coluna" title="Remover coluna" onclick="removerColunaEstoque('${escapar(c.id)}')">×</button></th>`).join("")}<th>Ações</th></tr></thead><tbody>${dados.itens.map(item => `<tr><td><input aria-label="Nome do material" value="${escapar(item.nome)}" onchange="editarEstoque('${escapar(item.id)}','nome',this.value)"></td><td><input aria-label="Quantidade" type="number" min="0" step="0.01" value="${Number(item.quantidade)||0}" onchange="editarEstoque('${escapar(item.id)}','quantidade',this.value)"></td><td><input aria-label="Valor unitário" type="number" min="0" step="0.01" value="${Number(item.valor)||0}" onchange="editarEstoque('${escapar(item.id)}','valor',this.value)"></td>${colunas.map(c => `<td><input aria-label="${escapar(c.nome)}" value="${escapar(item.extra?.[c.id] || "")}" onchange="editarEstoque('${escapar(item.id)}','extra:${escapar(c.id)}',this.value)"></td>`).join("")}<td><button class="botao-remover" onclick="removerLinhaEstoque('${escapar(item.id)}')">Apagar</button></td></tr>`).join("") || `<tr><td colspan="${4+colunas.length}">Nenhum material cadastrado. Use “+ Material” para começar.</td></tr>`}</tbody>`;
+  tabela.innerHTML = `<thead><tr><th>Material</th><th>Quantidade</th><th>Valor unitário (R$)</th>${colunas.map(c => `<th>${escapar(c.nome)} <button class="remover-coluna" title="Remover coluna" onclick="removerColunaEstoque('${escapar(c.id)}')">×</button></th>`).join("")}<th>Ações</th></tr></thead><tbody>${dados.itens.map(item => `<tr><td><input aria-label="Nome do material" value="${escapar(item.nome)}" onchange="editarEstoque('${escapar(item.id)}','nome',this.value)"></td><td><input aria-label="Quantidade" type="number" min="0" step="0.01" value="${Number(item.quantidade)||0}" onchange="editarEstoque('${escapar(item.id)}','quantidade',this.value)"></td><td><input aria-label="Valor unitário" type="number" min="0" step="0.01" data-money value="${BookMoney.decimal(item.valor)}" onchange="editarEstoque('${escapar(item.id)}','valor',this.value)"></td>${colunas.map(c => `<td><input aria-label="${escapar(c.nome)}" value="${escapar(item.extra?.[c.id] || "")}" onchange="editarEstoque('${escapar(item.id)}','extra:${escapar(c.id)}',this.value)"></td>`).join("")}<td><button class="botao-remover" onclick="removerLinhaEstoque('${escapar(item.id)}')">Apagar</button></td></tr>`).join("") || `<tr><td colspan="${4+colunas.length}">Nenhum material cadastrado. Use “+ Material” para começar.</td></tr>`}</tbody>`;
+  BookMoney.bind(tabela);
 }
-async function adicionarLinhaEstoque() { const d=lerEstoque(); d.itens.push({id:String(Date.now())+Math.random().toString(16).slice(2),nome:"",quantidade:0,valor:0,extra:{}}); await salvarEstoque(d); mostrarEstoque(); }
-async function editarEstoque(id,campo,valor) { const d=lerEstoque(), item=d.itens.find(i=>i.id===id); if(!item)return; if(campo.startsWith("extra:")){item.extra ||= {}; item.extra[campo.slice(6)]=valor;} else item[campo]=campo==="nome"?valor:Number(valor)||0; await salvarEstoque(d); }
+async function adicionarLinhaEstoque() { const d=lerEstoque(); d.itens.push({id:String(Date.now())+Math.random().toString(16).slice(2),nome:"",quantidade:0,valor:"0.00",extra:{}}); await salvarEstoque(d); mostrarEstoque(); }
+async function editarEstoque(id,campo,valor) { const d=lerEstoque(), item=d.itens.find(i=>i.id===id); if(!item)return; if(campo.startsWith("extra:")){item.extra ||= {}; item.extra[campo.slice(6)]=valor;} else item[campo]=campo==="nome"?valor:campo==="valor"?BookMoney.parse(valor):Number(valor)||0; await salvarEstoque(d); }
 async function removerLinhaEstoque(id) { const emUso=osList().some(o=>(o.fechamento?.materiais||[]).some(m=>m.id===id)); if(emUso){alert("Este material já foi usado em uma O.S. e não pode ser removido.");return;} const d=lerEstoque(); if(!confirm("Apagar este material do estoque?"))return; d.itens=d.itens.filter(i=>i.id!==id); await salvarEstoque(d); mostrarEstoque(); }
 async function adicionarColunaEstoque() { const nome=prompt("Nome da nova coluna:"); if(!nome?.trim())return; const d=lerEstoque(); d.colunas.push({id:String(Date.now()),nome:nome.trim()}); await salvarEstoque(d); mostrarEstoque(); }
 async function removerColunaEstoque(id) { const d=lerEstoque(); d.colunas=d.colunas.filter(c=>c.id!==id); d.itens.forEach(i=>{if(i.extra)delete i.extra[id];}); await salvarEstoque(d); mostrarEstoque(); }
@@ -173,11 +175,12 @@ function abrirOS(id) {
   botaoFechamento.textContent = o.status === "Em andamento" || o.fechamento ? "Preencher/editar informações do serviço" : "Registrar informações e finalizar o card";
   document.getElementById("osDetalhesModal").style.display = "block";
 }
-function formatarMoeda(valor) { return Number(valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
+function formatarMoeda(valor) { return BookMoney.format(valor); }
 function atualizarCustoTotal() {
-  const servico = Number(document.getElementById("fechamentoValorServico").value || 0);
-  const material = Number(document.getElementById("fechamentoValorMaterial").value || 0);
-  document.getElementById("fechamentoCustoTotal").value = (servico + material).toFixed(2);
+  const servico = document.getElementById("fechamentoValorServico").value || "0.00";
+  const material = document.getElementById("fechamentoValorMaterial").value || "0.00";
+  try { document.getElementById("fechamentoCustoTotal").value = BookMoney.sum([servico, material]); }
+  catch { document.getElementById("fechamentoCustoTotal").value = ""; }
 }
 function abrirFechamentoOS(id) {
   const o = osList().find(item => item.id == id); if (!o) return;
@@ -190,14 +193,14 @@ function abrirFechamentoOS(id) {
   const dados = o.fechamento || {};
   document.getElementById("fechamentoData").value = dados.data || dataLocalHoje();
   document.getElementById("fechamentoTerceiro").value = dados.terceiro || "";
-  document.getElementById("fechamentoValorServico").value = dados.valorServico ?? "0";
+  document.getElementById("fechamentoValorServico").value = BookMoney.decimal(dados.valorServico);
   document.getElementById("fechamentoTipoMaterial").value = dados.tipoMaterial || "";
-  document.getElementById("fechamentoValorMaterial").value = dados.valorMaterial ?? "0";
+  document.getElementById("fechamentoValorMaterial").value = BookMoney.decimal(dados.valorMaterial);
   document.getElementById("fechamentoDescricaoMaterial").value = dados.descricaoMaterial || "";
   document.getElementById("fechamentoResponsavelPagamento").value = dados.responsavelPagamento || "";
   document.getElementById("fechamentoObservacao").value = dados.observacao || "";
   preencherExecutores(o.fechamento?.executadoPor || "");
-  document.getElementById("fechamentoCustoTotal").value = Number(dados.custoTotal ?? 0).toFixed(2);
+  document.getElementById("fechamentoCustoTotal").value = BookMoney.decimal(dados.custoTotal);
   renderizarMateriaisOS(dados.materiais || []);
   atualizarCamposMaterial();
   document.getElementById("osDetalhesModal").style.display = "none";
@@ -205,14 +208,19 @@ function abrirFechamentoOS(id) {
 }
 function renderizarMateriaisOS(materiais = []) {
   const area=document.getElementById("materiaisOS"), dados=lerEstoque();
+  area.dataset.hadMaterials = materiais.some(material => material.id) ? 'true' : 'false';
   area.innerHTML=materiais.map((m,i)=>`<div class="linha-material-os"><select aria-label="Material do estoque" onchange="atualizarMateriaisOS()"><option value="">Selecione um material</option>${dados.itens.map(item=>`<option value="${escapar(item.id)}" ${item.id===m.id?"selected":""}>${escapar(item.nome||"Material sem nome")} (estoque: ${Number(item.quantidade)||0})</option>`).join("")}</select><input aria-label="Quantidade usada" type="number" min="0.01" step="0.01" value="${Number(m.quantidade)||1}" oninput="atualizarMateriaisOS()"><button type="button" class="botao-remover" onclick="this.parentElement.remove();atualizarMateriaisOS()">Remover</button></div>`).join(""); atualizarMateriaisOS();
 }
 function adicionarMaterialOS() { const atuais=[...document.querySelectorAll("#materiaisOS .linha-material-os")].map(l=>({id:l.querySelector("select").value,quantidade:Number(l.querySelector("input").value)})); atuais.push({id:"",quantidade:1}); renderizarMateriaisOS(atuais); }
 function obterMateriaisOS() { return [...document.querySelectorAll("#materiaisOS .linha-material-os")].map(l=>({id:l.querySelector("select").value,quantidade:Number(l.querySelector("input").value)||0})).filter(m=>m.id&&m.quantidade>0); }
 function atualizarMateriaisOS() {
  const estoque=lerEstoque(), usados=obterMateriaisOS();
- const total=usados.reduce((s,m)=>s+(Number(estoque.itens.find(i=>i.id===m.id)?.valor)||0)*m.quantidade,0);
- document.getElementById("fechamentoValorMaterial").value=total.toFixed(2);
+ const area=document.getElementById('materiaisOS'), campo=document.getElementById('fechamentoValorMaterial');
+ if(usados.length || area.dataset.hadMaterials === 'true') {
+   campo.value=BookMoney.materials(usados.map(m=>({valor:estoque.itens.find(i=>i.id===m.id)?.valor || "0.00",quantidade:m.quantidade})));
+ }
+ area.dataset.hadMaterials = usados.length ? 'true' : 'false';
+ campo.readOnly = usados.length > 0;
  if(usados.length) document.getElementById("fechamentoDescricaoMaterial").value=usados.map(m=>`${estoque.itens.find(i=>i.id===m.id)?.nome||"Material"}: ${m.quantidade}`).join("; ");
  atualizarCustoTotal();
 }
@@ -227,7 +235,8 @@ function atualizarCamposMaterial() {
   const descricao = document.getElementById("fechamentoDescricaoMaterial");
   valor.required = !nenhum; descricao.required = !nenhum;
   valor.disabled = nenhum;
-  if (nenhum) { valor.value = "0"; descricao.value = ""; }
+  if (nenhum) { valor.value = "0.00"; descricao.value = ""; }
+  else if (obterMateriaisOS().length) atualizarMateriaisOS();
   atualizarCustoTotal();
 }
 async function salvarRascunhoFechamentoOS() {
@@ -244,11 +253,11 @@ async function salvarRascunhoFechamentoOS() {
     const materiaisSelecionados = document.getElementById("fechamentoTipoMaterial").value === "Nenhum" ? [] : obterMateriaisOS();
     if (!aplicarConsumoEstoque(order, materiaisSelecionados)) return;
     order.fechamento = { ...(order.fechamento || {}), data: document.getElementById("fechamentoData").value,
-      terceiro: document.getElementById("fechamentoTerceiro").value, valorServico: Number(document.getElementById("fechamentoValorServico").value || 0),
-      tipoMaterial: document.getElementById("fechamentoTipoMaterial").value, valorMaterial: Number(document.getElementById("fechamentoValorMaterial").value || 0),
+      terceiro: document.getElementById("fechamentoTerceiro").value, valorServico: BookMoney.parse(document.getElementById("fechamentoValorServico").value || "0.00"),
+      tipoMaterial: document.getElementById("fechamentoTipoMaterial").value, valorMaterial: BookMoney.parse(document.getElementById("fechamentoValorMaterial").value || "0.00"),
       descricaoMaterial: document.getElementById("fechamentoDescricaoMaterial").value.trim(), responsavelPagamento: document.getElementById("fechamentoResponsavelPagamento").value,
       executadoPor: usuariosQueFinalizam().find(usuario => usuario.login === login)?.nome || "", executadoPorLogin: login,
-      custoTotal: Number(document.getElementById("fechamentoCustoTotal").value || 0), observacao: document.getElementById("fechamentoObservacao").value.trim(),
+      custoTotal: BookMoney.parse(document.getElementById("fechamentoCustoTotal").value || "0.00"), observacao: document.getElementById("fechamentoObservacao").value.trim(),
       fotos: [...(order.fechamento?.fotos || []), ...fotos], atualizadaEm: new Date().toISOString() };
     order.status = "Em andamento";
     try { await BookStore.setItem("ordensServico", JSON.stringify(items)); }
@@ -277,15 +286,15 @@ async function salvarFechamentoOS(event) {
     order.fechamento = {
       data: document.getElementById("fechamentoData").value,
       terceiro: document.getElementById("fechamentoTerceiro").value,
-      valorServico: Number(document.getElementById("fechamentoValorServico").value || 0),
-      valorMaterial: Number(document.getElementById("fechamentoValorMaterial").value || 0),
+      valorServico: BookMoney.parse(document.getElementById("fechamentoValorServico").value || "0.00"),
+      valorMaterial: BookMoney.parse(document.getElementById("fechamentoValorMaterial").value || "0.00"),
       descricaoMaterial: document.getElementById("fechamentoDescricaoMaterial").value.trim(),
       responsavelPagamento: document.getElementById("fechamentoResponsavelPagamento").value,
       tipoMaterial: document.getElementById("fechamentoTipoMaterial").value,
       executadoPor: usuariosQueFinalizam().find(usuario => usuario.login === document.getElementById("fechamentoExecutadoPor").value)?.nome || "",
       executadoPorLogin: document.getElementById("fechamentoExecutadoPor").value,
       finalizadaEm: new Date().toISOString(),
-      custoTotal: Number(document.getElementById("fechamentoCustoTotal").value || 0),
+      custoTotal: BookMoney.parse(document.getElementById("fechamentoCustoTotal").value || "0.00"),
       observacao: document.getElementById("fechamentoObservacao").value.trim(),
       fotos: [...(order.fechamento?.fotos || []), ...fotos],
       materiais: materiaisSelecionados
@@ -486,7 +495,7 @@ idsMensagensConhecidas=new Set(lerConversasChat().flatMap(c=>(c.mensagens||[]).m
 atualizarBadgeChat();setInterval(verificarNovasMensagensChat,1500);
 document.getElementById("osVencimento").min = dataLocalHoje();
 atualizarPainel();
-const abaSolicitada = ({ "#chamados": "chamados", "#chat": "chat", "#cards": "os", "#vistorias": "vistorias", "#dashboard": "dashboard", "#condominios": "condominios", "#estoque": "estoque", "#usuarios": "usuarios" })[location.hash];
+const abaSolicitada = ({ "#chamados": "chamados", "#chat": "chat", "#cards": "os", "#vistorias": "vistorias", "#dashboard": "dashboard", "#condominios": "condominios", "#estoque": "estoque", "#usuarios": "usuarios", "#financeiro": "financeiro" })[location.hash];
 if (abaSolicitada) mostrarAba(abaSolicitada);
 
 
@@ -498,3 +507,5 @@ window.addEventListener('book:data', () => {
   if (vistoriaHotel && vistoriaApartamento && !document.getElementById('visaoVistorias').hidden) selecionarApartamentoVistoria(vistoriaApartamento);
   verificarNovasMensagensChat(); if (conversaSelecionada) renderizarMensagensAdmin();
 });
+
+BookMoney.bind(document);

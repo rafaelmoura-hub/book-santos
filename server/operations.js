@@ -1,4 +1,5 @@
 const { randomUUID } = require('node:crypto');
+const Money = require('../assets/money');
 const COLLECTIONS = ['chamados', 'ordensServico', 'vistorias', 'estoqueBookSantos', 'conversasSuporte'];
 const fail = (status, message) => Object.assign(new Error(message), { status });
 const validId = value => typeof value === 'string' && /^[\w@:.-]{1,200}$/.test(value);
@@ -14,6 +15,16 @@ function validateChanges(input, user) {
     if (user.funcao !== 'adm' && !['chamados', 'conversasSuporte'].includes(change.collection)) throw fail(403, 'Acesso negado.');
     if (change.collection !== 'estoqueBookSantos' && !['Unlimited', 'Unique'].includes(change.data.hotel)) throw fail(400, 'Hotel inválido.');
     if (change.collection === 'estoqueBookSantos' && change.id !== 'singleton') throw fail(400, 'Estoque inválido.');
+    try {
+      // Numeric JSON also works before the finance migration. This conversion
+      // only serializes canonical cents; arithmetic stays in Money/PostgreSQL.
+      if (change.collection === 'estoqueBookSantos' && Array.isArray(change.data.itens)) {
+        for (const item of change.data.itens) item.valor = Number(Money.parse(item.valor));
+      }
+      if (change.collection === 'ordensServico' && change.data.fechamento) {
+        for (const field of ['valorServico','valorMaterial','custoTotal']) change.data.fechamento[field] = Number(Money.parse(change.data.fechamento[field]));
+      }
+    } catch (error) { throw fail(400, error.message); }
   }
   return input;
 }

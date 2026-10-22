@@ -111,6 +111,13 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         }
       }
       if (route === '/api/session' && req.method === 'GET') return json(200, { ...user, provider: 'supabase' });
+      if (route === '/api/finance' && req.method === 'GET') {
+        if (user.funcao !== 'adm') throw fail(403, 'Financeiro disponível somente para administradores.');
+        const payer = url.searchParams.get('payer');
+        const cursor = url.searchParams.get('cursor');
+        if (payer && payer.length > 200 || cursor && !validId(cursor)) throw fail(400, 'Consulta financeira inválida.');
+        return json(200, await provider.finance(session.accessToken, payer, cursor));
+      }
       if (route === '/api/manage/users') {
         if (user.funcao !== 'adm' || !user.mestre) throw fail(403, 'Somente o administrador mestre pode gerenciar usuários.');
         if (req.method === 'GET') return json(200, { users: await provider.managedUsers(session.accessToken), canCreate: provider.canCreateUsers === true });
@@ -183,7 +190,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
       if (!['GET', 'HEAD'].includes(req.method)) throw fail(405, 'Método não permitido.');
       if (/^\/hotel\/(hotel\.html)?$/.test(route)) { res.writeHead(302, { Location: '/adm/admin.html#condominios' }); return res.end(); }
       const file = route === '/' ? '/login.html' : route;
-      if (!/^\/(login\.(html|css|js)|assets\/(api|session|store)\.js|(adm|cliente|hotel)\/[a-z]+\.(html|css|js))$/.test(file)) throw fail(404, 'Arquivo não encontrado.');
+      if (!/^\/(login\.(html|css|js)|assets\/(api|session|store|money)\.js|(adm|cliente|hotel)\/[a-z]+\.(html|css|js))$/.test(file)) throw fail(404, 'Arquivo não encontrado.');
       if (/^\/(adm|hotel)\//.test(file) && user?.funcao !== 'adm' || /^\/cliente\//.test(file) && user?.funcao !== 'cliente') {
         res.writeHead(302, { Location: '/login.html' }); return res.end();
       }

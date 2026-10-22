@@ -17,6 +17,10 @@ async function main() {
     async profile() { return master; },
     async users() { return users; },
     async managedUsers() { return users; },
+    async finance(token,payer) {
+      const records=[{id:'1',hotel:'Unlimited',apartment:'1111',title:'Conserto',description:'Troca de torneira',status:'Finalizada',payer:'Book Santos',service:'0.10',material:'0.20',total:'0.30'},{id:'2',hotel:'Unique',apartment:'1111',title:'Limpeza',description:'Limpeza geral',status:'Em andamento',payer:'Airbnb',service:'2.50',material:'0.00',total:'2.50'}];
+      return {groups:[{payer:'Book Santos',count:1,total:'0.30',finalized:'0.30',pending:'0.00'},{payer:'Airbnb',count:1,total:'2.50',finalized:'0.00',pending:'2.50'}],records:payer?records.filter(row=>row.payer===payer):records,next:null};
+    },
     async saveUser(token,input) {
       writes++;
       if(input.id) Object.assign(users.find(user=>user.id===input.id),{nome:input.nome,funcao:input.funcao,version:2,book_hotel_access:input.hotels.map(hotel=>({hotel}))});
@@ -46,7 +50,12 @@ async function main() {
     await evaluate("fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({login:'master@example.com',senha:'senha'})}).then(r=>{if(!r.ok)throw Error('login');})");
     await send('Page.navigate',{url:base+'/adm/admin.html'});
     await wait("typeof mostrarAba === 'function' && !document.body.hidden");
-    const tabs=await evaluate(`(() => {const result=[];for(const tab of ['chamados','chat','os','vistorias','condominios','estoque','dashboard','usuarios']){mostrarAba(tab);const id=tab==='os'?'OS':tab[0].toUpperCase()+tab.slice(1);if(document.getElementById('visao'+id).hidden)throw Error(tab);if(document.querySelector('nav').getBoundingClientRect().height===0)throw Error('nav');result.push(tab);}return result;})()`);
+    const tabs=await evaluate(`(() => {const result=[];for(const tab of ['chamados','chat','os','vistorias','condominios','estoque','financeiro','dashboard','usuarios']){mostrarAba(tab);const id=tab==='os'?'OS':tab[0].toUpperCase()+tab.slice(1);if(document.getElementById('visao'+id).hidden)throw Error(tab);if(document.querySelector('nav').getBoundingClientRect().height===0)throw Error('nav');result.push(tab);}return result;})()`);
+    await evaluate("BookFinance.load()");
+    await evaluate("if(document.querySelectorAll('.financeiro-card').length!==2)throw Error('finance records');if(!document.getElementById('financeiroLista').textContent.includes('0,30'))throw Error('money display');document.getElementById('fechamentoValorServico').value='0.10';document.getElementById('fechamentoValorMaterial').value='0.20';atualizarCustoTotal();if(document.getElementById('fechamentoCustoTotal').value!=='0.30')throw Error('money sum');");
+    await evaluate("[...document.querySelectorAll('#financeiroAbas button')].find(button=>button.textContent.startsWith('Book Santos')).click()");
+    await wait("document.querySelectorAll('.financeiro-card').length === 1 && document.getElementById('financeiroLista').textContent.includes('Conserto')");
+    await evaluate("document.getElementById('fechamentoValorMaterial').value='12.34';renderizarMateriaisOS([]);if(document.getElementById('fechamentoValorMaterial').value!=='12.34')throw Error('manual material erased');document.getElementById('materiaisOS').dataset.hadMaterials='true';atualizarMateriaisOS();if(document.getElementById('fechamentoValorMaterial').value!=='0.00')throw Error('material reset');");
     await evaluate("mostrarAba('condominios');BookCondominios.mostrarHistorico('Unlimited');BookCondominios.selecionarApartamento('1111');BookCondominios.mostrarDadosApartamento('chamados');document.getElementById('abaEstoque').click();if(document.getElementById('visaoEstoque').hidden)throw Error('navigation');");
     await evaluate("BookUsers.load()");
     await evaluate("BookUsers.open();document.getElementById('usuarioNome').value='Pessoa teste';document.getElementById('usuarioEmail').value='pessoa@example.com';document.getElementById('usuarioSenha').value='senha-inicial-longa';document.getElementById('usuarioUnlimited').checked=true;BookUsers.save({preventDefault(){}})");

@@ -8,6 +8,16 @@
     --sombra: 0 8px 24px rgba(24, 39, 75, .08);
 }
 
+.financeiro-abas { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0; }
+.financeiro-abas button { border: 1px solid var(--borda); border-radius: 9px; padding: 10px 14px; cursor: pointer; background: white; color: var(--texto); }
+.financeiro-abas button.ativa { color: white; background: var(--azul); border-color: var(--azul); }
+#financeiroTotais { grid-template-columns: repeat(auto-fit,minmax(200px,1fr)); }
+#financeiroTotais .card p { font-size: clamp(20px,2.3vw,28px); overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.financeiro-descricao { white-space: pre-wrap; overflow-wrap: anywhere; }
+.financeiro-card dl { display: flex; flex-wrap: wrap; gap: 24px; }
+.financeiro-card dt { color: var(--suave); font-size: 13px; }
+.financeiro-card dd { margin: 6px 0 0; font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
 nav { flex-wrap: wrap; }
 #formUsuario label { display: block; margin: 14px 0; font-weight: 600; }
 #formUsuario input:not([type="checkbox"]), #formUsuario select, #buscaUsuario { display: block; width: 100%; padding: 11px 12px; border: 1px solid var(--borda); border-radius: 8px; margin-top: 6px; }

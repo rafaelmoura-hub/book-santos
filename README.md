@@ -1,5 +1,7 @@
 # Book Santos
 
+Financeiro: resumo por responsável pelo pagamento, com valores monetários de duas casas decimais. Ative a migração `202610220005_finance.sql` e consulte [docs/FINANCEIRO.md](docs/FINANCEIRO.md).
+
 Gestão de usuários pelo site e navegação unificada: veja [docs/USUARIOS-NO-SITE.md](docs/USUARIOS-NO-SITE.md). A ativação requer a migração `202610220004_user_management.sql` e, para criar novas contas, `SUPABASE_SECRET_KEY` configurada somente no servidor. As instruções antigas abaixo sobre gestão exclusiva pelo painel foram substituídas por esse fluxo.
 
 ## Piloto com publicação

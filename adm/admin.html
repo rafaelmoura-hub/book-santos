@@ -18,6 +18,7 @@
         <button id="abaVistorias" class="aba" onclick="mostrarAba('vistorias')">Vistorias</button>
         <button id="abaCondominios" class="aba" onclick="mostrarAba('condominios')">Condomínios</button>
         <button id="abaEstoque" class="aba" onclick="mostrarAba('estoque')">Estoque</button>
+        <button id="abaFinanceiro" class="aba" onclick="mostrarAba('financeiro')">Financeiro</button>
         <button id="abaDashboard" class="aba" onclick="mostrarAba('dashboard')">Dashboard</button>
         <button id="abaUsuarios" class="aba" onclick="mostrarAba('usuarios')" hidden>Usu&aacute;rios</button>
     </nav>
@@ -72,6 +73,15 @@
             <p>Selecione um condomínio e um apartamento para visualizar chamados e cards.</p>
         </section>
     </section>
+        <section id="visaoFinanceiro" hidden>
+          <div class="titulo-secao"><div><h2>Financeiro</h2><p>Resumo dos valores registrados nos cards, separado por responsável pelo pagamento.</p></div><button class="botao-secundario" type="button" onclick="BookFinance.load()">Atualizar financeiro</button></div>
+          <p>Os totais incluem todos os cards dos condomínios autorizados. Valores em andamento são provisórios; esta tela não confirma recebimentos.</p>
+          <div id="financeiroAbas" class="financeiro-abas" role="tablist" aria-label="Responsável pelo pagamento"></div>
+          <p id="financeiroStatus" role="status" aria-live="polite"></p>
+          <div id="financeiroTotais" class="cards"></div>
+          <div id="financeiroLista"></div>
+          <button id="financeiroMais" class="botao-secundario" type="button" onclick="BookFinance.more()" hidden>Carregar mais cards</button>
+        </section>
         <section id="visaoUsuarios" hidden>
           <div class="titulo-secao"><div><h2>Usuários e permissões</h2><p>Cadastre pessoas e escolha a função e os condomínios que podem acessar.</p></div><div><button class="botao-secundario" type="button" onclick="mostrarUsuarios()">Recarregar usuários</button> <button id="novoUsuario" class="acao-principal" type="button" onclick="mostrarUsuarios(true)">+ Novo usuário</button></div></div>
           <p id="usuariosStatus" role="status" aria-live="polite">Selecione Novo usuário ou Recarregar usuários para consultar os acessos.</p>
@@ -146,14 +156,14 @@
                 <input id="fechamentoIdOS" type="hidden">
                 <label>Data do fechamento<input id="fechamentoData" type="date" required></label>
                 <label>Servi&ccedil;o realizado por terceiro?<select id="fechamentoTerceiro" required><option value="">Selecione</option><option>Sim</option><option>N&atilde;o</option></select></label>
-                <label>Valor do servi&ccedil;o (R$)<input id="fechamentoValorServico" type="number" min="0" step="0.01" value="0" required oninput="atualizarCustoTotal()"></label>
+                <label>Valor do servi&ccedil;o (R$)<input id="fechamentoValorServico" data-money type="number" min="0" step="0.01" value="0.00" required oninput="atualizarCustoTotal()"></label>
                 <label>Tipo do material<select id="fechamentoTipoMaterial" required onchange="atualizarCamposMaterial()"><option value="">Selecione</option><option>Material de consumo</option><option>Material de repasse</option><option>Item de reposi&ccedil;&atilde;o</option><option>Nenhum</option></select></label>
                 <fieldset class="materiais-os"><legend>Materiais do estoque usados neste serviço</legend><div id="materiaisOS"></div><button type="button" class="botao-secundario" onclick="adicionarMaterialOS()">+ Adicionar material</button></fieldset>
-                <label>Valor do material (R$)<input id="fechamentoValorMaterial" type="number" min="0" step="0.01" value="0" required oninput="atualizarCustoTotal()"></label>
+                <label>Valor do material (R$)<input id="fechamentoValorMaterial" data-money type="number" min="0" step="0.01" value="0.00" required oninput="atualizarCustoTotal()"></label>
                 <label>Descri&ccedil;&atilde;o do material<textarea id="fechamentoDescricaoMaterial" required></textarea></label>
                 <label>Respons&aacute;vel pelo pagamento<select id="fechamentoResponsavelPagamento" required><option value="">Selecione</option><option>H&oacute;spede</option><option>Propriet&aacute;rio</option><option>Book Santos</option><option>Airbnb</option><option>Governan&ccedil;a</option></select></label>
                 <label>Quem executou o servi&ccedil;o<select id="fechamentoExecutadoPor" required></select></label>
-                <label>Custo total (R$)<input id="fechamentoCustoTotal" type="number" readonly></label>
+                <label>Custo total (R$)<input id="fechamentoCustoTotal" data-money type="number" readonly></label>
                 <label>Observa&ccedil;&atilde;o<textarea id="fechamentoObservacao"></textarea></label>
                 <label>Fotos do servi&ccedil;o conclu&iacute;do<input id="fechamentoFotos" type="file" accept="image/*" multiple></label>
                 <button type="button" class="botao-secundario" onclick="salvarRascunhoFechamentoOS()">Salvar</button>
@@ -176,6 +186,8 @@
       </div>
     </div>
     <div id="avisoChat" class="aviso-chat" role="status" aria-live="polite" hidden></div>
+    <script src="../assets/money.js"></script>
+    <script src="financeiro.js"></script>
     <script src="condominios.js"></script>
     <script src="usuarios.js"></script>
     <script src="../assets/api.js"></script>
