@@ -4,6 +4,7 @@ const { readFile } = require('node:fs/promises');
 const { randomBytes, randomUUID, createHash } = require('node:crypto');
 const { COLLECTIONS, validId, validateChanges, storeAttachments } = require('./operations');
 const { validateUser } = require('./users');
+const Periods = require('../assets/periods');
 const ROOT = path.resolve(__dirname, '..');
 const fail = (status, message) => Object.assign(new Error(message), { status });
 const digest = token => createHash('sha256').update(token).digest('hex');
@@ -116,7 +117,10 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         const payer = url.searchParams.get('payer');
         const cursor = url.searchParams.get('cursor');
         if (payer && payer.length > 200 || cursor && !validId(cursor)) throw fail(400, 'Consulta financeira inválida.');
-        return json(200, await provider.finance(session.accessToken, payer, cursor));
+        let period;
+        try { period = Periods.range(url.searchParams.get('period') || 'all', url.searchParams.get('date')); }
+        catch (error) { throw fail(400, error.message); }
+        return json(200, await provider.finance(session.accessToken, payer, cursor, period.start, period.end));
       }
       if (route === '/api/manage/users') {
         if (user.funcao !== 'adm' || !user.mestre) throw fail(403, 'Somente o administrador mestre pode gerenciar usuários.');
@@ -190,7 +194,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
       if (!['GET', 'HEAD'].includes(req.method)) throw fail(405, 'Método não permitido.');
       if (/^\/hotel\/(hotel\.html)?$/.test(route)) { res.writeHead(302, { Location: '/adm/admin.html#condominios' }); return res.end(); }
       const file = route === '/' ? '/login.html' : route;
-      if (!/^\/(login\.(html|css|js)|assets\/(api|session|store|money)\.js|(adm|cliente|hotel)\/[a-z]+\.(html|css|js))$/.test(file)) throw fail(404, 'Arquivo não encontrado.');
+      if (!/^\/(login\.(html|css|js)|assets\/(api|session|store|money|periods)\.js|(adm|cliente|hotel)\/[a-z]+\.(html|css|js))$/.test(file)) throw fail(404, 'Arquivo não encontrado.');
       if (/^\/(adm|hotel)\//.test(file) && user?.funcao !== 'adm' || /^\/cliente\//.test(file) && user?.funcao !== 'cliente') {
         res.writeHead(302, { Location: '/login.html' }); return res.end();
       }

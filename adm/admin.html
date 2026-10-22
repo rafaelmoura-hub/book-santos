@@ -76,6 +76,14 @@
         <section id="visaoFinanceiro" hidden>
           <div class="titulo-secao"><div><h2>Financeiro</h2><p>Resumo dos valores registrados nos cards, separado por responsável pelo pagamento.</p></div><button class="botao-secundario" type="button" onclick="BookFinance.load()">Atualizar financeiro</button></div>
           <p>Os totais incluem todos os cards dos condomínios autorizados. Valores em andamento são provisórios; esta tela não confirma recebimentos.</p>
+          <div class="financeiro-periodo">
+            <label>Histórico por<select id="financeiroPeriodo" onchange="BookFinance.changePeriod()"><option value="all">Todo o histórico</option><option value="dia">Dia</option><option value="semana">Semana</option><option value="mes">Mês</option><option value="ano">Ano</option></select></label>
+            <label>Data de referência<input id="financeiroData" type="date" onchange="BookFinance.changePeriod()" disabled></label>
+            <button id="financeiroAnterior" class="botao-secundario" type="button" onclick="BookFinance.move(-1)" disabled aria-label="Período anterior">Anterior</button>
+            <button id="financeiroProximo" class="botao-secundario" type="button" onclick="BookFinance.move(1)" disabled aria-label="Próximo período">Próximo</button>
+          </div>
+          <p id="financeiroIntervalo" class="financeiro-intervalo">Todo o histórico</p>
+          <p class="financeiro-ajuda">A data considerada é a do fechamento informado; na ausência dela, a data de abertura. A semana vai de segunda a domingo, no horário de São Paulo.</p>
           <div id="financeiroAbas" class="financeiro-abas" role="tablist" aria-label="Responsável pelo pagamento"></div>
           <p id="financeiroStatus" role="status" aria-live="polite"></p>
           <div id="financeiroTotais" class="cards"></div>
@@ -187,6 +195,7 @@
     </div>
     <div id="avisoChat" class="aviso-chat" role="status" aria-live="polite" hidden></div>
     <script src="../assets/money.js"></script>
+    <script src="../assets/periods.js"></script>
     <script src="financeiro.js"></script>
     <script src="condominios.js"></script>
     <script src="usuarios.js"></script>

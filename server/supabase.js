@@ -49,7 +49,7 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
     if (profile.funcao !== 'adm' || !profile.mestre) throw failure(403, 'Somente o administrador mestre pode gerenciar usuários.');
   }
   const provider = {
-    finance(token, payer, cursor) { return request('/rest/v1/rpc/book_finance', { token, method: 'POST', body: { payer: payer || null, cursor_id: cursor || null, page_size: 50 } }); },
+    finance(token, payer, cursor, start, end) { return request('/rest/v1/rpc/book_finance_history', { token, method: 'POST', body: { payer: payer || null, cursor_id: cursor || null, page_size: 50, start_date: start || null, end_date: end || null } }); },
     canCreateUsers: !!secretKey?.startsWith('sb_secret_'),
     async managedUsers(token) {
       await ensureMaster(token);

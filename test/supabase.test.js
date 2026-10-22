@@ -46,7 +46,7 @@ test('servidor Supabase protege sessão, perfis, arquivos e saída', async t => 
     async records(token, collection) { return { rows: [{ id: '101', version: 1, data: { hotel: 'Unlimited' } }], next: null }; },
     async access() { return [{ hotel: 'Unlimited' }]; },
     async apartments() { return [{ hotel: 'Unlimited', apartment: '1111' }]; },
-    async finance(token,payer,cursor) { assert.equal(token,'private-token');return {groups:[],records:[],next:null,payer,cursor}; },
+    async finance(token,payer,cursor,start,end) { assert.equal(token,'private-token');return {groups:[],records:[],next:null,payer,cursor,start,end}; },
     async commit(token, changes) { commits.push(changes); },
     async logout(token) { loggedOut.push(token); }
   };
@@ -74,6 +74,10 @@ test('servidor Supabase protege sessão, perfis, arquivos e saída', async t => 
   assert.equal((await req('/api/session', 'GET', undefined, cookie)).status, 200);
   assert.equal((await req('/api/users', 'GET', undefined, cookie)).status, 200);
   assert.equal((await req('/api/finance?payer=Airbnb','GET',undefined,cookie)).status,200);
+  const period = await (await req('/api/finance?period=semana&date=2026-01-01','GET',undefined,cookie)).json();
+  assert.equal(period.start,'2025-12-29');assert.equal(period.end,'2026-01-05');
+  assert.equal((await req('/api/finance?period=dia&date=2026-02-30','GET',undefined,cookie)).status,400);
+  assert.equal((await req('/api/finance?period=outro','GET',undefined,cookie)).status,400);
   assert.deepEqual(await (await req('/api/apartments','GET',undefined,cookie)).json(),[{hotel:'Unlimited',apartment:'1111'}]);
   assert.equal((await req('/api/data?collection=chamados', 'GET', undefined, cookie)).status, 200);
   assert.equal((await req('/api/data?collection=senha', 'GET', undefined, cookie)).status, 400);

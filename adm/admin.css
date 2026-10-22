@@ -9,6 +9,11 @@
 }
 
 .financeiro-abas { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0; }
+.financeiro-periodo { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; margin-top: 20px; }
+.financeiro-periodo label { display: grid; gap: 6px; font-weight: 600; }
+.financeiro-periodo input, .financeiro-periodo select { padding: 10px 12px; border: 1px solid var(--borda); background: white; font: inherit; }
+.financeiro-intervalo { font-weight: 700; color: var(--azul); }
+.financeiro-ajuda { color: var(--suave); font-size: 13px; }
 .financeiro-abas button { border: 1px solid var(--borda); border-radius: 9px; padding: 10px 14px; cursor: pointer; background: white; color: var(--texto); }
 .financeiro-abas button.ativa { color: white; background: var(--azul); border-color: var(--azul); }
 #financeiroTotais { grid-template-columns: repeat(auto-fit,minmax(200px,1fr)); }

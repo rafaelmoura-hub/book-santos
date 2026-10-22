@@ -17,9 +17,10 @@ async function main() {
     async profile() { return master; },
     async users() { return users; },
     async managedUsers() { return users; },
-    async finance(token,payer) {
-      const records=[{id:'1',hotel:'Unlimited',apartment:'1111',title:'Conserto',description:'Troca de torneira',status:'Finalizada',payer:'Book Santos',service:'0.10',material:'0.20',total:'0.30'},{id:'2',hotel:'Unique',apartment:'1111',title:'Limpeza',description:'Limpeza geral',status:'Em andamento',payer:'Airbnb',service:'2.50',material:'0.00',total:'2.50'}];
-      return {groups:[{payer:'Book Santos',count:1,total:'0.30',finalized:'0.30',pending:'0.00'},{payer:'Airbnb',count:1,total:'2.50',finalized:'0.00',pending:'2.50'}],records:payer?records.filter(row=>row.payer===payer):records,next:null};
+    async finance(token,payer,cursor,start,end) {
+      const records=[{id:'1',date:'2026-10-22',hotel:'Unlimited',apartment:'1111',title:'Conserto',description:'Troca de torneira',status:'Finalizada',payer:'Book Santos',service:'0.10',material:'0.20',total:'0.30'},{id:'2',date:'2026-09-14',hotel:'Unique',apartment:'1111',title:'Limpeza',description:'Limpeza geral',status:'Em andamento',payer:'Airbnb',service:'2.50',material:'0.00',total:'2.50'}].filter(row=>!start || row.date>=start&&row.date<end);
+      const groups=[{payer:'Book Santos',count:1,total:'0.30',finalized:'0.30',pending:'0.00'},{payer:'Airbnb',count:1,total:'2.50',finalized:'0.00',pending:'2.50'}].filter(group=>records.some(row=>row.payer===group.payer));
+      return {groups,records:payer?records.filter(row=>row.payer===payer):records,next:null};
     },
     async saveUser(token,input) {
       writes++;
@@ -55,6 +56,12 @@ async function main() {
     await evaluate("if(document.querySelectorAll('.financeiro-card').length!==2)throw Error('finance records');if(!document.getElementById('financeiroLista').textContent.includes('0,30'))throw Error('money display');document.getElementById('fechamentoValorServico').value='0.10';document.getElementById('fechamentoValorMaterial').value='0.20';atualizarCustoTotal();if(document.getElementById('fechamentoCustoTotal').value!=='0.30')throw Error('money sum');");
     await evaluate("[...document.querySelectorAll('#financeiroAbas button')].find(button=>button.textContent.startsWith('Book Santos')).click()");
     await wait("document.querySelectorAll('.financeiro-card').length === 1 && document.getElementById('financeiroLista').textContent.includes('Conserto')");
+    await evaluate("document.getElementById('financeiroPeriodo').value='dia';document.getElementById('financeiroData').value='2026-10-22';BookFinance.changePeriod()");
+    await evaluate("if(document.querySelectorAll('.financeiro-card').length!==1)throw Error('daily records');if(document.getElementById('financeiroIntervalo').textContent!=='22/10/2026')throw Error('daily label');document.getElementById('financeiroPeriodo').value='semana';BookFinance.changePeriod()");
+    await evaluate("if(document.getElementById('financeiroIntervalo').textContent!=='19/10/2026 a 25/10/2026')throw Error('week label');document.getElementById('financeiroPeriodo').value='mes';BookFinance.changePeriod()");
+    await evaluate("if(document.getElementById('financeiroIntervalo').textContent!=='01/10/2026 a 31/10/2026')throw Error('month label');BookFinance.move(-1)");
+    await evaluate("if(document.querySelectorAll('.financeiro-card').length!==0)throw Error('previous month records');if(document.getElementById('financeiroIntervalo').textContent!=='01/09/2026 a 30/09/2026')throw Error('previous month label');document.getElementById('financeiroPeriodo').value='ano';BookFinance.changePeriod()");
+    await evaluate("if(document.querySelectorAll('.financeiro-card').length!==1)throw Error('year records');if(document.getElementById('financeiroIntervalo').textContent!=='01/01/2026 a 31/12/2026')throw Error('year label');");
     await evaluate("document.getElementById('fechamentoValorMaterial').value='12.34';renderizarMateriaisOS([]);if(document.getElementById('fechamentoValorMaterial').value!=='12.34')throw Error('manual material erased');document.getElementById('materiaisOS').dataset.hadMaterials='true';atualizarMateriaisOS();if(document.getElementById('fechamentoValorMaterial').value!=='0.00')throw Error('material reset');");
     await evaluate("mostrarAba('condominios');BookCondominios.mostrarHistorico('Unlimited');BookCondominios.selecionarApartamento('1111');BookCondominios.mostrarDadosApartamento('chamados');document.getElementById('abaEstoque').click();if(document.getElementById('visaoEstoque').hidden)throw Error('navigation');");
     await evaluate("BookUsers.load()");
