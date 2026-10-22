@@ -1,5 +1,7 @@
 # Book Santos
 
+Gestão de usuários pelo site e navegação unificada: veja [docs/USUARIOS-NO-SITE.md](docs/USUARIOS-NO-SITE.md). A ativação requer a migração `202610220004_user_management.sql` e, para criar novas contas, `SUPABASE_SECRET_KEY` configurada somente no servidor. As instruções antigas abaixo sobre gestão exclusiva pelo painel foram substituídas por esse fluxo.
+
 ## Piloto com publicação
 
 Para testar com três pessoas sem comprar domínio, siga [docs/TESTE-RENDER.md](docs/TESTE-RENDER.md). O `render.yaml` prepara um serviço de testes com URL HTTPS fornecida pelo Render e mantém o Supabase atual.

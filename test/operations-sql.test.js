@@ -10,7 +10,7 @@ test('PostgreSQL: RLS, concorrência, auditoria e consumo atômico', async t => 
   await db.exec(`
     create role anon; create role authenticated;
     create schema auth; create schema storage;
-    create table auth.users(id uuid primary key);
+    create table auth.users(id uuid primary key,email text);
     create function auth.uid() returns uuid language sql stable as
       $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
     grant usage on schema public,auth,storage to authenticated,anon;
@@ -28,12 +28,14 @@ test('PostgreSQL: RLS, concorrência, auditoria e consumo atômico', async t => 
   await db.exec(migration('202610170002_operations.sql'));
   await db.exec(migration('202610220003_pilot.sql'));
   await db.exec(migration('202610220003_pilot.sql'));
+  await db.exec(migration('202610220004_user_management.sql'));
+  await db.exec(migration('202610220004_user_management.sql'));
   const master = '11111111-1111-4111-8111-111111111111';
   const client = '22222222-2222-4222-8222-222222222222';
   const other = '33333333-3333-4333-8333-333333333333';
   const admin = '44444444-4444-4444-8444-444444444444';
   for (const [id, name, role, isMaster] of [[master,'Mestre','adm',true],[client,'Cliente','cliente',false],[other,'Outro','cliente',false],[admin,'Gestor','adm',false]]) {
-    await db.query('insert into auth.users values($1)', [id]);
+    await db.query('insert into auth.users(id,email) values($1,$2)', [id,`${name}@test.com`]);
     await db.query('insert into public.book_profiles(id,nome,login,funcao,mestre) values($1,$2,$3,$4,$5)', [id,name,`${name}@test.com`,role,isMaster]);
   }
   await db.query("insert into public.book_hotel_access values($1,'Unlimited'),($2,'Unlimited'),($3,'Unique')", [client,other,admin]);
@@ -99,6 +101,30 @@ test('PostgreSQL: RLS, concorrência, auditoria e consumo atômico', async t => 
   await actor(other);
   assert.equal((await db.query('select * from storage.objects')).rows.length,0);
   assert.equal((await db.query('select * from public.book_audit')).rows.length,0);
+  const managed = '55555555-5555-4555-8555-555555555555';
+  await db.exec('reset role');
+  await db.query('insert into auth.users(id,email) values($1,$2)',[managed,'novo@test.com']);
+  const manage = (target,name,role,hotels,version) => db.query('select public.book_manage_user($1,$2,$3,$4,$5)',[target,name,role,hotels,version]);
+  await actor(admin);
+  await assert.rejects(manage(managed,'Novo','adm',['Unlimited'],0),error=>error.code==='42501');
+  await actor(client);
+  await assert.rejects(manage(client,'Promovido','adm',['Unique'],1),error=>error.code==='42501');
+  await actor(master);
+  await manage(managed,'Novo','cliente',['Unlimited'],0);
+  assert.equal((await db.query('select funcao from public.book_profiles where id=$1',[managed])).rows[0].funcao,'cliente');
+  assert.equal((await db.query('select hotel from public.book_hotel_access where user_id=$1',[managed])).rows[0].hotel,'Unlimited');
+  await assert.rejects(manage(managed,'Inválido','adm',['Outro'],1),error=>error.code==='22023');
+  await assert.rejects(manage(master,'Rebaixado','cliente',[],1),error=>error.code==='42501');
+  await manage(managed,'Funcionário','adm',['Unique'],1);
+  await assert.rejects(manage(managed,'Antigo','cliente',['Unlimited'],1),error=>error.code==='PT409');
+  assert.deepEqual((await db.query('select hotel from public.book_hotel_access where user_id=$1',[managed])).rows.map(r=>r.hotel),['Unique']);
+  assert.equal((await db.query('select * from public.book_user_audit where user_id=$1',[managed])).rows.length,2);
+  await actor(managed);
+  assert.equal((await db.query('select * from public.book_user_audit')).rows.length,0);
+  assert.deepEqual((await db.query('select distinct user_id from public.book_hotel_access')).rows.map(r=>r.user_id),[managed]);
+  assert.equal((await db.query('select public.book_can_hotel($1) allowed',['Unlimited'])).rows[0].allowed,false);
+  assert.equal((await db.query('select public.book_can_hotel($1) allowed',['Unique'])).rows[0].allowed,true);
   await db.exec('reset role; set role anon');
+  await assert.rejects(manage(managed,'Anônimo','adm',['Unlimited'],2),error=>error.code==='42501');
   await assert.rejects(commit([]),error=>error.code==='42501');
 });

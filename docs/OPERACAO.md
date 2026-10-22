@@ -1,5 +1,7 @@
 # Ativar os dados compartilhados
 
+Atualização: a aplicação foi publicada no Render. Para cadastrar usuários pelo próprio site e editar suas funções/hotéis, siga [USUARIOS-NO-SITE.md](USUARIOS-NO-SITE.md). O procedimento administrativo abaixo permanece como alternativa de provisionamento manual.
+
 Esta etapa está preparada no código e foi testada localmente. O SQL ainda precisa ser executado no seu projeto Supabase. A conexão MCP administrativa não está disponível nesta sessão.
 
 ## Para Rafael

@@ -1,0 +1,16 @@
+*
+!package.json
+!package-lock.json
+!server/
+!server/**
+!assets/
+!assets/**
+!adm/
+!adm/**
+!cliente/
+!cliente/**
+!hotel/
+!hotel/**
+!login.html
+!login.css
+!login.js

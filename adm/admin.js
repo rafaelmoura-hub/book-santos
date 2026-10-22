@@ -37,7 +37,7 @@ function atualizarPainel() {
 }
 function mostrarAba(aba) {
   if (aba === "usuarios" && !ehAdministradorMestre) return;
-  ["chamados", "chat", "os", "vistorias", "estoque", "usuarios", "dashboard"].forEach(nome => {
+  ["chamados", "chat", "os", "vistorias", "condominios", "estoque", "usuarios", "dashboard"].forEach(nome => {
     const sufixo = nome === "os" ? "OS" : nome[0].toUpperCase() + nome.slice(1);
     document.getElementById(`visao${sufixo}`).hidden = nome !== aba;
     if (document.getElementById(`aba${sufixo}`)) document.getElementById(`aba${sufixo}`).classList.toggle("ativa", nome === aba);
@@ -45,6 +45,7 @@ function mostrarAba(aba) {
   if (aba === "os") document.getElementById("filtroApartamento").focus();
   if (aba === "vistorias") atualizarTotaisVistorias();
   if (aba === "usuarios") mostrarUsuarios();
+  if (aba === "condominios") BookCondominios.atualizarTotais();
   if (aba === "dashboard") atualizarDashboard();
   if (aba === "estoque") mostrarEstoque();
   if (aba === "chat") mostrarConversasChat();
@@ -61,10 +62,7 @@ async function adicionarColunaEstoque() { const nome=prompt("Nome da nova coluna
 async function removerColunaEstoque(id) { const d=lerEstoque(); d.colunas=d.colunas.filter(c=>c.id!==id); d.itens.forEach(i=>{if(i.extra)delete i.extra[id];}); await salvarEstoque(d); mostrarEstoque(); }
 
 async function mostrarUsuarios() {
-  try { await atualizarUsuarios(); } catch (error) { alert(error.message); return; }
-  if (!ehAdministradorMestre) return;
-  const lista = document.getElementById("listaUsuarios"), usuarios = lerUsuarios();
-  lista.innerHTML = usuarios.map(usuario => `<article class="chamado usuario-card"><div><strong>${escapar(usuario.nome)}</strong><p>E-mail: ${escapar(usuario.login)} · Função: ${usuario.funcao === "adm" ? "Administrador" : "Cliente"}${usuario.mestre ? " · Mestre" : ""}</p></div></article>`).join("") || '<p class="vazio">Nenhum usuário cadastrado.</p>';
+  if (ehAdministradorMestre) await BookUsers.load();
 }
 function usuariosQueFinalizam() { return lerUsuarios().filter(usuario => usuario.funcao === "adm"); }
 function preencherExecutores(selecionado = "") {
@@ -482,7 +480,7 @@ idsMensagensConhecidas=new Set(lerConversasChat().flatMap(c=>(c.mensagens||[]).m
 atualizarBadgeChat();setInterval(verificarNovasMensagensChat,1500);
 document.getElementById("osVencimento").min = dataLocalHoje();
 atualizarPainel();
-const abaSolicitada = ({ "#chamados": "chamados", "#chat": "chat", "#cards": "os", "#vistorias": "vistorias", "#dashboard": "dashboard" })[location.hash];
+const abaSolicitada = ({ "#chamados": "chamados", "#chat": "chat", "#cards": "os", "#vistorias": "vistorias", "#dashboard": "dashboard", "#condominios": "condominios", "#estoque": "estoque", "#usuarios": "usuarios" })[location.hash];
 if (abaSolicitada) mostrarAba(abaSolicitada);
 
 

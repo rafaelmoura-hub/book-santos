@@ -11,6 +11,7 @@ services:
       PUBLIC_ORIGIN: https://${DOMAIN:?Defina DOMAIN em .env.production}
       SUPABASE_URL: ${SUPABASE_URL:?Defina SUPABASE_URL}
       SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:?Defina SUPABASE_PUBLISHABLE_KEY}
+      SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY:-}
     read_only: true
     tmpfs:
       - /tmp

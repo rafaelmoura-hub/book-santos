@@ -16,7 +16,7 @@
         <button id="abaChat" class="aba" onclick="mostrarAba('chat')">Chat <span id="chatBadge" class="chat-badge" hidden>0</span></button>
         <button id="abaOS" class="aba" onclick="mostrarAba('os')">Card</button>
         <button id="abaVistorias" class="aba" onclick="mostrarAba('vistorias')">Vistorias</button>
-        <button onclick="window.location.href='../hotel/hotel.html'">Condomínios</button>
+        <button id="abaCondominios" class="aba" onclick="mostrarAba('condominios')">Condomínios</button>
         <button id="abaEstoque" class="aba" onclick="mostrarAba('estoque')">Estoque</button>
         <button id="abaDashboard" class="aba" onclick="mostrarAba('dashboard')">Dashboard</button>
         <button id="abaUsuarios" class="aba" onclick="mostrarAba('usuarios')" hidden>Usu&aacute;rios</button>
@@ -57,8 +57,26 @@
           </div>
           <div id="areaVistorias"><p class="vazio">Selecione um condomínio para começar.</p></div>
         </section>
+        <section id="visaoCondominios" hidden>
+        <h2>Condom&iacute;nios cadastrados</h2>
+        <div class="hoteis">
+            <article class="hotel" role="button" tabindex="0" onclick="BookCondominios.mostrarHistorico('Unlimited')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Unlimited')}">
+                <h2>Unlimited</h2><p id="totalUnlimited">0 chamados</p>
+            </article>
+            <article class="hotel" role="button" tabindex="0" onclick="BookCondominios.mostrarHistorico('Unique')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Unique')}">
+                <h2>Unique</h2><p id="totalUnique">0 chamados</p>
+            </article>
+        </div>
+        <section id="historico" aria-live="polite">
+            <h2>Hist&oacute;rico</h2>
+            <p>Selecione um condomínio e um apartamento para visualizar chamados e cards.</p>
+        </section>
+    </section>
         <section id="visaoUsuarios" hidden>
-          <div class="titulo-secao"><div><h2>Usuários</h2><p>Cadastre as contas no Supabase e libere o perfil de cliente ou administrador em book_profiles.</p></div><a class="acao-principal" href="https://supabase.com/dashboard/project/afeexyrfdpdpqibedrtz/auth/users" target="_blank" rel="noopener noreferrer">Gerenciar contas no Supabase</a></div>
+          <div class="titulo-secao"><div><h2>Usuários e permissões</h2><p>Cadastre pessoas e escolha a função e os condomínios que podem acessar.</p></div><button id="novoUsuario" class="acao-principal" type="button" onclick="BookUsers.open()" disabled>+ Novo usuário</button></div>
+          <p id="usuariosStatus" role="status" aria-live="polite"></p>
+          <label class="filtro-apartamento" for="buscaUsuario">Buscar por nome ou e-mail</label><input id="buscaUsuario" type="search" placeholder="Buscar usuário" oninput="BookUsers.render()">
+          <div class="permissoes-ajuda"><p><strong>Cliente:</strong> abre e acompanha seus chamados. <strong>Administrador:</strong> gerencia os condomínios selecionados e o estoque global. <strong>Mestre:</strong> acesso completo; conta protegida.</p></div>
           <div id="listaUsuarios"></div>
         </section>
         <section id="visaoDashboard" hidden>
@@ -143,7 +161,23 @@
             </form>
         </div>
     </div>
+    <div id="usuarioModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="usuarioTitulo">
+      <div class="modal-conteudo"><button type="button" class="fechar" aria-label="Fechar cadastro" onclick="BookUsers.close()">&times;</button>
+        <h2 id="usuarioTitulo">Novo usuário</h2>
+        <form id="formUsuario" onsubmit="BookUsers.save(event)">
+          <label>Nome<input id="usuarioNome" maxlength="120" autocomplete="name" required></label>
+          <label>E-mail<input id="usuarioEmail" type="email" maxlength="254" autocomplete="off" required></label>
+          <label id="usuarioSenhaLabel">Senha inicial<input id="usuarioSenha" type="password" minlength="12" maxlength="100" autocomplete="new-password" required><small>De 12 a 100 caracteres. Compartilhe a senha individualmente com a pessoa.</small></label>
+          <label>Função<select id="usuarioFuncao"><option value="cliente">Cliente</option><option value="adm">Administrador</option></select></label>
+          <fieldset class="usuario-hoteis"><legend>Condomínios permitidos</legend><label><input id="usuarioUnlimited" type="checkbox"> Unlimited</label><label><input id="usuarioUnique" type="checkbox"> Unique</label></fieldset>
+          <p>Sem condomínios selecionados, a pessoa não acessa os registros dos hotéis. Administradores continuam tendo acesso ao estoque global.</p>
+          <p id="usuarioErro" role="alert"></p><button id="salvarUsuario" type="submit" class="acao-principal">Salvar usuário</button> <button id="cancelarUsuario" type="button" class="botao-secundario" onclick="BookUsers.close()">Cancelar</button>
+        </form>
+      </div>
+    </div>
     <div id="avisoChat" class="aviso-chat" role="status" aria-live="polite" hidden></div>
+    <script src="condominios.js"></script>
+    <script src="usuarios.js"></script>
     <script src="../assets/api.js"></script>
     <script src="../assets/session.js"></script>
 </body>

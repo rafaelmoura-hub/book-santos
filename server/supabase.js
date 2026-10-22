@@ -1,6 +1,6 @@
 const failure = (status, message) => Object.assign(new Error(message), { status });
 
-function createSupabase({ url, key, fetchImpl = fetch }) {
+function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
   if (!url || !key?.startsWith('sb_publishable_')) throw new Error('Configure SUPABASE_URL e SUPABASE_PUBLISHABLE_KEY no arquivo .env.');
   const origin = new URL(url);
   if (origin.protocol !== 'https:' || origin.username || origin.password || origin.pathname !== '/') throw new Error('SUPABASE_URL deve ser a URL HTTPS do projeto.');
@@ -15,9 +15,10 @@ function createSupabase({ url, key, fetchImpl = fetch }) {
     } catch { throw failure(503, 'Não foi possível conectar ao Supabase. Verifique sua conexão.'); }
     const data = await response.json().catch(() => null);
     if (!response.ok) {
-      if (['PGRST205', 'PGRST202', '42P01'].includes(data?.code)) throw failure(503, 'Execute primeiro a migração SQL do Book Santos no Supabase.');
+      if (['PGRST205', 'PGRST202', '42P01', '42703'].includes(data?.code)) throw failure(503, 'Execute primeiro a migração SQL do Book Santos no Supabase.');
       if (response.status === 409 || data?.code === 'PT409') throw failure(409, data?.message || 'Registro alterado por outro usuário. Atualize e tente novamente.');
       if (data?.code === '22023') throw failure(400, data.message || 'Dados inválidos.');
+      if (data?.code === '42501') throw failure(403, 'Sem permissão para esta operação.');
       if (['23514','22P02','22003','22007','22008'].includes(data?.code)) throw failure(400, 'Registro com valores inválidos ou acima do limite de tamanho permitido.');
       if (response.status === 401 || response.status === 400 && route.startsWith('/auth/')) throw failure(401, 'E-mail ou senha inválidos, ou e-mail ainda não confirmado.');
       if (response.status === 429) throw failure(429, 'Muitas tentativas. Aguarde antes de tentar novamente.');
@@ -25,7 +26,54 @@ function createSupabase({ url, key, fetchImpl = fetch }) {
     }
     return data;
   }
-  return {
+  async function adminRequest(route, { method, body }) {
+    if (!secretKey?.startsWith('sb_secret_')) throw failure(503, 'O cadastro de contas ainda não foi habilitado pelo responsável pelo sistema.');
+    let response;
+    try {
+      response = await fetchImpl(new URL(route, origin), {
+        method, signal: AbortSignal.timeout(15000), headers: { apikey: secretKey, 'Content-Type': 'application/json' },
+        body: body === undefined ? undefined : JSON.stringify(body)
+      });
+    } catch { throw failure(503, 'Falha de conexão ao cadastrar a conta. Confira no painel antes de tentar novamente.'); }
+    const data = await response.json().catch(() => null);
+    if (!response.ok) {
+      if (['email_exists','email_conflict','user_already_exists'].includes(data?.code) || response.status === 409) throw failure(409, 'Já existe uma conta com esse e-mail.');
+      if (response.status === 422 || response.status === 400) throw failure(400, 'O cadastro foi recusado. Confira o e-mail e os requisitos de senha.');
+      throw failure(502, 'Não foi possível cadastrar a conta. Confira a configuração administrativa.');
+    }
+    return data;
+  }
+  const manageProfile = (token, id, input, version) => request('/rest/v1/rpc/book_manage_user', { token, method: 'POST', body: { target_id: id, display_name: input.nome, role_name: input.funcao, hotels: input.hotels, expected_version: version } });
+  async function ensureMaster(token) {
+    const profile = await provider.profile(token);
+    if (profile.funcao !== 'adm' || !profile.mestre) throw failure(403, 'Somente o administrador mestre pode gerenciar usuários.');
+  }
+  const provider = {
+    canCreateUsers: !!secretKey?.startsWith('sb_secret_'),
+    async managedUsers(token) {
+      await ensureMaster(token);
+      return request('/rest/v1/book_profiles?select=id,nome,login,funcao,mestre,version,book_hotel_access(hotel)&order=nome&limit=10000', { token });
+    },
+    async saveUser(token, input) {
+      await ensureMaster(token);
+      if (input.id) return manageProfile(token, input.id, input, input.version);
+      // Probe the new RPC with the caller's identity before creating an Auth account.
+      await request('/rest/v1/book_profiles?select=version&limit=1', { token });
+      const created = await adminRequest('/auth/v1/admin/users', { method: 'POST', body: { email: input.login, password: input.senha, email_confirm: true } });
+      const id = created?.id;
+      if (typeof id !== 'string' || !/^[a-f0-9-]{36}$/i.test(id)) throw failure(502, 'A conta não pôde ser confirmada. Confira no painel antes de tentar novamente.');
+      try { await manageProfile(token, id, input, 0); }
+      catch (error) {
+        // A timeout can mean the transaction committed: do not delete a valid account.
+        let profiles;
+        try { profiles = await request(`/rest/v1/book_profiles?select=id&id=eq.${id}`, { token }); }
+        catch { throw failure(503, 'Não foi possível confirmar o cadastro. Atualize a lista antes de tentar novamente.'); }
+        if (profiles?.length) return;
+        try { await adminRequest(`/auth/v1/admin/users/${id}`, { method: 'DELETE' }); }
+        catch { throw failure(503, 'Conta criada sem perfil. O responsável precisa concluir a liberação no Supabase.'); }
+        throw error;
+      }
+    },
     async records(token, collection, cursor, limit = 100) {
       const query = new URLSearchParams({ select: 'id,data,owner_id,version,updated_at', collection: `eq.${collection}`, order: 'id.desc', limit: String(limit + 1) });
       if (cursor) query.set('id', `lt.${cursor}`);
@@ -72,5 +120,6 @@ function createSupabase({ url, key, fetchImpl = fetch }) {
     logout(token) { return request('/auth/v1/logout?scope=local', { token, method: 'POST' }); },
     async check() { await request('/auth/v1/settings'); return { ok: true }; }
   };
+  return provider;
 }
 module.exports = { createSupabase };

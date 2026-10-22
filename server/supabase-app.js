@@ -3,16 +3,17 @@ const path = require('node:path');
 const { readFile } = require('node:fs/promises');
 const { randomBytes, randomUUID, createHash } = require('node:crypto');
 const { COLLECTIONS, validId, validateChanges, storeAttachments } = require('./operations');
+const { validateUser } = require('./users');
 const ROOT = path.resolve(__dirname, '..');
 const fail = (status, message) => Object.assign(new Error(message), { status });
 const digest = token => createHash('sha256').update(token).digest('hex');
 
-async function readBody(req) {
+async function readBody(req, limit = 15 * 1024 * 1024) {
   const chunks = [];
   let size = 0;
   for await (const chunk of req) {
     size += chunk.length;
-    if (size > 15 * 1024 * 1024) throw fail(413, 'Requisição muito grande (máximo 10 MB de anexos).');
+    if (size > limit) throw fail(413, 'Requisição acima do tamanho permitido.');
     chunks.push(chunk);
   }
   try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); }
@@ -75,7 +76,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         const freshToken = randomBytes(32).toString('hex');
         const lifetime = 8 * 3600;
         sessions.delete(sessionId);
-        sessions.set(digest(freshToken), { accessToken: auth.access_token, refreshToken: auth.refresh_token, authExpires: now + (Number(auth.expires_in) || 3600) * 1000, expires: now + lifetime * 1000 });
+        sessions.set(digest(freshToken), { userId: user.id, accessToken: auth.access_token, refreshToken: auth.refresh_token, authExpires: now + (Number(auth.expires_in) || 3600) * 1000, expires: now + lifetime * 1000 });
         attempts.delete(account);
         cookie(freshToken, lifetime);
         return json(200, { ...user, provider: 'supabase' });
@@ -110,6 +111,19 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         }
       }
       if (route === '/api/session' && req.method === 'GET') return json(200, { ...user, provider: 'supabase' });
+      if (route === '/api/manage/users') {
+        if (user.funcao !== 'adm' || !user.mestre) throw fail(403, 'Somente o administrador mestre pode gerenciar usuários.');
+        if (req.method === 'GET') return json(200, { users: await provider.managedUsers(session.accessToken), canCreate: provider.canCreateUsers === true });
+        if (req.method !== 'POST') throw fail(405, 'Método não permitido.');
+        const key = `manage:${user.id}`;
+        const quota = writes.get(key) || { count: 0, until: now + 60000 };
+        if (quota.count >= 10) throw fail(429, 'Aguarde um minuto antes de gerenciar mais contas.');
+        quota.count++; writes.set(key, quota);
+        const input = validateUser(await readBody(req, 16384));
+        await provider.saveUser(session.accessToken, input);
+        if (input.id) for (const [key, value] of sessions) if (value.userId === input.id) sessions.delete(key);
+        return json(200, { ok: true });
+      }
       if (route === '/api/apartments' && req.method === 'GET') return json(200, await provider.apartments(session.accessToken));
       if (route === '/api/access' && req.method === 'GET') return json(200, user.mestre ? ['Unlimited', 'Unique'] : (await provider.access(session.accessToken)).map(row => row.hotel));
       if (route === '/api/snapshot' && req.method === 'GET') {
@@ -167,6 +181,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
       if (route === '/api/users' || route.startsWith('/api/users/')) throw fail(403, 'Gerencie as contas em Authentication → Users e os perfis em book_profiles no painel Supabase.');
       if (route.startsWith('/api/')) throw fail(404, 'Rota não encontrada.');
       if (!['GET', 'HEAD'].includes(req.method)) throw fail(405, 'Método não permitido.');
+      if (/^\/hotel\/(hotel\.html)?$/.test(route)) { res.writeHead(302, { Location: '/adm/admin.html#condominios' }); return res.end(); }
       const file = route === '/' ? '/login.html' : route;
       if (!/^\/(login\.(html|css|js)|assets\/(api|session|store)\.js|(adm|cliente|hotel)\/[a-z]+\.(html|css|js))$/.test(file)) throw fail(404, 'Arquivo não encontrado.');
       if (/^\/(adm|hotel)\//.test(file) && user?.funcao !== 'adm' || /^\/cliente\//.test(file) && user?.funcao !== 'cliente') {

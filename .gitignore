@@ -1,0 +1,9 @@
+data/
+.env
+.env.*
+!.env.example
+!.env.production.example
+node_modules/
+*.log
+book-santos-upload.zip
+book-santos-upload/

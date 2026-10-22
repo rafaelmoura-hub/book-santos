@@ -6,7 +6,7 @@ const { loadConfig } = require('./config');
 const envPath = path.resolve(__dirname, '..', '.env');
 if (existsSync(envPath)) process.loadEnvFile(envPath);
 try {
-  const provider = createSupabase({ url: process.env.SUPABASE_URL, key: process.env.SUPABASE_PUBLISHABLE_KEY });
+  const provider = createSupabase({ url: process.env.SUPABASE_URL, key: process.env.SUPABASE_PUBLISHABLE_KEY, secretKey: process.env.SUPABASE_SECRET_KEY });
   const { port, host, ...options } = loadConfig();
   const server = createSupabaseApp(provider, options);
   server.on('error', error => { console.error(error.code === 'EADDRINUSE' ? `A porta ${port} já está em uso.` : 'Não foi possível iniciar o servidor.'); process.exitCode = 1; });
