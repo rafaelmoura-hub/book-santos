@@ -73,8 +73,8 @@
         </section>
     </section>
         <section id="visaoUsuarios" hidden>
-          <div class="titulo-secao"><div><h2>Usuários e permissões</h2><p>Cadastre pessoas e escolha a função e os condomínios que podem acessar.</p></div><button id="novoUsuario" class="acao-principal" type="button" onclick="BookUsers.open()" disabled>+ Novo usuário</button></div>
-          <p id="usuariosStatus" role="status" aria-live="polite"></p>
+          <div class="titulo-secao"><div><h2>Usuários e permissões</h2><p>Cadastre pessoas e escolha a função e os condomínios que podem acessar.</p></div><div><button class="botao-secundario" type="button" onclick="mostrarUsuarios()">Recarregar usuários</button> <button id="novoUsuario" class="acao-principal" type="button" onclick="mostrarUsuarios(true)">+ Novo usuário</button></div></div>
+          <p id="usuariosStatus" role="status" aria-live="polite">Selecione Novo usuário ou Recarregar usuários para consultar os acessos.</p>
           <label class="filtro-apartamento" for="buscaUsuario">Buscar por nome ou e-mail</label><input id="buscaUsuario" type="search" placeholder="Buscar usuário" oninput="BookUsers.render()">
           <div class="permissoes-ajuda"><p><strong>Cliente:</strong> abre e acompanha seus chamados. <strong>Administrador:</strong> gerencia os condomínios selecionados e o estoque global. <strong>Mestre:</strong> acesso completo; conta protegida.</p></div>
           <div id="listaUsuarios"></div>

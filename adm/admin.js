@@ -61,8 +61,14 @@ async function removerLinhaEstoque(id) { const emUso=osList().some(o=>(o.fechame
 async function adicionarColunaEstoque() { const nome=prompt("Nome da nova coluna:"); if(!nome?.trim())return; const d=lerEstoque(); d.colunas.push({id:String(Date.now()),nome:nome.trim()}); await salvarEstoque(d); mostrarEstoque(); }
 async function removerColunaEstoque(id) { const d=lerEstoque(); d.colunas=d.colunas.filter(c=>c.id!==id); d.itens.forEach(i=>{if(i.extra)delete i.extra[id];}); await salvarEstoque(d); mostrarEstoque(); }
 
-async function mostrarUsuarios() {
-  if (ehAdministradorMestre) await BookUsers.load();
+async function mostrarUsuarios(abrirCadastro = false) {
+  if (!ehAdministradorMestre) return;
+  try {
+    if (!window.BookUsers) throw new Error('O formulário de usuários não carregou. Atualize a página com Ctrl + Shift + R.');
+    if (await BookUsers.load() && abrirCadastro) await BookUsers.open();
+  } catch (error) {
+    document.getElementById('usuariosStatus').textContent = error.message;
+  }
 }
 function usuariosQueFinalizam() { return lerUsuarios().filter(usuario => usuario.funcao === "adm"); }
 function preencherExecutores(selecionado = "") {

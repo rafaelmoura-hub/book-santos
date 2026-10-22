@@ -18,7 +18,8 @@ nav { flex-wrap: wrap; }
 #usuarioErro { color: #a61b1b; }
 #usuariosStatus, .permissoes-ajuda { color: var(--suave); line-height: 1.5; }
 #visaoUsuarios .usuario-card { display: flex; justify-content: space-between; gap: 16px; align-items: center; flex-wrap: wrap; }
-button:disabled { cursor: wait; opacity: .6; }
+button:disabled { cursor: not-allowed; opacity: .6; }
+button[aria-busy="true"] { cursor: wait; }
 
 * { box-sizing: border-box; }
 body { margin: 0; color: var(--texto); background: var(--fundo); font-family: Inter, "Segoe UI", Arial, sans-serif; }

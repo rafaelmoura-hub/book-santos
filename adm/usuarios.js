@@ -1,5 +1,5 @@
 window.BookUsers = (() => {
-  let users = [], editing = null, saving = false, canCreate = false;
+  let users = [], editing = null, saving = false, canCreate = false, loaded = false, loading = null;
   const el = id => document.getElementById(id);
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   function render() {
@@ -20,21 +20,40 @@ window.BookUsers = (() => {
     }).join('') || '<p class="vazio">Nenhum usuário encontrado.</p>';
     el('listaUsuarios').querySelectorAll('button[data-user-id]').forEach(button => { button.onclick = () => open(button.dataset.userId); });
   }
-  async function load() {
+  function load() {
+    if (loading) return loading;
+    loading = loadOnce().finally(() => { loading = null; });
+    return loading;
+  }
+  async function loadOnce() {
+    el('novoUsuario').disabled = true;
+    el('novoUsuario').textContent = 'Carregando usuários…';
+    el('novoUsuario').setAttribute('aria-busy', 'true');
     el('usuariosStatus').textContent = 'Carregando usuários…';
     try {
-      const data = await BookAPI.request('/api/manage/users');
-      users = data.users; canCreate = data.canCreate;
-      el('novoUsuario').disabled = !canCreate;
-      el('usuariosStatus').textContent = `${users.length} usuário(s) cadastrado(s).${canCreate ? '' : ' Novos cadastros ainda precisam ser habilitados pelo responsável pelo sistema.'}`;
+      const data = await BookAPI.request('/api/manage/users', { timeoutMs: 30000 });
+      if (!Array.isArray(data?.users)) throw new Error('Não foi possível ler a lista de usuários. Recarregue a página.');
+      users = data.users; canCreate = data.canCreate === true; loaded = true;
+      el('usuariosStatus').textContent = `${users.length} usuário(s) cadastrado(s).${canCreate ? '' : ' Cadastro de contas indisponível: confira SUPABASE_SECRET_KEY no Render e publique a configuração.'}`;
       render();
+      return true;
     } catch (error) {
-      el('novoUsuario').disabled = true;
+      loaded = false;
       el('usuariosStatus').textContent = error.message;
+      return false;
+    } finally {
+      el('novoUsuario').disabled = false;
+      el('novoUsuario').textContent = '+ Novo usuário';
+      el('novoUsuario').removeAttribute('aria-busy');
     }
   }
-  function open(id) {
+  async function open(id) {
     if (saving) return;
+    if (!loaded && !await load()) return;
+    if (!id && !canCreate) {
+      el('usuariosStatus').textContent = 'Cadastro de contas indisponível: confira SUPABASE_SECRET_KEY no Render e publique a configuração. A chave deve começar com sb_secret_.';
+      return;
+    }
     editing = id ? users.find(user => user.id === id) : null;
     if (id && (!editing || editing.mestre) || !id && !canCreate) return;
     el('formUsuario').reset();
@@ -67,7 +86,7 @@ window.BookUsers = (() => {
     el('salvarUsuario').disabled = true; el('cancelarUsuario').disabled = true;
     el('usuarioErro').textContent = 'Salvando…';
     let confirmed = false;
-    try { await BookAPI.request('/api/manage/users', { method: 'POST', body: JSON.stringify(input) }); confirmed = true; }
+    try { await BookAPI.request('/api/manage/users', { method: 'POST', body: JSON.stringify(input), timeoutMs: 120000 }); confirmed = true; }
     catch (error) { el('usuarioErro').textContent = error.message; }
     finally {
       saving = false; el('salvarUsuario').disabled = false; el('cancelarUsuario').disabled = false;
