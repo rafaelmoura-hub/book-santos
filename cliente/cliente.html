@@ -1,0 +1,63 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cliente | Book Santos</title>
+    <link rel="stylesheet" href="cliente.css">
+</head>
+<body hidden data-screen="cliente.js">
+    <header><h1>Book Santos</h1><button onclick="sair()">Sair</button></header>
+    <main>
+        <h2>Abrir chamado</h2>
+        <form id="formChamado" onsubmit="abrirChamado(event)">
+        <label for="hotel">Condomínio:</label>
+        <select id="hotel" required>
+            <option value="">Selecione o condomínio</option>
+            <option value="Unlimited">Condomínio Unlimited</option>
+            <option value="Unique">Condomínio Unique</option>
+        </select>
+        <label for="apartamento">N&uacute;mero do apartamento:</label>
+        <select id="apartamento" required disabled><option value="">Selecione primeiro o condomínio</option></select>
+        <label for="assunto">Assunto:</label>
+        <input type="text" id="assunto" maxlength="100" required>
+        <label for="categoria">Categoria:</label>
+        <select id="categoria" required>
+            <option value="">Selecione uma categoria</option>
+            <option value="Manuten&#231;&#227;o">Manuten&ccedil;&atilde;o</option>
+            <option value="Limpeza">Limpeza</option>
+            <option value="Internet">Internet</option>
+            <option value="Ar-condicionado">Ar-condicionado</option>
+            <option value="El&#233;trica">El&eacute;trica</option>
+            <option value="Hidr&#225;ulica">Hidr&aacute;ulica</option>
+            <option value="Quebra">Quebra</option>
+            <option value="Outro">Outro</option>
+        </select>
+        <label for="prioridade">Prioridade:</label>
+        <select id="prioridade"><option>Normal</option><option>Alta</option><option>Urgente</option></select>
+        <label for="descricao">Descri&ccedil;&atilde;o:</label>
+        <textarea id="descricao" maxlength="2000" required></textarea>
+        <label for="arquivo">Foto ou v&iacute;deo:</label>
+        <input type="file" id="arquivo" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm" onchange="mostrarArquivo()" required aria-describedby="ajudaArquivo">
+        <small id="ajudaArquivo">Imagem ou vídeo de até 5 MB.</small>
+        <div id="preview"></div>
+        <button type="submit">Abrir chamado</button>
+        <p id="mensagem" role="status" aria-live="polite"></p>
+        </form>
+        <hr>
+        <h2>Meus chamados</h2>
+        <div id="listaChamados"></div>
+    </main>
+    <button id="botaoSuporte" class="botao-suporte" type="button" onclick="alternarChatCliente()" aria-label="Abrir chat de suporte">🎧 <span>Suporte</span></button>
+    <aside id="chatCliente" class="chat-cliente" hidden aria-label="Chat de suporte">
+      <div class="chat-topo"><div><strong>Suporte Book Santos</strong><small>Converse sobre um chamado</small></div><button type="button" onclick="alternarChatCliente()" aria-label="Fechar chat">×</button></div>
+      <label for="chamadoChat">Chamado</label><select id="chamadoChat" onchange="selecionarConversaCliente()"><option value="">Selecione um chamado</option></select>
+      <div id="mensagensCliente" class="chat-mensagens"><p class="chat-vazio">Selecione um chamado para ver a conversa.</p></div>
+      <form class="chat-enviar" onsubmit="enviarMensagemCliente(event)"><input id="textoCliente" maxlength="2000" placeholder="Escreva sua mensagem..." autocomplete="off" required><button type="submit" aria-label="Enviar mensagem">Enviar</button></form>
+    </aside>
+    <script src="../assets/api.js"></script>
+    <script src="../assets/session.js"></script>
+</body>
+</html>
+
+

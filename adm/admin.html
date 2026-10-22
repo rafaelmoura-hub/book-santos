@@ -1,0 +1,153 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Book Santos</title>
+    <link rel="stylesheet" href="admin.css">
+</head>
+<body hidden data-screen="admin.js">
+    <header>
+        <h1>Book Santos - Administra&ccedil;&atilde;o</h1>
+        <button onclick="sair()">Sair</button>
+    </header>
+    <nav>
+        <button id="abaChamados" class="aba ativa" onclick="mostrarAba('chamados')">Chamados</button>
+        <button id="abaChat" class="aba" onclick="mostrarAba('chat')">Chat <span id="chatBadge" class="chat-badge" hidden>0</span></button>
+        <button id="abaOS" class="aba" onclick="mostrarAba('os')">Card</button>
+        <button id="abaVistorias" class="aba" onclick="mostrarAba('vistorias')">Vistorias</button>
+        <button onclick="window.location.href='../hotel/hotel.html'">Condomínios</button>
+        <button id="abaEstoque" class="aba" onclick="mostrarAba('estoque')">Estoque</button>
+        <button id="abaDashboard" class="aba" onclick="mostrarAba('dashboard')">Dashboard</button>
+        <button id="abaUsuarios" class="aba" onclick="mostrarAba('usuarios')" hidden>Usu&aacute;rios</button>
+    </nav>
+    <main>
+        <section id="visaoChamados">
+          <div class="cards">
+            <div class="card"><h3>Total</h3><p id="total">0</p></div>
+            <div class="card"><h3>Abertos</h3><p id="abertos">0</p></div>
+            <div class="card"><h3>Total de cards</h3><p id="andamento">0</p></div>
+            <div class="card"><h3>Fechados</h3><p id="resolvidos">0</p></div>
+          </div>
+          <div class="titulo-secao"><div><h2>Chamados</h2><p>Selecione um chamado para consultar os detalhes.</p></div></div>
+          <div id="listaChamados"></div>
+        </section>
+        <section id="visaoOS" hidden>
+          <div class="titulo-secao"><div><h2>Cards</h2><p>Acompanhe os cards e suas datas de vencimento.</p></div><button class="acao-principal" onclick="abrirFormularioOS()">+ Abrir Card</button></div>
+          <label class="filtro-apartamento" for="filtroApartamento">Filtrar por apartamento</label>
+          <input id="filtroApartamento" type="search" inputmode="numeric" maxlength="4" placeholder="Digite 1111 ou 2222" oninput="mostrarOS()">
+          <label class="filtro-apartamento" for="filtroStatusOS">Filtrar por status</label>
+          <select id="filtroStatusOS" onchange="mostrarOS()"><option value="">Todos os status</option><option value="Aberta">Aberta</option><option value="Em andamento">Em andamento</option><option value="Finalizada">Finalizada</option></select>
+          <p id="resumoListaOS" aria-live="polite"></p>
+          <div id="listaOS"></div>
+        </section>
+        <section id="visaoChat" hidden>
+          <div class="titulo-secao"><div><h2>Conversas com clientes</h2><p id="resumoChat">Mensagens organizadas por cliente e chamado.</p></div><button type="button" class="botao-secundario" onclick="ativarNotificacoesChat()">Ativar notificações</button></div>
+          <div class="painel-chat"><div id="listaConversasChat" class="lista-conversas-chat"></div><div class="conversa-chat"><div id="cabecalhoConversaChat" class="cabecalho-conversa-chat">Selecione uma conversa</div><div id="mensagensAdmin" class="chat-mensagens"><p class="chat-vazio">As mensagens aparecerão aqui.</p></div><form class="chat-enviar" onsubmit="enviarMensagemAdmin(event)"><input id="textoAdmin" maxlength="2000" placeholder="Escreva sua resposta..." autocomplete="off" required disabled><button id="enviarAdmin" type="submit" disabled>Enviar</button></form></div></div>
+        </section>
+        <section id="visaoEstoque" hidden>
+          <div class="titulo-secao"><div><h2>Estoque de materiais</h2><p>Edite os valores nas células e aguarde a confirmação de sincronização.</p></div><div><button class="botao-secundario" type="button" onclick="adicionarColunaEstoque()">+ Coluna</button> <button class="acao-principal" type="button" onclick="adicionarLinhaEstoque()">+ Material</button></div></div>
+          <div class="planilha-wrap"><table id="tabelaEstoque" class="planilha"></table></div>
+        </section>
+        <section id="visaoVistorias" hidden>
+          <div class="titulo-secao"><div><h2>Vistorias</h2><p>Selecione um condomínio e apartamento para consultar e registrar vistorias.</p></div></div>
+          <div class="hoteis-vistoria">
+            <button class="hotel-vistoria" onclick="selecionarHotelVistoria('Unlimited')"><strong>Unlimited</strong><span id="totalVistoriasUnlimited">0 vistorias</span></button>
+            <button class="hotel-vistoria" onclick="selecionarHotelVistoria('Unique')"><strong>Unique</strong><span id="totalVistoriasUnique">0 vistorias</span></button>
+          </div>
+          <div id="areaVistorias"><p class="vazio">Selecione um condomínio para começar.</p></div>
+        </section>
+        <section id="visaoUsuarios" hidden>
+          <div class="titulo-secao"><div><h2>Usuários</h2><p>Cadastre as contas no Supabase e libere o perfil de cliente ou administrador em book_profiles.</p></div><a class="acao-principal" href="https://supabase.com/dashboard/project/afeexyrfdpdpqibedrtz/auth/users" target="_blank" rel="noopener noreferrer">Gerenciar contas no Supabase</a></div>
+          <div id="listaUsuarios"></div>
+        </section>
+        <section id="visaoDashboard" hidden>
+          <div class="titulo-secao"><div><h2>Painel</h2><p>Visão geral de chamados e cards.</p></div></div>
+          <div class="dashboard-painel">
+            <div class="dashboard-cabecalho"><div><h3>Cards</h3><p id="resumoDashboardOS"></p></div><div class="controles-grafico"><label>Per&iacute;odo<select id="periodoOS" onchange="atualizarDashboard()"><option value="diario">Di&aacute;rio</option><option value="semanal">Semanal</option><option value="mensal" selected>Mensal</option><option value="anual">Anual</option></select></label><label>Usu&aacute;rio<select id="usuarioOS" onchange="atualizarDashboard()"><option value="todos">Todos</option></select></label><label>Gr&aacute;fico<select id="tipoGraficoOS" onchange="atualizarDashboard()"><option value="linha" selected>Linha</option><option value="coluna">Coluna</option><option value="pizza">Pizza</option></select></label></div></div>
+            <div id="graficoOS" class="grafico-dashboard" role="img" aria-label="Gr&aacute;fico de Cards"></div>
+          </div>
+          <div class="dashboard-painel">
+            <div class="dashboard-cabecalho"><div><h3>Chamados</h3><p id="resumoDashboardChamados"></p></div><div class="controles-grafico"><label>Per&iacute;odo<select id="periodoChamados" onchange="atualizarDashboard()"><option value="diario">Di&aacute;rio</option><option value="semanal">Semanal</option><option value="mensal" selected>Mensal</option><option value="anual">Anual</option></select></label><label>Usu&aacute;rio<select id="usuarioChamados" onchange="atualizarDashboard()"><option value="todos">Todos</option></select></label><label>Gr&aacute;fico<select id="tipoGraficoChamados" onchange="atualizarDashboard()"><option value="linha" selected>Linha</option><option value="coluna">Coluna</option><option value="pizza">Pizza</option></select></label></div></div>
+            <div id="graficoChamados" class="grafico-dashboard" role="img" aria-label="Gr&aacute;fico de chamados"></div>
+          </div>
+        </section>
+    </main>
+    <div id="modal" class="modal">
+        <div class="modal-conteudo">
+            <span class="fechar" onclick="fecharModal()">&times;</span>
+            <div id="detalhes"></div>
+        </div>
+    </div>
+    <div id="osModal" class="modal">
+        <div class="modal-conteudo">
+            <span class="fechar" onclick="document.getElementById('osModal').style.display='none'">&times;</span>
+            <h2>Abrir Card</h2>
+            <form id="formOS" onsubmit="salvarOS(event)">
+                <input id="osChamado" type="hidden">
+                <label>Condomínio<select id="osHotel" required><option value="">Selecione</option><option>Unlimited</option><option>Unique</option></select></label>
+                <label>Apartamento<select id="osApartamento" required></select></label>
+                <label>Assunto<input id="osTitulo" required></label>
+                <label>Descri&ccedil;&atilde;o<textarea id="osDescricao" required></textarea></label>
+                <label>Data de vencimento<input id="osVencimento" type="date" required></label>
+                <label>Prioridade<select id="osPrioridade"><option>Normal</option><option>Alta</option><option>Urgente</option></select></label>
+                <label>Responsável<select id="osResponsavel" required></select></label>
+                <label>Fotos e arquivos relacionados<input id="osAnexos" type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,application/pdf"><small>Até 20 anexos, 5 MB por arquivo e 10 MB no total.</small></label>
+                <button type="submit">Criar Card</button>
+            </form>
+        </div>
+    </div>
+    <div id="osDetalhesModal" class="modal">
+        <div class="modal-conteudo">
+            <span class="fechar" onclick="document.getElementById('osDetalhesModal').style.display='none'">&times;</span>
+            <div id="osDetalhes"></div>
+            <button id="botaoFinalizarOS" class="acao-principal" onclick="abrirFechamentoOS(document.getElementById('fechamentoIdOS').value)">Finalizar Card</button>
+        </div>
+    </div>
+    <div id="vistoriaModal" class="modal">
+      <div class="modal-conteudo modal-vistoria">
+        <span class="fechar" onclick="fecharVistoriaModal()">&times;</span>
+        <h2>Nova vistoria</h2>
+        <p id="vistoriaLocal"></p>
+        <form id="formVistoria" onsubmit="salvarVistoria(event)">
+          <label>Data da vistoria<input id="vistoriaData" type="date" required></label>
+          <label>Quem fez a vistoria<input id="vistoriaResponsavel" required></label>
+          <label>Tipo de vistoria<select id="vistoriaTipo" required><option value="">Selecione</option><option>Completa</option><option>Simplificada</option></select></label>
+          <div id="gruposVistoria"></div>
+          <label>Observações gerais<textarea id="vistoriaObservacoes"></textarea></label>
+          <label>Fotos (máximo de 20, total de até 10 MB)<input id="vistoriaFotos" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple><small id="vistoriaFotosAjuda">0 de 20 fotos selecionadas.</small></label>
+          <button type="submit">Salvar vistoria</button>
+        </form>
+      </div>
+    </div>
+    <div id="fechamentoModal" class="modal">
+        <div class="modal-conteudo">
+            <span class="fechar" onclick="document.getElementById('fechamentoModal').style.display='none'">&times;</span>
+            <h2>Dados para finalizar Card</h2>
+            <form id="formFechamentoOS" onsubmit="salvarFechamentoOS(event)">
+                <input id="fechamentoIdOS" type="hidden">
+                <label>Data do fechamento<input id="fechamentoData" type="date" required></label>
+                <label>Servi&ccedil;o realizado por terceiro?<select id="fechamentoTerceiro" required><option value="">Selecione</option><option>Sim</option><option>N&atilde;o</option></select></label>
+                <label>Valor do servi&ccedil;o (R$)<input id="fechamentoValorServico" type="number" min="0" step="0.01" value="0" required oninput="atualizarCustoTotal()"></label>
+                <label>Tipo do material<select id="fechamentoTipoMaterial" required onchange="atualizarCamposMaterial()"><option value="">Selecione</option><option>Material de consumo</option><option>Material de repasse</option><option>Item de reposi&ccedil;&atilde;o</option><option>Nenhum</option></select></label>
+                <fieldset class="materiais-os"><legend>Materiais do estoque usados neste serviço</legend><div id="materiaisOS"></div><button type="button" class="botao-secundario" onclick="adicionarMaterialOS()">+ Adicionar material</button></fieldset>
+                <label>Valor do material (R$)<input id="fechamentoValorMaterial" type="number" min="0" step="0.01" value="0" required oninput="atualizarCustoTotal()"></label>
+                <label>Descri&ccedil;&atilde;o do material<textarea id="fechamentoDescricaoMaterial" required></textarea></label>
+                <label>Respons&aacute;vel pelo pagamento<select id="fechamentoResponsavelPagamento" required><option value="">Selecione</option><option>H&oacute;spede</option><option>Propriet&aacute;rio</option><option>Book Santos</option><option>Airbnb</option><option>Governan&ccedil;a</option></select></label>
+                <label>Quem executou o servi&ccedil;o<select id="fechamentoExecutadoPor" required></select></label>
+                <label>Custo total (R$)<input id="fechamentoCustoTotal" type="number" readonly></label>
+                <label>Observa&ccedil;&atilde;o<textarea id="fechamentoObservacao"></textarea></label>
+                <label>Fotos do servi&ccedil;o conclu&iacute;do<input id="fechamentoFotos" type="file" accept="image/*" multiple></label>
+                <button type="button" class="botao-secundario" onclick="salvarRascunhoFechamentoOS()">Salvar</button>
+                <button type="submit">Salvar e finalizar Card</button>
+            </form>
+        </div>
+    </div>
+    <div id="avisoChat" class="aviso-chat" role="status" aria-live="polite" hidden></div>
+    <script src="../assets/api.js"></script>
+    <script src="../assets/session.js"></script>
+</body>
+</html>
+
+
+

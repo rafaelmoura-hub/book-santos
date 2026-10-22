@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Santos | Login</title>
+    <link rel="stylesheet" href="login.css">
+</head>
+<body>
+    <div class="login-box">
+        <h1>Book Santos</h1>
+        <p>Sistema de Apoio &agrave; Decis&atilde;o</p>
+        <form onsubmit="entrar(event)">
+        <input type="email" id="login" aria-label="E-mail" placeholder="Digite seu e-mail" maxlength="254" autocomplete="username" required>
+        <input type="password" id="senha" placeholder="Digite sua senha" maxlength="100" autocomplete="current-password" required>
+        <button type="submit">Entrar</button>
+        </form>
+        <p id="mensagem" role="status" aria-live="polite"></p>
+    </div>
+    <script src="assets/api.js"></script>
+    <script src="login.js"></script>
+</body>
+</html>

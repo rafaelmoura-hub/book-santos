@@ -1,0 +1,23 @@
+:root { --azul: #0803b8; --fundo: #f3f5f9; --texto: #202638; --borda: #dce2ec; }
+* { box-sizing: border-box; }
+body { min-height: 100vh; margin: 0; display: grid; place-items: center; padding: 22px; color: var(--texto); background: radial-gradient(circle at 20% 10%, #2823db, transparent 42%), linear-gradient(145deg, #0803b8, #090b28 82%); font-family: Inter, "Segoe UI", Arial, sans-serif; }
+.login-box { width: min(100%, 390px); padding: 38px; border: 1px solid rgba(255,255,255,.55); border-radius: 18px; background: white; box-shadow: 0 24px 70px rgba(0,0,0,.28); text-align: center; }
+.login-box h1 { margin: 0; color: var(--azul); font-size: 34px; letter-spacing: -.7px; }
+.login-box p { color: #687386; }
+input { width: 100%; margin-top: 14px; padding: 13px 14px; border: 1px solid var(--borda); border-radius: 9px; font: inherit; }
+input:focus { border-color: var(--azul); outline: none; box-shadow: 0 0 0 3px rgba(8,3,184,.1); }
+button { width: 100%; margin-top: 20px; padding: 13px; border: 0; border-radius: 9px; color: white; background: var(--azul); font: inherit; font-weight: 700; cursor: pointer; transition: background .15s ease, transform .15s ease; }
+button:hover { transform: translateY(-1px); background: #07028f; }
+#mensagem { min-height: 20px; color: #b42318; }
+
+:root { --azul: #174a8b; --texto: #1d2939; --borda: #dce5ef; }
+body { color: var(--texto); background: radial-gradient(circle at 15% 15%, rgba(93, 148, 205, .36), transparent 30%), linear-gradient(145deg, #12365d, #172c48 78%); }
+.login-box { padding: 42px; border: 1px solid rgba(255, 255, 255, .72); border-radius: 20px; box-shadow: 0 28px 80px rgba(8, 23, 43, .34); }
+.login-box h1 { color: #174a8b; letter-spacing: -.9px; }
+.login-box > p:first-of-type { margin: 9px 0 27px; color: #66758a; font-size: 14px; }
+.login-box form { display: grid; gap: 4px; }
+input { padding: 14px 15px; border-color: var(--borda); border-radius: 10px; }
+button { margin-top: 13px; border-radius: 10px; background: #1d5b98; }
+button:hover { background: #103966; }
+:focus-visible { outline: 3px solid rgba(75, 134, 198, .45); outline-offset: 2px; }
+@media (max-width: 480px) { .login-box { padding: 30px 24px; } }

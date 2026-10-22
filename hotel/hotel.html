@@ -1,0 +1,40 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Condom&iacute;nios | Book Santos</title>
+    <link rel="stylesheet" href="hotel.css">
+</head>
+<body hidden data-screen="hotel.js">
+    <header>
+        <h1>Book Santos - Condom&iacute;nios</h1>
+        <button onclick="sair()">Sair</button>
+    </header>
+    <nav>
+        <a href="../adm/admin.html#chamados">Chamados</a>
+        <a href="../adm/admin.html#cards">Cards</a>
+        <a href="../adm/admin.html#vistorias">Vistorias</a>
+        <a href="../adm/admin.html#dashboard">Dashboard</a>
+        <a class="ativa" href="hotel.html" aria-current="page">Condom&iacute;nios</a>
+    </nav>
+    <main>
+        <h2>Condom&iacute;nios cadastrados</h2>
+        <div class="hoteis">
+            <article class="hotel" role="button" tabindex="0" onclick="mostrarHistorico('Unlimited')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarHistorico('Unlimited')}">
+                <h2>Unlimited</h2><p id="totalUnlimited">0 chamados</p>
+            </article>
+            <article class="hotel" role="button" tabindex="0" onclick="mostrarHistorico('Unique')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarHistorico('Unique')}">
+                <h2>Unique</h2><p id="totalUnique">0 chamados</p>
+            </article>
+        </div>
+        <section id="historico" aria-live="polite">
+            <h2>Hist&oacute;rico</h2>
+            <p>Selecione um condomínio e um apartamento para visualizar chamados e cards.</p>
+        </section>
+    </main>
+    <script src="../assets/api.js"></script>
+    <script src="../assets/session.js"></script>
+</body>
+</html>
+
