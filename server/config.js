@@ -11,6 +11,6 @@ function loadConfig(env = process.env) {
     publicOrigin = parsed.origin;
   }
   if (production && (!secure || !publicOrigin?.startsWith('https://'))) throw new Error('Publicação exige PUBLIC_ORIGIN=https://seu-dominio e COOKIE_SECURE=true.');
-  return { port, host: env.HOST || '127.0.0.1', secure, publicOrigin };
+  return { port, host: env.HOST || '127.0.0.1', secure, publicOrigin, sessionKey: env.BOOK_SESSION_KEY, sessionFile: env.BOOK_SESSION_FILE };
 }
 module.exports = { loadConfig };

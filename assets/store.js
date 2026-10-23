@@ -6,6 +6,11 @@ window.BookStore = (() => {
     const cursors = new Map();
     let user, busy = false, refreshing = false, status, toolbar;
     let apartmentCatalog = [];
+    let totals = null, activeCollections = keys;
+    function activate(tab) {
+        const groups = { chamados: ['chamados'], chat: ['chamados','conversasSuporte'], os: ['ordensServico','chamados','estoqueBookSantos'], vistorias: ['vistorias','ordensServico'], condominios: ['chamados','ordensServico'], estoque: ['estoqueBookSantos','ordensServico'], dashboard: ['chamados','ordensServico'], financeiro: [], usuarios: [], backup: [] };
+        activeCollections = groups[tab] || keys;
+    }
     const apartments = hotel => apartmentCatalog.filter(row => row.hotel === hotel).map(row => row.apartment).sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
     const clone = value => JSON.parse(JSON.stringify(value));
     const notify = () => window.dispatchEvent(new Event('book:data'));
@@ -24,11 +29,16 @@ window.BookStore = (() => {
         return String(data.id);
     }
     async function refresh(force = false) {
+        if (!force && !activeCollections.length) return;
         if (refreshing || busy || !force && (document.hidden || document.querySelector('.modal[style*="block"]') || /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName))) return;
         refreshing = true;
         try {
-            const result = await BookAPI.request(`/api/snapshot?pages=${encodeURIComponent(JSON.stringify(Object.fromEntries(pages)))}`);
-            for (const [key, data] of Object.entries(result)) { cache.set(key, data.loaded); cursors.set(key, data.cursor); }
+            const filter = force ? '' : `&collections=${encodeURIComponent(JSON.stringify(activeCollections))}`;
+            const result = await BookAPI.request(`/api/snapshot?pages=${encodeURIComponent(JSON.stringify(Object.fromEntries(pages)))}${filter}`);
+            for (const [key, data] of Object.entries(result)) {
+                if (key === '__counts') { totals = data; continue; }
+                cache.set(key, data.loaded); cursors.set(key, data.cursor);
+            }
             message(`Dados sincronizados às ${new Date().toLocaleTimeString('pt-BR')}. Totais e filtros consideram os registros carregados.${[...cursors.values()].some(Boolean) ? ' Há registros anteriores: use Carregar mais.' : ''}`);
         } catch (error) { message(error.message, true); if (force) throw error; }
         finally { refreshing = false; }
@@ -84,6 +94,7 @@ window.BookStore = (() => {
     }
     async function init(profile) {
         user = profile;
+        if (profile.funcao === 'cliente') activeCollections = ['chamados', 'conversasSuporte'];
         toolbar = document.createElement('aside');
         toolbar.style.cssText = 'padding:12px;background:#eef5ff;border-bottom:1px solid #b8c9e3;font:14px system-ui;display:flex;gap:12px;align-items:center;flex-wrap:wrap';
         status = document.createElement('span'); status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
@@ -147,5 +158,5 @@ window.BookStore = (() => {
             };
         }
     }
-    return { init, getItem, setItem, refresh, validateFiles, protectActions, apartments, id: () => Date.now() * 1000 + crypto.getRandomValues(new Uint16Array(1))[0] % 1000 };
+    return { init, getItem, setItem, refresh, validateFiles, protectActions, apartments, activate, totals: () => totals, id: () => Date.now() * 1000 + crypto.getRandomValues(new Uint16Array(1))[0] % 1000 };
 })();

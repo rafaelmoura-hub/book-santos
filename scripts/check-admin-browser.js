@@ -22,6 +22,9 @@ async function main() {
     async login(email) { return { access_token:email===client.login?'client-token':'mock-token' }; },
     async profile(token) { return identity(token); },
     async access() { return [{hotel:'Be Urban'},{hotel:'Lume Alto da Boa Vista'}]; },
+    async backup(token,selected) {
+      return {exported_at:new Date().toISOString(),schema_version:9,records:[...records.entries()].filter(([key])=>selected.includes(key.split('/')[0])).map(([,row])=>row),profiles:selected.includes('cadastros')?users:[],access:[],apartments:[],audit:[],user_audit:[]};
+    },
     async logout() {},
     async users() { return users; },
     async managedUsers() { return users; },
@@ -63,6 +66,8 @@ async function main() {
     socket.addEventListener('message',event=>{const message=JSON.parse(event.data);if(message.id){const handler=pending.get(message.id);if(handler){pending.delete(message.id);message.error?handler.reject(new Error(message.error.message)):handler.resolve(message.result);}}if(message.method==='Runtime.exceptionThrown')errors.push(message.params.exceptionDetails.text);});
     const send=(method,params={})=>new Promise((resolve,reject)=>{const id=++sequence;const timer=setTimeout(()=>{pending.delete(id);reject(new Error(`Chrome excedeu o prazo: ${method}`));},10000);pending.set(id,{resolve:value=>{clearTimeout(timer);resolve(value);},reject:error=>{clearTimeout(timer);reject(error);}});socket.send(JSON.stringify({id,method,params}));});
     await send('Runtime.enable');
+    await send('Log.enable');
+    socket.addEventListener('message',event=>{const message=JSON.parse(event.data);if(message.method==='Runtime.consoleAPICalled'&&message.params.type==='error')errors.push(message.params.args.map(arg=>arg.description||arg.value).join(' '));if(message.method==='Log.entryAdded'&&message.params.entry.source==='security'&&message.params.entry.level==='error')errors.push(message.params.entry.text);});
     await send('Page.enable');
     const dialogs=[];
     socket.addEventListener('message',event=>{const message=JSON.parse(event.data);if(message.method==='Page.javascriptDialogOpening'){dialogs.push(message.params.message);send('Page.handleJavaScriptDialog',{accept:true}).catch(()=>{});}});
@@ -72,7 +77,7 @@ async function main() {
     await evaluate("fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({login:'master@example.com',senha:'senha'})}).then(r=>{if(!r.ok)throw Error('login');})");
     await send('Page.navigate',{url:base+'/adm/admin.html'});
     await wait("typeof mostrarAba === 'function' && !document.body.hidden");
-    const tabs=await evaluate(`(() => {const result=[];for(const tab of ['chamados','chat','os','vistorias','condominios','estoque','financeiro','dashboard','usuarios']){mostrarAba(tab);const id=tab==='os'?'OS':tab[0].toUpperCase()+tab.slice(1);if(document.getElementById('visao'+id).hidden)throw Error(tab);if(document.querySelector('nav').getBoundingClientRect().height===0)throw Error('nav');result.push(tab);}return result;})()`);
+    const tabs=await evaluate(`(() => {const result=[];for(const tab of ['chamados','chat','os','vistorias','condominios','estoque','financeiro','dashboard','usuarios','backup']){document.getElementById('aba'+(tab==='os'?'OS':tab[0].toUpperCase()+tab.slice(1))).click();const id=tab==='os'?'OS':tab[0].toUpperCase()+tab.slice(1);if(document.getElementById('visao'+id).hidden)throw Error(tab);if(document.querySelector('nav').getBoundingClientRect().height===0)throw Error('nav');result.push(tab);}return result;})()`);
     const catalogCheck=await evaluate(`(() => {
       mostrarAba('os');abrirFormularioOS();
       const hotel=document.getElementById('osHotel'),ap=document.getElementById('osApartamento');
@@ -132,6 +137,14 @@ async function main() {
     if(users.length!==2||writes!==1)throw new Error('Cadastro não confirmado pelo servidor.');
     await evaluate("BookUsers.open('55555555-5555-4555-8555-555555555555');document.getElementById('usuarioFuncao').value='adm';document.getElementById('usuarioUnlimited').checked=false;document.getElementById('usuarioUnique Residence').checked=true;BookUsers.save({preventDefault(){}})");
     if(writes!==2||users[1].funcao!=='adm'||users[1].book_hotel_access[0].hotel!=='Unique Residence')throw new Error('Edição de permissões falhou.');
+    await evaluate(`(() => {
+      function folder(name){const files=new Map(),folders=new Map();return {name,files,folders,async getDirectoryHandle(name,opts={}){if(!folders.has(name)){if(!opts.create)throw Error('Pasta ausente');folders.set(name,folder(name));}return folders.get(name);},async getFileHandle(name,opts={}){if(!opts.create&&!files.has(name))throw Error('Arquivo ausente');return {async createWritable(){return {async write(bytes){files.set(name,bytes);},async close(){},async abort(){}};},async getFile(){return new File([files.get(name)],name);}};}};}
+      window.testHD=folder('HD-EXTERNO');window.showDirectoryPicker=async()=>window.testHD;
+      document.getElementById('abaBackup').click();document.getElementById('backupIniciar').click();
+    })()`);
+    await wait("document.getElementById('backupStatus').textContent.startsWith('Backup concluído e conferido')");
+    await evaluate(`(() => {const saved=[...window.testHD.folders.values()][0];if(!saved.files.has('dados.json')||!saved.folders.has('anexos'))throw Error('Cópia incompleta');window.showDirectoryPicker=async()=>saved;document.getElementById('backupVerificar').click();})()`);
+    await wait("document.getElementById('backupStatus').textContent.startsWith('Backup íntegro')");
     await evaluate("BookAPI.request('/api/logout',{method:'POST',body:'{}'})");
     await send('Page.navigate',{url:base+'/login.html'});
     await wait("typeof entrar === 'function'");
@@ -152,6 +165,7 @@ async function main() {
       await enviarMensagemCliente({preventDefault(){}});
       if(!document.getElementById('mensagensCliente').textContent.includes('Mensagem do cliente'))throw Error('Enviar chat cliente');
       if((await fetch('/api/finance')).status!==403)throw Error('Financeiro acessível pelo cliente');
+      if((await fetch('/api/backup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({selected:['chamados']})})).status!==403)throw Error('Backup acessível pelo cliente');
       return ticket.id;
     })()`);
     await evaluate("BookAPI.request('/api/login',{method:'POST',body:JSON.stringify({login:'master@example.com',senha:'senha'})})");
@@ -166,7 +180,7 @@ async function main() {
     await wait("location.pathname === '/login.html'");
     if(errors.length)throw new Error(errors.join('; '));
     if(dialogs.length)throw new Error('Alertas inesperados: '+dialogs.join('; '));
-    console.log(JSON.stringify({browser:'Chrome headless',tabs,catalogCheck,created:1,permissionsUpdated:1,cardLifecycle:true,inspectionWithPhoto:true,inventorySaved:true,clientTicketWithPhoto:true,chatBothDirections:true,clientPermissions:true,logout:true,uncaughtErrors:0}));
+    console.log(JSON.stringify({browser:'Chrome headless',tabs,catalogCheck,created:1,permissionsUpdated:1,cardLifecycle:true,inspectionWithPhoto:true,inventorySaved:true,clientTicketWithPhoto:true,chatBothDirections:true,clientPermissions:true,backupAndVerification:true,externalDisk:'simulated',logout:true,uncaughtErrors:0}));
   } finally {
     socket?.close();child.kill();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));
     await delay(500);

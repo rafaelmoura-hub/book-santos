@@ -20,17 +20,17 @@ function formatarData(data) {
 let hotelSelecionado = "", apartamentoSelecionado = "", tipoSelecionado = "";
 function mostrarHistorico(hotel) {
   hotelSelecionado = hotel; apartamentoSelecionado = "";
-  document.getElementById("historico").innerHTML = `<h2>${esc(hotel)} - Apartamentos</h2><div class="apartamentos">${BookStore.apartments(hotel).map(ap => `<button class="apartamento-opcao" onclick="selecionarApartamento('${ap}')">Apartamento ${ap}</button>`).join("")}</div><div id="opcoesApartamento"><p>Selecione um apartamento para escolher o que deseja visualizar.</p></div>`;
+  document.getElementById("historico").innerHTML = `<h2>${esc(hotel)} - Apartamentos</h2><div class="apartamentos">${BookStore.apartments(hotel).map(ap => `<button class="apartamento-opcao" data-on-click="selecionarApartamento('${ap}')">Apartamento ${ap}</button>`).join("")}</div><div id="opcoesApartamento"><p>Selecione um apartamento para escolher o que deseja visualizar.</p></div>`;
 }
 function selecionarApartamento(ap) {
   tipoSelecionado = "";
   apartamentoSelecionado = ap;
-  document.getElementById("opcoesApartamento").innerHTML = `<h3>Apartamento ${ap}</h3><div class="opcoes-dados"><button onclick="mostrarDadosApartamento('chamados')">Chamados</button><button onclick="mostrarDadosApartamento('os')">Cards</button></div><div id="dadosApartamento"><p>Selecione chamados ou cards.</p></div>`;
+  document.getElementById("opcoesApartamento").innerHTML = `<h3>Apartamento ${ap}</h3><div class="opcoes-dados"><button data-on-click="mostrarDadosApartamento('chamados')">Chamados</button><button data-on-click="mostrarDadosApartamento('os')">Cards</button></div><div id="dadosApartamento"><p>Selecione chamados ou cards.</p></div>`;
 }
 function mostrarDadosApartamento(tipo) {
   tipoSelecionado = tipo;
   const area = document.getElementById("dadosApartamento");
-  area.innerHTML = `<h4>${tipo === "chamados" ? "Chamados" : "Cards"} do condomínio ${esc(hotelSelecionado)}</h4><label class="filtro-hotel" for="filtroApartamentoHotel">Pesquisar pelo título</label><input id="filtroApartamentoHotel" type="search" placeholder="Digite o assunto do chamado ou do card" oninput="filtrarRegistrosHotel('${tipo}')"><div id="listaRegistrosHotel"></div>`;
+  area.innerHTML = `<h4>${tipo === "chamados" ? "Chamados" : "Cards"} do condomínio ${esc(hotelSelecionado)}</h4><label class="filtro-hotel" for="filtroApartamentoHotel">Pesquisar pelo título</label><input id="filtroApartamentoHotel" type="search" placeholder="Digite o assunto do chamado ou do card" data-on-input="filtrarRegistrosHotel('${tipo}')"><div id="listaRegistrosHotel"></div>`;
   renderizarRegistrosHotel(tipo, "");
 }
 function filtrarRegistrosHotel(tipo) {

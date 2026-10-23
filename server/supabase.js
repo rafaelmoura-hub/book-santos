@@ -4,16 +4,21 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
   if (!url || !key?.startsWith('sb_publishable_')) throw new Error('Configure SUPABASE_URL e SUPABASE_PUBLISHABLE_KEY no arquivo .env.');
   const origin = new URL(url);
   if (origin.protocol !== 'https:' || origin.username || origin.password || origin.pathname !== '/') throw new Error('SUPABASE_URL deve ser a URL HTTPS do projeto.');
-  async function request(route, { token, method = 'GET', body } = {}) {
+  async function request(route, { token, method = 'GET', body, timeoutMs = 15000 } = {}) {
     let response;
     try {
       response = await fetchImpl(new URL(route, origin), {
-        method, signal: AbortSignal.timeout(15000),
+        method, signal: AbortSignal.timeout(timeoutMs),
         headers: { apikey: key, 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: body === undefined ? undefined : JSON.stringify(body)
       });
     } catch { throw failure(503, 'Não foi possível conectar ao Supabase. Verifique sua conexão.'); }
-    const data = await response.json().catch(() => null);
+    let data;
+    if (response.status === 204) data = null;
+    else {
+      try { data = await response.json(); }
+      catch { throw failure(503, 'Resposta incompleta do Supabase. Atualize os dados antes de tentar novamente.'); }
+    }
     if (!response.ok) {
       if (['PGRST205', 'PGRST202', '42P01', '42703'].includes(data?.code)) throw failure(503, 'Execute primeiro a migração SQL do Book Santos no Supabase.');
       if (response.status === 409 || data?.code === 'PT409') throw failure(409, data?.message || 'Registro alterado por outro usuário. Atualize e tente novamente.');
@@ -49,7 +54,13 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
     if (profile.funcao !== 'adm' || !profile.mestre) throw failure(403, 'Somente o administrador mestre pode gerenciar usuários.');
   }
   const provider = {
-    finance(token, payer, cursor, start, end) { return request('/rest/v1/rpc/book_finance_history', { token, method: 'POST', body: { payer: payer || null, cursor_id: cursor || null, page_size: 50, start_date: start || null, end_date: end || null } }); },
+    backup(token, selected) { return request('/rest/v1/rpc/book_backup', { token, method: 'POST', body: { selected }, timeoutMs: 120000 }); },
+    async finance(token, payer, cursor, start, end) {
+      const result = await request('/rest/v1/rpc/book_finance_history', { token, method: 'POST', body: { payer: payer || null, cursor_id: cursor || null, page_size: 50, start_date: start || null, end_date: end || null } });
+      result.records = result.records.map(row => ({ ...row, hotel: row.hotel === 'Unique' ? 'Unique Residence' : row.hotel }));
+      return result;
+    },
+    counts(token) { return request('/rest/v1/rpc/book_counts', { token, method: 'POST', body: {} }); },
     canCreateUsers: !!secretKey?.startsWith('sb_secret_'),
     async managedUsers(token) {
       await ensureMaster(token);
@@ -79,13 +90,13 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
       const query = new URLSearchParams({ select: 'id,data,owner_id,version,updated_at', collection: `eq.${collection}`, order: 'id.desc', limit: String(limit + 1) });
       if (cursor) query.set('id', `lt.${cursor}`);
       const rows = await request(`/rest/v1/book_records?${query}`, { token });
-      return { rows: rows.slice(0, limit), next: rows.length > limit ? rows[limit - 1].id : null };
+      return { rows: rows.slice(0, limit).map(row => row.data?.hotel === 'Unique' ? { ...row, hotel: row.hotel === 'Unique' ? 'Unique Residence' : row.hotel, data: { ...row.data, hotel: 'Unique Residence' } } : row), next: rows.length > limit ? rows[limit - 1].id : null };
     },
-    access(token) { return request('/rest/v1/book_hotel_access?select=hotel', { token }); },
+    async access(token) { return (await request('/rest/v1/book_hotel_access?select=hotel', { token })).map(row => ({ ...row, hotel: row.hotel === 'Unique' ? 'Unique Residence' : row.hotel })); },
     apartments(token) { return request('/rest/v1/book_apartments?select=hotel,apartment&order=apartment&limit=10000', { token }); },
     async ready() {
       await request('/auth/v1/settings');
-      if (await request('/rest/v1/rpc/book_schema_version', { method: 'POST', body: {} }) !== 3) throw failure(503, 'Atualize as migrações do banco antes do piloto.');
+      if (await request('/rest/v1/rpc/book_schema_version', { method: 'POST', body: {} }) !== 9) throw failure(503, 'Aplique as migrações até 202610230009_hardening.sql antes de publicar esta versão.');
       return { ok: true };
     },
     commit(token, changes) { return request('/rest/v1/rpc/book_commit', { token, method: 'POST', body: { changes } }); },

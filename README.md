@@ -1,5 +1,7 @@
 # Book Santos
 
+Backup no HD externo, proteção do catálogo e melhorias de segurança: aplique as migrações `202610230008_backup.sql` e `202610230009_hardening.sql`, nessa ordem, **antes de publicar esta versão**. Veja [como usar o backup](docs/BACKUP.md) e [configuração de segurança e sessões persistidas](docs/MELHORIAS-SEGURANCA.md).
+
 Histórico financeiro por dia, semana, mês ou ano: aplique `202610220006_finance_history.sql` após a migração financeira anterior. Os filtros usam horário de São Paulo e abrangem tanto os cards quanto os totais por responsável.
 
 Financeiro: resumo por responsável pelo pagamento, com valores monetários de duas casas decimais. Ative a migração `202610220005_finance.sql` e consulte [docs/FINANCEIRO.md](docs/FINANCEIRO.md).
