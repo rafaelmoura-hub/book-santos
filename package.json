@@ -9,6 +9,7 @@
   "scripts": {
     "start": "node server/start.js",
     "test": "node --test test/*.test.js",
+    "test:browser": "node scripts/check-admin-browser.js",
     "check:supabase": "node server/check-supabase.js"
   },
   "devDependencies": {

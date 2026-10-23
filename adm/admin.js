@@ -100,8 +100,13 @@ function abrirChamado(id) {
 }
 function fecharModal() { document.getElementById("modal").style.display = "none"; }
 function preencherApartamentos() {
-  document.getElementById("osApartamento").innerHTML = '<option value="">Selecione</option>' + apartamentos(document.getElementById("osHotel").value).map(a => `<option value="${a}">${a}</option>`).join("");
+  const hotel = document.getElementById("osHotel").value;
+  const unidades = apartamentos(hotel);
+  const campo = document.getElementById("osApartamento");
+  campo.disabled = !hotel || !unidades.length;
+  campo.innerHTML = `<option value="">${!hotel ? "Selecione primeiro o condomínio" : unidades.length ? "Selecione o apartamento" : "Nenhum apartamento cadastrado"}</option>` + unidades.map(a => `<option value="${escapar(a)}">${escapar(a)}</option>`).join("");
 }
+document.getElementById("osHotel").addEventListener("change", preencherApartamentos);
 function abrirFormularioOS(chamadoId = "", hotelPreselecionado = "", apartamentoPreselecionado = "") {
   fecharModal(); document.getElementById("formOS").reset();
   const c = chamadoId ? chamados().find(item => item.id == chamadoId) : null;

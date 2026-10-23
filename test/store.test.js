@@ -40,6 +40,12 @@ test('tela aguarda confirmação e preserva versão lida para impedir sobrescrit
   const store=context.BookStore;
   await store.init({id:'owner',funcao:'cliente'});
   assert.deepEqual(Array.from(store.apartments('Unlimited')), ['618','901','1111']);
+  const photo={type:'image/jpeg',size:512*1024};
+  store.validateFiles(Array(20).fill(photo));
+  assert.throws(()=>store.validateFiles(Array(21).fill(photo)),/20 anexos/);
+  assert.throws(()=>store.validateFiles([{...photo,size:5*1024*1024+1}]),/5 MB/);
+  assert.throws(()=>store.validateFiles(Array(3).fill({...photo,size:4*1024*1024})),/10 MB/);
+  assert.throws(()=>store.validateFiles([{...photo,type:'image/svg+xml'}]),/Use JPG/);
   const initial=JSON.parse(store.getItem('chamados'));
   assert.equal(initial[0].__bookVersion,1);
   initial[0].assunto='Editado';

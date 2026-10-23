@@ -5,20 +5,28 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { createSupabaseApp } = require('../server/supabase-app');
+const Catalog = require('../assets/catalog');
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 const chrome = process.env.CHROME_BIN || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 async function main() {
   if (!fs.existsSync(chrome)) throw new Error('Defina CHROME_BIN com o caminho do Chrome instalado.');
   const master = { id:'11111111-1111-4111-8111-111111111111',nome:'Mestre',login:'master@example.com',funcao:'adm',mestre:true,version:1,book_hotel_access:[] };
   const users = [master]; let writes = 0;
+  const client = { id:'22222222-2222-4222-8222-222222222222',nome:'Cliente teste',login:'cliente@example.com',funcao:'cliente',mestre:false };
+  const records = new Map();
+  const uploaded = new Map();
+  const identity = token => token === 'client-token' ? client : master;
+  records.set('chamados/101', { id:'101',version:1,owner_id:client.id,data:{id:101,hotel:'Be Urban',apartamento:'214',assunto:'Torneira',descricao:'Vazamento',categoria:'Hidráulica',status:'Aberto',criadaPor:client.nome,criadaPorLogin:client.login,data:'23/10/2026'} });
   const provider = {
     canCreateUsers: true,
-    async login() { return { access_token:'mock-token' }; },
-    async profile() { return master; },
+    async login(email) { return { access_token:email===client.login?'client-token':'mock-token' }; },
+    async profile(token) { return identity(token); },
+    async access() { return [{hotel:'Be Urban'},{hotel:'Lume Alto da Boa Vista'}]; },
+    async logout() {},
     async users() { return users; },
     async managedUsers() { return users; },
     async finance(token,payer,cursor,start,end) {
-      const records=[{id:'1',date:'2026-10-22',hotel:'Unlimited',apartment:'1111',title:'Conserto',description:'Troca de torneira',status:'Finalizada',payer:'Book Santos',service:'0.10',material:'0.20',total:'0.30'},{id:'2',date:'2026-09-14',hotel:'Unique',apartment:'1111',title:'Limpeza',description:'Limpeza geral',status:'Em andamento',payer:'Airbnb',service:'2.50',material:'0.00',total:'2.50'}].filter(row=>!start || row.date>=start&&row.date<end);
+      const records=[{id:'1',date:'2026-10-22',hotel:'Unlimited',apartment:'1111',title:'Conserto',description:'Troca de torneira',status:'Finalizada',payer:'Book Santos',service:'0.10',material:'0.20',total:'0.30'},{id:'2',date:'2026-09-14',hotel:'Unique Residence',apartment:'1111',title:'Limpeza',description:'Limpeza geral',status:'Em andamento',payer:'Airbnb',service:'2.50',material:'0.00',total:'2.50'}].filter(row=>!start || row.date>=start&&row.date<end);
       const groups=[{payer:'Book Santos',count:1,total:'0.30',finalized:'0.30',pending:'0.00'},{payer:'Airbnb',count:1,total:'2.50',finalized:'0.00',pending:'2.50'}].filter(group=>records.some(row=>row.payer===group.payer));
       return {groups,records:payer?records.filter(row=>row.payer===payer):records,next:null};
     },
@@ -27,17 +35,27 @@ async function main() {
       if(input.id) Object.assign(users.find(user=>user.id===input.id),{nome:input.nome,funcao:input.funcao,version:2,book_hotel_access:input.hotels.map(hotel=>({hotel}))});
       else users.push({id:'55555555-5555-4555-8555-555555555555',nome:input.nome,login:input.login,funcao:input.funcao,version:1,mestre:false,book_hotel_access:input.hotels.map(hotel=>({hotel}))});
     },
-    async apartments() { return ['Unlimited','Unique'].map(hotel=>({hotel,apartment:'1111'})); },
-    async records() { return {rows:[],next:null}; }
+    async apartments(token) { return Catalog.hotels.filter(h=>identity(token).mestre || ['Be Urban','Lume Alto da Boa Vista'].includes(h)).flatMap(hotel=>Catalog.apartments[hotel].map(apartment=>({hotel,apartment}))); },
+    async records(token,collection) { return {rows:[...records.entries()].filter(([key,row])=>key.startsWith(collection+'/') && (identity(token).mestre || row.owner_id===client.id)).map(([,row])=>row),next:null}; },
+    async commit(token,changes) {
+      for(const change of changes) {
+        const key=change.collection+'/'+change.id, old=records.get(key);
+        if((old?.version||0)!==change.version) throw Object.assign(new Error('Conflito de versão'),{status:409});
+        records.set(key,{id:change.id,owner_id:old?.owner_id||identity(token).id,version:change.version+1,data:change.data});
+      }
+    },
+    async upload(token,name,bytes,type) { uploaded.set(name,{bytes,type}); },
+    async removeFiles(token,names) { names.forEach(name=>uploaded.delete(name)); },
+    async file(token,name) { const file=uploaded.get(name); if(!file)throw Error('Arquivo inexistente');return new Response(file.bytes,{headers:{'Content-Type':file.type}}); }
   };
   const server=createSupabaseApp(provider); server.listen(0,'127.0.0.1'); await once(server,'listening');
   const base=`http://127.0.0.1:${server.address().port}`;
   const profile=fs.mkdtempSync(path.join(os.tmpdir(),'book-browser-'));
-  const child=spawn(chrome,['--headless=new','--disable-gpu','--no-first-run','--no-default-browser-check','--remote-debugging-port=0',`--user-data-dir=${profile}`,'about:blank'],{windowsHide:true,stdio:'ignore'});
+  const child=spawn(chrome,['--headless=new','--disable-gpu','--no-sandbox','--no-first-run','--no-default-browser-check','--remote-debugging-port=0',`--user-data-dir=${profile}`,'about:blank'],{windowsHide:true,stdio:'ignore'});
   let socket;
   try {
     let port;
-    for(let i=0;i<100;i++){try{port=fs.readFileSync(path.join(profile,'DevToolsActivePort'),'utf8').split('\n')[0];break;}catch{await delay(100);}}
+    for(let i=0;i<100;i++){try{port=fs.readFileSync(path.join(profile,'DevToolsActivePort'),'utf8').split(/\r?\n/)[0];break;}catch{await delay(100);}}
     if(!port)throw new Error('Chrome não iniciou a depuração.');
     const target=await (await fetch(`http://127.0.0.1:${port}/json/new?${encodeURIComponent(base)}`,{method:'PUT',signal:AbortSignal.timeout(10000)})).json();
     socket=new WebSocket(target.webSocketDebuggerUrl); await Promise.race([once(socket,'open'),delay(10000).then(()=>{throw new Error('Chrome não abriu a sessão de teste.');})]);
@@ -45,6 +63,9 @@ async function main() {
     socket.addEventListener('message',event=>{const message=JSON.parse(event.data);if(message.id){const handler=pending.get(message.id);if(handler){pending.delete(message.id);message.error?handler.reject(new Error(message.error.message)):handler.resolve(message.result);}}if(message.method==='Runtime.exceptionThrown')errors.push(message.params.exceptionDetails.text);});
     const send=(method,params={})=>new Promise((resolve,reject)=>{const id=++sequence;const timer=setTimeout(()=>{pending.delete(id);reject(new Error(`Chrome excedeu o prazo: ${method}`));},10000);pending.set(id,{resolve:value=>{clearTimeout(timer);resolve(value);},reject:error=>{clearTimeout(timer);reject(error);}});socket.send(JSON.stringify({id,method,params}));});
     await send('Runtime.enable');
+    await send('Page.enable');
+    const dialogs=[];
+    socket.addEventListener('message',event=>{const message=JSON.parse(event.data);if(message.method==='Page.javascriptDialogOpening'){dialogs.push(message.params.message);send('Page.handleJavaScriptDialog',{accept:true}).catch(()=>{});}});
     const evaluate=async expression=>{const result=await send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(result.exceptionDetails)throw new Error(JSON.stringify(result.exceptionDetails));return result.result.value;};
     const wait=async expression=>{for(let i=0;i<100;i++){if(await evaluate(expression))return;await delay(100);}throw new Error(`Tempo excedido: ${expression}`);};
     await wait("location.origin === '"+base+"' && document.readyState === 'complete'");
@@ -52,6 +73,48 @@ async function main() {
     await send('Page.navigate',{url:base+'/adm/admin.html'});
     await wait("typeof mostrarAba === 'function' && !document.body.hidden");
     const tabs=await evaluate(`(() => {const result=[];for(const tab of ['chamados','chat','os','vistorias','condominios','estoque','financeiro','dashboard','usuarios']){mostrarAba(tab);const id=tab==='os'?'OS':tab[0].toUpperCase()+tab.slice(1);if(document.getElementById('visao'+id).hidden)throw Error(tab);if(document.querySelector('nav').getBoundingClientRect().height===0)throw Error('nav');result.push(tab);}return result;})()`);
+    const catalogCheck=await evaluate(`(() => {
+      mostrarAba('os');abrirFormularioOS();
+      const hotel=document.getElementById('osHotel'),ap=document.getElementById('osApartamento');
+      if(!ap.disabled)throw Error('Apartamento deve aguardar condomínio');
+      for(const name of BookCatalog.hotels){
+        hotel.value=name;hotel.dispatchEvent(new Event('change'));
+        const actual=[...ap.options].filter(o=>o.value).map(o=>o.value);
+        if(JSON.stringify(actual)!==JSON.stringify(BookCatalog.apartments[name]))throw Error('Apartamentos: '+name);
+        ap.value=actual[0];
+      }
+      hotel.value='';hotel.dispatchEvent(new Event('change'));if(ap.value||!ap.disabled)throw Error('Seleção antiga mantida');
+      abrirFormularioOS(101);if(hotel.value!=='Be Urban'||ap.value!=='214')throw Error('Card pelo chamado');
+      abrirFormularioOS('','Lume Alto da Boa Vista','194A');if(ap.value!=='194A')throw Error('Card pela vistoria');
+      document.getElementById('osModal').style.display='none';
+      mostrarAba('condominios');
+      for(const name of BookCatalog.hotels){BookCondominios.mostrarHistorico(name);if(document.querySelectorAll('#historico .apartamento-opcao').length!==BookCatalog.apartments[name].length)throw Error('Histórico: '+name);}
+      return {condominiums:BookCatalog.hotels.length,apartments:Object.values(BookCatalog.apartments).flat().length};
+    })()`);
+    await evaluate(`(async()=>{
+      mostrarAba('os');abrirFormularioOS('','Be Urban','214');
+      document.getElementById('osTitulo').value='Card de teste';document.getElementById('osDescricao').value='Teste de fluxo';
+      document.getElementById('osResponsavel').value='master@example.com';
+      await salvarOS({preventDefault(){}});
+      const order=JSON.parse(BookStore.getItem('ordensServico'))[0];if(!order||order.apartamento!=='214')throw Error('Salvar card');
+      window.testOrderId=order.id;
+      await alterarStatusOS(order.id,'Em andamento');abrirOS(order.id);abrirFechamentoOS(order.id);
+      document.getElementById('fechamentoTerceiro').value='Não';document.getElementById('fechamentoTipoMaterial').value='Nenhum';atualizarCamposMaterial();
+      document.getElementById('fechamentoValorServico').value='12.34';document.getElementById('fechamentoResponsavelPagamento').value='Book Santos';
+      document.getElementById('fechamentoExecutadoPor').value='master@example.com';atualizarCustoTotal();
+      await salvarRascunhoFechamentoOS();abrirFechamentoOS(order.id);await salvarFechamentoOS({preventDefault(){}});
+      const saved=JSON.parse(BookStore.getItem('ordensServico'))[0];if(saved.status!=='Finalizada'||saved.fechamento.custoTotal!==12.34)throw Error('Finalizar card');
+      document.getElementById('osDetalhesModal').style.display='none';
+      mostrarAba('vistorias');selecionarHotelVistoria('Lume Alto da Boa Vista');selecionarApartamentoVistoria('194A');abrirFormularioVistoria();
+      document.getElementById('vistoriaResponsavel').value='Gestor teste';document.getElementById('vistoriaTipo').value='Simplificada';renderizarChecklistVistoria();
+      const canvas=document.createElement('canvas');canvas.width=2;canvas.height=2;const photo=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
+      const selection=new DataTransfer();selection.items.add(new File([photo],'vistoria.png',{type:'image/png'}));document.getElementById('vistoriaFotos').files=selection.files;
+      document.getElementById('vistoriaFotos').dispatchEvent(new Event('change'));
+      document.querySelectorAll('#gruposVistoria select').forEach(s=>s.value='Em ordem');await salvarVistoria({preventDefault(){}});
+      const inspection=JSON.parse(BookStore.getItem('vistorias'))[0];if(inspection.apartamento!=='194A'||!Object.keys(inspection.checklist).length||!inspection.fotos[0].dados.startsWith('/api/files/'))throw Error('Salvar vistoria com foto');
+      mostrarAba('estoque');await adicionarLinhaEstoque();if(JSON.parse(BookStore.getItem('estoqueBookSantos')).itens.length!==1)throw Error('Adicionar estoque');
+      mostrarAba('dashboard');atualizarDashboard();
+    })()`);
     await evaluate("BookFinance.load()");
     await evaluate("if(document.querySelectorAll('.financeiro-card').length!==2)throw Error('finance records');if(!document.getElementById('financeiroLista').textContent.includes('0,30'))throw Error('money display');document.getElementById('fechamentoValorServico').value='0.10';document.getElementById('fechamentoValorMaterial').value='0.20';atualizarCustoTotal();if(document.getElementById('fechamentoCustoTotal').value!=='0.30')throw Error('money sum');");
     await evaluate("[...document.querySelectorAll('#financeiroAbas button')].find(button=>button.textContent.startsWith('Book Santos')).click()");
@@ -67,10 +130,43 @@ async function main() {
     await evaluate("BookUsers.load()");
     await evaluate("BookUsers.open();document.getElementById('usuarioNome').value='Pessoa teste';document.getElementById('usuarioEmail').value='pessoa@example.com';document.getElementById('usuarioSenha').value='senha-inicial-longa';document.getElementById('usuarioUnlimited').checked=true;BookUsers.save({preventDefault(){}})");
     if(users.length!==2||writes!==1)throw new Error('Cadastro não confirmado pelo servidor.');
-    await evaluate("BookUsers.open('55555555-5555-4555-8555-555555555555');document.getElementById('usuarioFuncao').value='adm';document.getElementById('usuarioUnlimited').checked=false;document.getElementById('usuarioUnique').checked=true;BookUsers.save({preventDefault(){}})");
-    if(writes!==2||users[1].funcao!=='adm'||users[1].book_hotel_access[0].hotel!=='Unique')throw new Error('Edição de permissões falhou.');
+    await evaluate("BookUsers.open('55555555-5555-4555-8555-555555555555');document.getElementById('usuarioFuncao').value='adm';document.getElementById('usuarioUnlimited').checked=false;document.getElementById('usuarioUnique Residence').checked=true;BookUsers.save({preventDefault(){}})");
+    if(writes!==2||users[1].funcao!=='adm'||users[1].book_hotel_access[0].hotel!=='Unique Residence')throw new Error('Edição de permissões falhou.');
+    await evaluate("BookAPI.request('/api/logout',{method:'POST',body:'{}'})");
+    await send('Page.navigate',{url:base+'/login.html'});
+    await wait("typeof entrar === 'function'");
+    await evaluate("document.getElementById('login').value='cliente@example.com';document.getElementById('senha').value='senha';document.querySelector('form').requestSubmit()");
+    await wait("location.pathname === '/cliente/cliente.html' && typeof abrirChamado === 'function'");
+    const ticketId=await evaluate(`(async()=>{
+      const hotels=[...document.getElementById('hotel').options].filter(o=>o.value).map(o=>o.value);
+      if(hotels.join('|')!=='Be Urban|Lume Alto da Boa Vista')throw Error('Permissões do cliente');
+      const hotel=document.getElementById('hotel');hotel.value='Be Urban';hotel.dispatchEvent(new Event('change'));
+      if(document.getElementById('apartamento').options.length!==7)throw Error('Apartamentos do cliente');
+      document.getElementById('apartamento').value='214';document.getElementById('assunto').value='Chamado pelo cliente';document.getElementById('descricao').value='Teste completo de chamado com foto';
+      document.getElementById('categoria').selectedIndex=1;
+      const canvas=document.createElement('canvas');canvas.width=2;canvas.height=2;const photo=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
+      const selection=new DataTransfer();selection.items.add(new File([photo],'chamado.png',{type:'image/png'}));document.getElementById('arquivo').files=selection.files;mostrarArquivo();
+      await abrirChamado({preventDefault(){}});
+      const ticket=JSON.parse(BookStore.getItem('chamados')).find(c=>c.assunto==='Chamado pelo cliente');if(!ticket||!ticket.anexoData.startsWith('/api/files/'))throw Error('Chamado do cliente não salvo');
+      alternarChatCliente();document.getElementById('chamadoChat').value=String(ticket.id);selecionarConversaCliente();document.getElementById('textoCliente').value='Mensagem do cliente';
+      await enviarMensagemCliente({preventDefault(){}});
+      if(!document.getElementById('mensagensCliente').textContent.includes('Mensagem do cliente'))throw Error('Enviar chat cliente');
+      if((await fetch('/api/finance')).status!==403)throw Error('Financeiro acessível pelo cliente');
+      return ticket.id;
+    })()`);
+    await evaluate("BookAPI.request('/api/login',{method:'POST',body:JSON.stringify({login:'master@example.com',senha:'senha'})})");
+    await send('Page.navigate',{url:base+'/adm/admin.html'});
+    await wait("typeof mostrarAba === 'function' && !document.body.hidden");
+    await evaluate(`(async()=>{mostrarAba('chat');await abrirConversaChat('cliente@example.com',${JSON.stringify(String(ticketId))});document.getElementById('textoAdmin').value='Resposta do administrador';await enviarMensagemAdmin({preventDefault(){}});if(!document.getElementById('mensagensAdmin').textContent.includes('Resposta do administrador'))throw Error('Resposta do chat');abrirChamado(${ticketId});document.getElementById('modal').style.display='none';})()`);
+    await evaluate("BookAPI.request('/api/login',{method:'POST',body:JSON.stringify({login:'cliente@example.com',senha:'senha'})})");
+    await send('Page.navigate',{url:base+'/cliente/cliente.html'});
+    await wait("typeof abrirChamado === 'function' && location.pathname === '/cliente/cliente.html'");
+    await evaluate(`(async()=>{alternarChatCliente();document.getElementById('chamadoChat').value=${JSON.stringify(String(ticketId))};await renderizarConversaCliente();if(!document.getElementById('mensagensCliente').textContent.includes('Resposta do administrador'))throw Error('Cliente não recebeu resposta');})()`);
+    await evaluate("sair()");
+    await wait("location.pathname === '/login.html'");
     if(errors.length)throw new Error(errors.join('; '));
-    console.log(JSON.stringify({browser:'Chrome headless',tabs,created:1,permissionsUpdated:1,uncaughtErrors:0}));
+    if(dialogs.length)throw new Error('Alertas inesperados: '+dialogs.join('; '));
+    console.log(JSON.stringify({browser:'Chrome headless',tabs,catalogCheck,created:1,permissionsUpdated:1,cardLifecycle:true,inspectionWithPhoto:true,inventorySaved:true,clientTicketWithPhoto:true,chatBothDirections:true,clientPermissions:true,logout:true,uncaughtErrors:0}));
   } finally {
     socket?.close();child.kill();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));
     await delay(500);

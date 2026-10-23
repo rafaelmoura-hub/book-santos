@@ -96,7 +96,11 @@ function alternarChatCliente() {
  const painel=document.getElementById("chatCliente"); painel.hidden=!painel.hidden;
  if(!painel.hidden){atualizarListaChamadosChat(); if(!intervaloChatCliente)intervaloChatCliente=setInterval(renderizarConversaCliente,1200); renderizarConversaCliente();}
 }
-async function selecionarConversaCliente() { const id=document.getElementById("chamadoChat").value; if(id){const items=conversasSuporte();let c=items.find(x=>String(x.chamadoId)===id&&x.clienteLogin===sessaoCliente.login);if(!c){const chamado=chamadosDoCliente().find(x=>String(x.id)===id);c={chamadoId:id,clienteLogin:sessaoCliente.login,clienteNome:sessaoCliente.nome,mensagens:[]};items.push(c);await salvarConversasSuporte(items);}} renderizarConversaCliente(); }
+async function selecionarConversaCliente() {
+ // A conversa é criada no envio da primeira mensagem, sem gravar uma conversa
+ // vazia que poderia bloquear o envio enquanto o servidor sincroniza.
+ await renderizarConversaCliente();
+}
 async function renderizarConversaCliente() {
  if(document.getElementById('chatCliente').hidden) return;
  const id=document.getElementById("chamadoChat").value, area=document.getElementById("mensagensCliente");
