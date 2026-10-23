@@ -1,3 +1,4 @@
+const { hotels, filePath } = require('../assets/catalog');
 const { randomUUID } = require('node:crypto');
 const Money = require('../assets/money');
 const COLLECTIONS = ['chamados', 'ordensServico', 'vistorias', 'estoqueBookSantos', 'conversasSuporte'];
@@ -13,7 +14,7 @@ function validateChanges(input, user) {
     if (seen.has(key)) throw fail(400, 'Registro duplicado no lote.');
     seen.add(key);
     if (user.funcao !== 'adm' && !['chamados', 'conversasSuporte'].includes(change.collection)) throw fail(403, 'Acesso negado.');
-    if (change.collection !== 'estoqueBookSantos' && !['Unlimited', 'Unique'].includes(change.data.hotel)) throw fail(400, 'Hotel inválido.');
+    if (change.collection !== 'estoqueBookSantos' && !hotels.includes(change.data.hotel)) throw fail(400, 'Hotel inválido.');
     if (change.collection === 'estoqueBookSantos' && change.id !== 'singleton') throw fail(400, 'Estoque inválido.');
     try {
       // Numeric JSON also works before the finance migration. This conversion
@@ -63,7 +64,7 @@ async function storeAttachments(changes, user, upload, uploadedPaths = []) {
         return `/api/files/${entry.path}`;
       }
       if (/^(?:https?:|javascript:|blob:|\/\/)/i.test(value)) throw fail(400, 'Links externos não são permitidos nos registros.');
-      if (['dados', 'anexoData'].includes(field) && !/^\/api\/files\/[a-f0-9-]{36}\/(Unlimited|Unique)\/[a-f0-9-]{36}$/.test(value)) throw fail(400, 'Referência de anexo inválida.');
+      if (['dados', 'anexoData'].includes(field) && (!value.startsWith('/api/files/') || !filePath(value.slice('/api/files/'.length)))) throw fail(400, 'Referência de anexo inválida.');
       return value;
     }
     if (Array.isArray(value)) return value.map(item => walk(item, hotel, depth + 1));

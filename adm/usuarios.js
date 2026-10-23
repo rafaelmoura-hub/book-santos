@@ -66,7 +66,7 @@ window.BookUsers = (() => {
     el('usuarioSenha').disabled = !!editing;
     el('usuarioSenha').required = !editing;
     el('usuarioFuncao').value = editing?.funcao || 'cliente';
-    for (const hotel of ['Unlimited','Unique']) el(`usuario${hotel}`).checked = !!editing?.book_hotel_access?.some(row => row.hotel === hotel);
+    for (const hotel of BookCatalog.hotels) el(`usuario${hotel}`).checked = !!editing?.book_hotel_access?.some(row => row.hotel === hotel);
     el('usuarioModal').style.display = 'block';
     el('usuarioNome').focus();
   }
@@ -79,7 +79,7 @@ window.BookUsers = (() => {
   async function save(event) {
     event.preventDefault();
     if (saving || !el('formUsuario').reportValidity()) return;
-    const input = { nome: el('usuarioNome').value.trim(), funcao: el('usuarioFuncao').value, hotels: ['Unlimited','Unique'].filter(hotel => el(`usuario${hotel}`).checked) };
+    const input = { nome: el('usuarioNome').value.trim(), funcao: el('usuarioFuncao').value, hotels: BookCatalog.hotels.filter(hotel => el(`usuario${hotel}`).checked) };
     if (editing) { input.id = editing.id; input.version = editing.version; }
     else { input.login = el('usuarioEmail').value.trim(); input.senha = el('usuarioSenha').value; }
     saving = true;

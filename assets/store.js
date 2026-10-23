@@ -6,7 +6,7 @@ window.BookStore = (() => {
     const cursors = new Map();
     let user, busy = false, refreshing = false, status, toolbar;
     let apartmentCatalog = [];
-    const apartments = hotel => apartmentCatalog.filter(row => row.hotel === hotel).map(row => row.apartment);
+    const apartments = hotel => apartmentCatalog.filter(row => row.hotel === hotel).map(row => row.apartment).sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
     const clone = value => JSON.parse(JSON.stringify(value));
     const notify = () => window.dispatchEvent(new Event('book:data'));
     function message(text, error = false) {
@@ -113,7 +113,15 @@ window.BookStore = (() => {
         await refresh(true);
         const hotels = await BookAPI.request('/api/access');
         apartmentCatalog = await BookAPI.request('/api/apartments');
+        document.querySelectorAll('[data-hotel]').forEach(card => { card.hidden = !hotels.includes(card.dataset.hotel); });
         document.querySelectorAll('#hotel option, #osHotel option').forEach(option => { if (option.value && !hotels.includes(option.value)) option.remove(); });
+        const compare = (a, b) => a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' });
+        document.querySelectorAll('.hoteis, .hoteis-vistoria').forEach(list => {
+            [...list.querySelectorAll('[data-hotel]')].sort((a, b) => compare(a.dataset.hotel, b.dataset.hotel)).forEach(card => list.appendChild(card));
+        });
+        document.querySelectorAll('#hotel, #osHotel').forEach(select => {
+            [...select.options].filter(option => option.value).sort((a, b) => compare(a.textContent, b.textContent)).forEach(option => select.appendChild(option));
+        });
         setInterval(() => refresh(), 15000);
         window.addEventListener('unhandledrejection', event => { event.preventDefault(); message(event.reason?.message || 'Falha na operação.', true); });
     }

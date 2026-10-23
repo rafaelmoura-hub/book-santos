@@ -10,7 +10,7 @@ const esc = value => String(value || "").replace(/[&<>"']/g, c => ({"&":"&amp;",
 
 function atualizarTotais() {
   const items = ler("chamados");
-  ["Unlimited", "Unique"].forEach(h => document.getElementById("total" + h).textContent = items.filter(c => c.hotel === h).length + " chamados");
+  BookCatalog.hotels.forEach(h => document.getElementById("total" + h).textContent = items.filter(c => c.hotel === h).length + " chamados");
 }
 function formatarData(data) {
   if (!data) return "Sem data";

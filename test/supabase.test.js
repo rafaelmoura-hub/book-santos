@@ -72,6 +72,12 @@ test('servidor Supabase protege sessão, perfis, arquivos e saída', async t => 
   const cookie = response.headers.get('set-cookie').split(';')[0];
   assert.match(response.headers.get('set-cookie'), /HttpOnly/);
   assert.equal((await req('/api/session', 'GET', undefined, cookie)).status, 200);
+  const catalogScript = await req('/assets/catalog.js', 'GET', undefined, cookie);
+  assert.equal(catalogScript.status, 200);
+  assert.match(await catalogScript.text(), /Lume Alto da Boa Vista/);
+  const adminPage = await req('/adm/admin.html', 'GET', undefined, cookie);
+  assert.equal(adminPage.headers.get('cache-control'), 'no-store');
+  assert.equal((await adminPage.text()).match(/class="hotel" data-hotel=/g).length, 17);
   assert.equal((await req('/api/users', 'GET', undefined, cookie)).status, 200);
   assert.equal((await req('/api/finance?payer=Airbnb','GET',undefined,cookie)).status,200);
   const period = await (await req('/api/finance?period=semana&date=2026-01-01','GET',undefined,cookie)).json();

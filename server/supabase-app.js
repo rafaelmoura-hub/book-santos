@@ -1,3 +1,4 @@
+const { hotels, filePath } = require('../assets/catalog');
 const http = require('node:http');
 const path = require('node:path');
 const { readFile } = require('node:fs/promises');
@@ -136,7 +137,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         return json(200, { ok: true });
       }
       if (route === '/api/apartments' && req.method === 'GET') return json(200, await provider.apartments(session.accessToken));
-      if (route === '/api/access' && req.method === 'GET') return json(200, user.mestre ? ['Unlimited', 'Unique'] : (await provider.access(session.accessToken)).map(row => row.hotel));
+      if (route === '/api/access' && req.method === 'GET') return json(200, user.mestre ? hotels : (await provider.access(session.accessToken)).map(row => row.hotel));
       if (route === '/api/snapshot' && req.method === 'GET') {
         let pages;
         try { pages = JSON.parse(url.searchParams.get('pages') || '{}'); }
@@ -178,8 +179,8 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         return json(200, { ok: true });
       }
       if (route.startsWith('/api/files/') && req.method === 'GET') {
-        const filename = route.slice('/api/files/'.length);
-        if (!/^[a-f0-9-]{36}\/(Unlimited|Unique)\/[a-f0-9-]{36}$/.test(filename)) throw fail(400, 'Caminho de anexo inválido.');
+        const filename = decodeURIComponent(route.slice('/api/files/'.length));
+        if (!filePath(filename)) throw fail(400, 'Caminho de anexo inválido.');
         const file = await provider.file(session.accessToken, filename);
         const bytes = Buffer.from(await file.arrayBuffer());
         res.writeHead(200, { 'Content-Type': file.headers.get('content-type') || 'application/octet-stream', 'Content-Length': bytes.length, 'Content-Security-Policy': "default-src 'none'; sandbox" });
@@ -194,12 +195,12 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
       if (!['GET', 'HEAD'].includes(req.method)) throw fail(405, 'Método não permitido.');
       if (/^\/hotel\/(hotel\.html)?$/.test(route)) { res.writeHead(302, { Location: '/adm/admin.html#condominios' }); return res.end(); }
       const file = route === '/' ? '/login.html' : route;
-      if (!/^\/(login\.(html|css|js)|assets\/(api|session|store|money|periods)\.js|(adm|cliente|hotel)\/[a-z]+\.(html|css|js))$/.test(file)) throw fail(404, 'Arquivo não encontrado.');
+      if (!/^\/(login\.(html|css|js)|assets\/(api|session|store|money|periods|catalog)\.js|(adm|cliente|hotel)\/[a-z]+\.(html|css|js))$/.test(file)) throw fail(404, 'Arquivo não encontrado.');
       if (/^\/(adm|hotel)\//.test(file) && user?.funcao !== 'adm' || /^\/cliente\//.test(file) && user?.funcao !== 'cliente') {
         res.writeHead(302, { Location: '/login.html' }); return res.end();
       }
       const content = await readFile(path.join(ROOT, file));
-      res.writeHead(200, { 'Content-Type': `${{ '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript' }[path.extname(file)]}; charset=utf-8` });
+      res.writeHead(200, { 'Content-Type': `${{ '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript' }[path.extname(file)]}; charset=utf-8`, 'Cache-Control': 'no-store' });
       res.end(req.method === 'HEAD' ? undefined : content);
     } catch (error) {
       json(error.status || (error.code === 'ENOENT' ? 404 : 500), { message: error.status ? error.message : 'Não foi possível concluir a operação.' });

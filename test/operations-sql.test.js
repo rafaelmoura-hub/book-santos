@@ -175,4 +175,21 @@ test('PostgreSQL: RLS, concorrência, auditoria e consumo atômico', async t => 
   await db.exec('reset role; set role anon');
   await assert.rejects(manage(managed,'Anônimo','adm',['Unlimited'],2),error=>error.code==='42501');
   await assert.rejects(commit([]),error=>error.code==='42501');
+  await db.exec('reset role');
+  await db.exec(migration('202610230007_catalog.sql'));
+  await db.exec(migration('202610230007_catalog.sql'));
+  const catalog = require('../assets/catalog');
+  const apartments = (await db.query('select hotel,apartment from public.book_apartments')).rows;
+  assert.equal(apartments.length,126);
+  assert.equal(new Set(apartments.map(row=>row.hotel)).size,17);
+  for (const hotel of catalog.hotels) {
+    assert.deepEqual(apartments.filter(row=>row.hotel===hotel).map(row=>row.apartment).sort(), [...catalog.apartments[hotel]].sort());
+  }
+  await actor(master);
+  await manage(managed,'Todos','adm',catalog.hotels,2);
+  await actor(managed);
+  await commit([change('chamados',9001,{id:9001,hotel:'Lume Alto da Boa Vista',apartamento:'194A',assunto:'Teste',descricao:'Teste',status:'Aberto'})]);
+  await assert.rejects(commit([change('chamados',9002,{id:9002,hotel:'Be Urban',apartamento:'194A',assunto:'Teste',status:'Aberto'})]), error=>error.code==='22023');
+  await actor(client);
+  assert.equal((await db.query("select * from public.book_apartments where hotel='Be Urban'")).rows.length,0);
 });

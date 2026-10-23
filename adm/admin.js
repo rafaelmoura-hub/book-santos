@@ -326,7 +326,7 @@ let vistoriaHotel = "", vistoriaApartamento = "";
 const vistorias = () => ler("vistorias");
 function atualizarTotaisVistorias() {
   const itens = vistorias();
-  ["Unlimited", "Unique"].forEach(hotel => {
+  BookCatalog.hotels.forEach(hotel => {
     const total = itens.filter(item => item.hotel === hotel).length;
     document.getElementById(`totalVistorias${hotel}`).textContent = `${total} ${total === 1 ? "vistoria" : "vistorias"}`;
   });

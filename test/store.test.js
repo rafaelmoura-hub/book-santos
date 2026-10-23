@@ -17,7 +17,7 @@ test('tela aguarda confirmação e preserva versão lida para impedir sobrescrit
   let held, requestStarted, release;
   const api={async request(url,options) {
     if(url==='/api/access') return ['Unlimited'];
-    if(url==='/api/apartments') return [{hotel:'Unlimited',apartment:'1111'}];
+    if(url==='/api/apartments') return ['1111','901','618'].map(apartment=>({hotel:'Unlimited',apartment}));
     if(url.startsWith('/api/snapshot')) return JSON.parse(JSON.stringify({chamados:{loaded:rows,cursor:null}}));
     const {changes}=JSON.parse(options.body);
     if(requestStarted) requestStarted();
@@ -39,6 +39,7 @@ test('tela aguarda confirmação e preserva versão lida para impedir sobrescrit
   vm.runInNewContext(readFileSync('assets/store.js','utf8'),context);
   const store=context.BookStore;
   await store.init({id:'owner',funcao:'cliente'});
+  assert.deepEqual(Array.from(store.apartments('Unlimited')), ['618','901','1111']);
   const initial=JSON.parse(store.getItem('chamados'));
   assert.equal(initial[0].__bookVersion,1);
   initial[0].assunto='Editado';

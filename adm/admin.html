@@ -52,22 +52,44 @@
         </section>
         <section id="visaoVistorias" hidden>
           <div class="titulo-secao"><div><h2>Vistorias</h2><p>Selecione um condomínio e apartamento para consultar e registrar vistorias.</p></div></div>
-          <div class="hoteis-vistoria">
-            <button class="hotel-vistoria" onclick="selecionarHotelVistoria('Unlimited')"><strong>Unlimited</strong><span id="totalVistoriasUnlimited">0 vistorias</span></button>
-            <button class="hotel-vistoria" onclick="selecionarHotelVistoria('Unique')"><strong>Unique</strong><span id="totalVistoriasUnique">0 vistorias</span></button>
-          </div>
+          <div class="hoteis-vistoria"><button class="hotel-vistoria" data-hotel="Be Urban" onclick="selecionarHotelVistoria('Be Urban')"><strong>Be Urban</strong><span id="totalVistoriasBe Urban">0 vistorias</span></button>
+<button class="hotel-vistoria" data-hotel="Conde Luciano" onclick="selecionarHotelVistoria('Conde Luciano')"><strong>Conde Luciano</strong><span id="totalVistoriasConde Luciano">0 vistorias</span></button>
+<button class="hotel-vistoria" data-hotel="Embaré" onclick="selecionarHotelVistoria('Embaré')"><strong>Embaré</strong><span id="totalVistoriasEmbaré">0 vistorias</span></button>
+<button class="hotel-vistoria" data-hotel="Helbor Stay" onclick="selecionarHotelVistoria('Helbor Stay')"><strong>Helbor Stay</strong><span id="totalVistoriasHelbor Stay">0 vistorias</span></button>
+<button class="hotel-vistoria" data-hotel="Housi" onclick="selecionarHotelVistoria('Housi')"><strong>Housi</strong><span id="totalVistoriasHousi">0 vistorias</span></button>
+<button class="hotel-vistoria" data-hotel="Houx" onclick="selecionarHotelVistoria('Houx')"><strong>Houx</strong><span id="totalVistoriasHoux">0 vistorias</span></button>
+<button class="hotel-vistoria" data-hotel="Ipanema" onclick="selecionarHotelVistoria('Ipanema')"><strong>Ipanema</strong><span id="totalVistoriasIpanema">0 vistorias</span></button>
+<button class="hotel-vistoria" data-hotel="Lume Alto da Boa Vista" onclick="selecionarHotelVistoria('Lume Alto da Boa Vista')"><strong>Lume Alto da Boa Vista</strong><span id="totalVistoriasLume Alto da Boa Vista">0 vistorias</span></button>
+<button class="hotel-vistoria" data-hotel="Maralta" onclick="selecionarHotelVistoria('Maralta')"><strong>Maralta</strong><span id="totalVistoriasMaralta">0 vistorias</span></button>
+<button class="hotel-vistoria" data-hotel="Marco Aurelio" onclick="selecionarHotelVistoria('Marco Aurelio')"><strong>Marco Aurelio</strong><span id="totalVistoriasMarco Aurelio">0 vistorias</span></button>
+<button class="hotel-vistoria" data-hotel="Nexone" onclick="selecionarHotelVistoria('Nexone')"><strong>Nexone</strong><span id="totalVistoriasNexone">0 vistorias</span></button>
+<button class="hotel-vistoria" data-hotel="Type" onclick="selecionarHotelVistoria('Type')"><strong>Type</strong><span id="totalVistoriasType">0 vistorias</span></button>
+<button class="hotel-vistoria" data-hotel="Unique Residence" onclick="selecionarHotelVistoria('Unique Residence')"><strong>Unique Residence</strong><span id="totalVistoriasUnique Residence">0 vistorias</span></button>
+<button class="hotel-vistoria" data-hotel="Universo Palace" onclick="selecionarHotelVistoria('Universo Palace')"><strong>Universo Palace</strong><span id="totalVistoriasUniverso Palace">0 vistorias</span></button>
+<button class="hotel-vistoria" data-hotel="Unlimited" onclick="selecionarHotelVistoria('Unlimited')"><strong>Unlimited</strong><span id="totalVistoriasUnlimited">0 vistorias</span></button>
+<button class="hotel-vistoria" data-hotel="VN Melo" onclick="selecionarHotelVistoria('VN Melo')"><strong>VN Melo</strong><span id="totalVistoriasVN Melo">0 vistorias</span></button>
+<button class="hotel-vistoria" data-hotel="Xangô" onclick="selecionarHotelVistoria('Xangô')"><strong>Xangô</strong><span id="totalVistoriasXangô">0 vistorias</span></button></div>
           <div id="areaVistorias"><p class="vazio">Selecione um condomínio para começar.</p></div>
         </section>
         <section id="visaoCondominios" hidden>
         <h2>Condom&iacute;nios cadastrados</h2>
-        <div class="hoteis">
-            <article class="hotel" role="button" tabindex="0" onclick="BookCondominios.mostrarHistorico('Unlimited')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Unlimited')}">
-                <h2>Unlimited</h2><p id="totalUnlimited">0 chamados</p>
-            </article>
-            <article class="hotel" role="button" tabindex="0" onclick="BookCondominios.mostrarHistorico('Unique')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Unique')}">
-                <h2>Unique</h2><p id="totalUnique">0 chamados</p>
-            </article>
-        </div>
+        <div class="hoteis"><article class="hotel" data-hotel="Be Urban" role="button" tabindex="0" onclick="BookCondominios.mostrarHistorico('Be Urban')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Be Urban')}"><h2>Be Urban</h2><p>6 apartamento(s)</p><p id="totalBe Urban">0 chamados</p></article>
+<article class="hotel" data-hotel="Conde Luciano" role="button" tabindex="0" onclick="BookCondominios.mostrarHistorico('Conde Luciano')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Conde Luciano')}"><h2>Conde Luciano</h2><p>1 apartamento(s)</p><p id="totalConde Luciano">0 chamados</p></article>
+<article class="hotel" data-hotel="Embaré" role="button" tabindex="0" onclick="BookCondominios.mostrarHistorico('Embaré')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Embaré')}"><h2>Embaré</h2><p>2 apartamento(s)</p><p id="totalEmbaré">0 chamados</p></article>
+<article class="hotel" data-hotel="Helbor Stay" role="button" tabindex="0" onclick="BookCondominios.mostrarHistorico('Helbor Stay')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Helbor Stay')}"><h2>Helbor Stay</h2><p>1 apartamento(s)</p><p id="totalHelbor Stay">0 chamados</p></article>
+<article class="hotel" data-hotel="Housi" role="button" tabindex="0" onclick="BookCondominios.mostrarHistorico('Housi')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Housi')}"><h2>Housi</h2><p>6 apartamento(s)</p><p id="totalHousi">0 chamados</p></article>
+<article class="hotel" data-hotel="Houx" role="button" tabindex="0" onclick="BookCondominios.mostrarHistorico('Houx')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Houx')}"><h2>Houx</h2><p>1 apartamento(s)</p><p id="totalHoux">0 chamados</p></article>
+<article class="hotel" data-hotel="Ipanema" role="button" tabindex="0" onclick="BookCondominios.mostrarHistorico('Ipanema')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Ipanema')}"><h2>Ipanema</h2><p>1 apartamento(s)</p><p id="totalIpanema">0 chamados</p></article>
+<article class="hotel" data-hotel="Lume Alto da Boa Vista" role="button" tabindex="0" onclick="BookCondominios.mostrarHistorico('Lume Alto da Boa Vista')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Lume Alto da Boa Vista')}"><h2>Lume Alto da Boa Vista</h2><p>3 apartamento(s)</p><p id="totalLume Alto da Boa Vista">0 chamados</p></article>
+<article class="hotel" data-hotel="Maralta" role="button" tabindex="0" onclick="BookCondominios.mostrarHistorico('Maralta')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Maralta')}"><h2>Maralta</h2><p>1 apartamento(s)</p><p id="totalMaralta">0 chamados</p></article>
+<article class="hotel" data-hotel="Marco Aurelio" role="button" tabindex="0" onclick="BookCondominios.mostrarHistorico('Marco Aurelio')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Marco Aurelio')}"><h2>Marco Aurelio</h2><p>2 apartamento(s)</p><p id="totalMarco Aurelio">0 chamados</p></article>
+<article class="hotel" data-hotel="Nexone" role="button" tabindex="0" onclick="BookCondominios.mostrarHistorico('Nexone')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Nexone')}"><h2>Nexone</h2><p>4 apartamento(s)</p><p id="totalNexone">0 chamados</p></article>
+<article class="hotel" data-hotel="Type" role="button" tabindex="0" onclick="BookCondominios.mostrarHistorico('Type')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Type')}"><h2>Type</h2><p>9 apartamento(s)</p><p id="totalType">0 chamados</p></article>
+<article class="hotel" data-hotel="Unique Residence" role="button" tabindex="0" onclick="BookCondominios.mostrarHistorico('Unique Residence')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Unique Residence')}"><h2>Unique Residence</h2><p>42 apartamento(s)</p><p id="totalUnique Residence">0 chamados</p></article>
+<article class="hotel" data-hotel="Universo Palace" role="button" tabindex="0" onclick="BookCondominios.mostrarHistorico('Universo Palace')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Universo Palace')}"><h2>Universo Palace</h2><p>2 apartamento(s)</p><p id="totalUniverso Palace">0 chamados</p></article>
+<article class="hotel" data-hotel="Unlimited" role="button" tabindex="0" onclick="BookCondominios.mostrarHistorico('Unlimited')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Unlimited')}"><h2>Unlimited</h2><p>43 apartamento(s)</p><p id="totalUnlimited">0 chamados</p></article>
+<article class="hotel" data-hotel="VN Melo" role="button" tabindex="0" onclick="BookCondominios.mostrarHistorico('VN Melo')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('VN Melo')}"><h2>VN Melo</h2><p>1 apartamento(s)</p><p id="totalVN Melo">0 chamados</p></article>
+<article class="hotel" data-hotel="Xangô" role="button" tabindex="0" onclick="BookCondominios.mostrarHistorico('Xangô')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Xangô')}"><h2>Xangô</h2><p>1 apartamento(s)</p><p id="totalXangô">0 chamados</p></article></div>
         <section id="historico" aria-live="polite">
             <h2>Hist&oacute;rico</h2>
             <p>Selecione um condomínio e um apartamento para visualizar chamados e cards.</p>
@@ -121,7 +143,7 @@
             <h2>Abrir Card</h2>
             <form id="formOS" onsubmit="salvarOS(event)">
                 <input id="osChamado" type="hidden">
-                <label>Condomínio<select id="osHotel" required><option value="">Selecione</option><option>Unlimited</option><option>Unique</option></select></label>
+                <label>Condomínio<select id="osHotel" required><option value="">Selecione</option><option value="Be Urban">Be Urban</option><option value="Conde Luciano">Conde Luciano</option><option value="Embaré">Embaré</option><option value="Helbor Stay">Helbor Stay</option><option value="Housi">Housi</option><option value="Houx">Houx</option><option value="Ipanema">Ipanema</option><option value="Lume Alto da Boa Vista">Lume Alto da Boa Vista</option><option value="Maralta">Maralta</option><option value="Marco Aurelio">Marco Aurelio</option><option value="Nexone">Nexone</option><option value="Type">Type</option><option value="Unique Residence">Unique Residence</option><option value="Universo Palace">Universo Palace</option><option value="Unlimited">Unlimited</option><option value="VN Melo">VN Melo</option><option value="Xangô">Xangô</option></select></label>
                 <label>Apartamento<select id="osApartamento" required></select></label>
                 <label>Assunto<input id="osTitulo" required></label>
                 <label>Descri&ccedil;&atilde;o<textarea id="osDescricao" required></textarea></label>
@@ -187,7 +209,7 @@
           <label>E-mail<input id="usuarioEmail" type="email" maxlength="254" autocomplete="off" required></label>
           <label id="usuarioSenhaLabel">Senha inicial<input id="usuarioSenha" type="password" minlength="12" maxlength="100" autocomplete="new-password" required><small>De 12 a 100 caracteres. Compartilhe a senha individualmente com a pessoa.</small></label>
           <label>Função<select id="usuarioFuncao"><option value="cliente">Cliente</option><option value="adm">Administrador</option></select></label>
-          <fieldset class="usuario-hoteis"><legend>Condomínios permitidos</legend><label><input id="usuarioUnlimited" type="checkbox"> Unlimited</label><label><input id="usuarioUnique" type="checkbox"> Unique</label></fieldset>
+          <fieldset class="usuario-hoteis"><legend>Condomínios permitidos</legend><label><input id="usuarioBe Urban" type="checkbox"> Be Urban</label><label><input id="usuarioConde Luciano" type="checkbox"> Conde Luciano</label><label><input id="usuarioEmbaré" type="checkbox"> Embaré</label><label><input id="usuarioHelbor Stay" type="checkbox"> Helbor Stay</label><label><input id="usuarioHousi" type="checkbox"> Housi</label><label><input id="usuarioHoux" type="checkbox"> Houx</label><label><input id="usuarioIpanema" type="checkbox"> Ipanema</label><label><input id="usuarioLume Alto da Boa Vista" type="checkbox"> Lume Alto da Boa Vista</label><label><input id="usuarioMaralta" type="checkbox"> Maralta</label><label><input id="usuarioMarco Aurelio" type="checkbox"> Marco Aurelio</label><label><input id="usuarioNexone" type="checkbox"> Nexone</label><label><input id="usuarioType" type="checkbox"> Type</label><label><input id="usuarioUnique Residence" type="checkbox"> Unique Residence</label><label><input id="usuarioUniverso Palace" type="checkbox"> Universo Palace</label><label><input id="usuarioUnlimited" type="checkbox"> Unlimited</label><label><input id="usuarioVN Melo" type="checkbox"> VN Melo</label><label><input id="usuarioXangô" type="checkbox"> Xangô</label></fieldset>
           <p>Sem condomínios selecionados, a pessoa não acessa os registros dos hotéis. Administradores continuam tendo acesso ao estoque global.</p>
           <p id="usuarioErro" role="alert"></p><button id="salvarUsuario" type="submit" class="acao-principal">Salvar usuário</button> <button id="cancelarUsuario" type="button" class="botao-secundario" onclick="BookUsers.close()">Cancelar</button>
         </form>
@@ -199,6 +221,7 @@
     <script src="financeiro.js"></script>
     <script src="condominios.js"></script>
     <script src="usuarios.js"></script>
+    <script src="../assets/catalog.js"></script>
     <script src="../assets/api.js"></script>
     <script src="../assets/session.js"></script>
 </body>
