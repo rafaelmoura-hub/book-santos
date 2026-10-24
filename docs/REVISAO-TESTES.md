@@ -1,5 +1,11 @@
 # Revisão dos cards e testes de regressão
 
+## Atualização: backup e segurança
+
+A suíte ampliada tem 31 testes aprovados. Foram acrescentados testes de cópia e integridade, arquivos alterados e ausentes, interrupção e cancelamento, caminhos inválidos, autenticação e exclusividade do mestre, seleção de dados, limite de frequência, criptografia de sessões, restrição do catálogo, ações delegadas sem execução arbitrária, normalização do histórico e prontidão das migrações. O PostgreSQL local testa a aplicação e reaplicação de 008 e 009, bloqueio do backup para cliente e administrador comum e atualização de registros históricos.
+
+O Chrome verifica dez abas, incluindo Backup. O seletor de pasta e o HD são simulados no navegador; são testados escrita e leitura dos arquivos, manifesto, conferência da cópia e bloqueio do endpoint para o cliente. O teste não acessa um HD físico nem altera o ambiente online. O relatório anterior abaixo descreve a revisão que precedeu essas melhorias.
+
 ## Correções
 
 - Cards: a troca de condomínio agora atualiza o campo de apartamentos. A seleção anterior é removida; o campo fica desabilitado sem condomínio ou sem unidades cadastradas. Abertura por chamado e vistoria mantém a unidade correta, inclusive 194A.

@@ -1,0 +1,13 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "pwa-chrome",
+            "request": "launch",
+            "name": "Book Santos - abrir servidor local",
+            "url": "http://127.0.0.1:3000",
+            "webRoot": "${workspaceFolder}",
+            "preLaunchTask": "Book Santos: iniciar servidor"
+        }
+    ]
+}

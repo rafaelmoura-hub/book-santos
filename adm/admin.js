@@ -11,6 +11,7 @@ async function atualizarUsuarios() {
 }
 atualizarUsuarios().catch(error => alert(error.message));
 if (ehAdministradorMestre) document.getElementById("abaUsuarios").hidden = false;
+if (ehAdministradorMestre) document.getElementById("abaBackup").hidden = false;
 
 const apartamentos = hotel => BookStore.apartments(hotel);
 const ler = key => {
@@ -29,15 +30,17 @@ const escapar = value => String(value || "").replace(/[&<>"']/g, c => ({"&":"&am
 
 function atualizarPainel() {
   const items = chamados();
-  document.getElementById("total").textContent = items.length;
-  document.getElementById("abertos").textContent = items.filter(c => (c.status || "Aberto") === "Aberto").length;
-  document.getElementById("andamento").textContent = osList().length;
-  document.getElementById("resolvidos").textContent = items.filter(c => c.status === "Fechado").length;
+  const totals = BookStore.totals();
+  document.getElementById("total").textContent = totals?.chamados ?? items.length;
+  document.getElementById("abertos").textContent = totals?.abertos ?? items.filter(c => (c.status || "Aberto") === "Aberto").length;
+  document.getElementById("andamento").textContent = totals?.ordensServico ?? osList().length;
+  document.getElementById("resolvidos").textContent = totals?.fechados ?? items.filter(c => c.status === "Fechado").length;
   mostrarChamados(); mostrarOS();
 }
 function mostrarAba(aba) {
-  if (aba === "usuarios" && !ehAdministradorMestre) return;
-  ["chamados", "chat", "os", "vistorias", "condominios", "estoque", "financeiro", "usuarios", "dashboard"].forEach(nome => {
+  if (["usuarios", "backup"].includes(aba) && !ehAdministradorMestre) return;
+  BookStore.activate(aba);
+  ["chamados", "chat", "os", "vistorias", "condominios", "estoque", "financeiro", "usuarios", "dashboard", "backup"].forEach(nome => {
     const sufixo = nome === "os" ? "OS" : nome[0].toUpperCase() + nome.slice(1);
     document.getElementById(`visao${sufixo}`).hidden = nome !== aba;
     if (document.getElementById(`aba${sufixo}`)) document.getElementById(`aba${sufixo}`).classList.toggle("ativa", nome === aba);
@@ -54,7 +57,7 @@ function mostrarAba(aba) {
 
 function mostrarEstoque() {
   const dados = lerEstoque(), colunas = dados.colunas || [], tabela = document.getElementById("tabelaEstoque");
-  tabela.innerHTML = `<thead><tr><th>Material</th><th>Quantidade</th><th>Valor unitário (R$)</th>${colunas.map(c => `<th>${escapar(c.nome)} <button class="remover-coluna" title="Remover coluna" onclick="removerColunaEstoque('${escapar(c.id)}')">×</button></th>`).join("")}<th>Ações</th></tr></thead><tbody>${dados.itens.map(item => `<tr><td><input aria-label="Nome do material" value="${escapar(item.nome)}" onchange="editarEstoque('${escapar(item.id)}','nome',this.value)"></td><td><input aria-label="Quantidade" type="number" min="0" step="0.01" value="${Number(item.quantidade)||0}" onchange="editarEstoque('${escapar(item.id)}','quantidade',this.value)"></td><td><input aria-label="Valor unitário" type="number" min="0" step="0.01" data-money value="${BookMoney.decimal(item.valor)}" onchange="editarEstoque('${escapar(item.id)}','valor',this.value)"></td>${colunas.map(c => `<td><input aria-label="${escapar(c.nome)}" value="${escapar(item.extra?.[c.id] || "")}" onchange="editarEstoque('${escapar(item.id)}','extra:${escapar(c.id)}',this.value)"></td>`).join("")}<td><button class="botao-remover" onclick="removerLinhaEstoque('${escapar(item.id)}')">Apagar</button></td></tr>`).join("") || `<tr><td colspan="${4+colunas.length}">Nenhum material cadastrado. Use “+ Material” para começar.</td></tr>`}</tbody>`;
+  tabela.innerHTML = `<thead><tr><th>Material</th><th>Quantidade</th><th>Valor unitário (R$)</th>${colunas.map(c => `<th>${escapar(c.nome)} <button class="remover-coluna" title="Remover coluna" data-on-click="removerColunaEstoque('${escapar(c.id)}')">×</button></th>`).join("")}<th>Ações</th></tr></thead><tbody>${dados.itens.map(item => `<tr><td><input aria-label="Nome do material" value="${escapar(item.nome)}" data-on-change="editarEstoque('${escapar(item.id)}','nome',this.value)"></td><td><input aria-label="Quantidade" type="number" min="0" step="0.01" value="${Number(item.quantidade)||0}" data-on-change="editarEstoque('${escapar(item.id)}','quantidade',this.value)"></td><td><input aria-label="Valor unitário" type="number" min="0" step="0.01" data-money value="${BookMoney.decimal(item.valor)}" data-on-change="editarEstoque('${escapar(item.id)}','valor',this.value)"></td>${colunas.map(c => `<td><input aria-label="${escapar(c.nome)}" value="${escapar(item.extra?.[c.id] || "")}" data-on-change="editarEstoque('${escapar(item.id)}','extra:${escapar(c.id)}',this.value)"></td>`).join("")}<td><button class="botao-remover" data-on-click="removerLinhaEstoque('${escapar(item.id)}')">Apagar</button></td></tr>`).join("") || `<tr><td colspan="${4+colunas.length}">Nenhum material cadastrado. Use “+ Material” para começar.</td></tr>`}</tbody>`;
   BookMoney.bind(tabela);
 }
 async function adicionarLinhaEstoque() { const d=lerEstoque(); d.itens.push({id:String(Date.now())+Math.random().toString(16).slice(2),nome:"",quantidade:0,valor:"0.00",extra:{}}); await salvarEstoque(d); mostrarEstoque(); }
@@ -85,7 +88,7 @@ function formatarData(data) {
 function mostrarChamados() {
   const area = document.getElementById("listaChamados"), items = chamados();
   items.sort((a, b) => Number(a.status === "Fechado") - Number(b.status === "Fechado"));
-  area.innerHTML = items.length ? items.map(c => `<article class="chamado linha-chamado ${c.status === "Fechado" ? "finalizado" : ""}" onclick="abrirChamado(${Number(c.id)})"><div><strong>${escapar(c.assunto || "Chamado sem assunto")}</strong><span>${escapar(c.hotel)} - Apartamento ${escapar(c.apartamento)}</span></div><select aria-label="Status" onclick="event.stopPropagation()" onchange="alterarStatus(${Number(c.id)},this.value)"><option ${((c.status || "Aberto")==="Aberto")?"selected":""}>Aberto</option><option ${c.status==="Fechado"?"selected":""}>Fechado</option></select></article>`).join("") : "<p class=\"vazio\">Nenhum chamado cadastrado.</p>";
+  area.innerHTML = items.length ? items.map(c => `<article class="chamado linha-chamado ${c.status === "Fechado" ? "finalizado" : ""}" data-on-click="abrirChamado(${Number(c.id)})"><div><strong>${escapar(c.assunto || "Chamado sem assunto")}</strong><span>${escapar(c.hotel)} - Apartamento ${escapar(c.apartamento)}</span></div><select aria-label="Status" data-on-click="event.stopPropagation()" data-on-change="alterarStatus(${Number(c.id)},this.value)"><option ${((c.status || "Aberto")==="Aberto")?"selected":""}>Aberto</option><option ${c.status==="Fechado"?"selected":""}>Fechado</option></select></article>`).join("") : "<p class=\"vazio\">Nenhum chamado cadastrado.</p>";
 }
 async function alterarStatus(id, status) {
   const items = chamados(), item = items.find(c => c.id == id);
@@ -95,7 +98,7 @@ async function alterarStatus(id, status) {
 function abrirChamado(id) {
   const c = chamados().find(item => item.id == id); if (!c) return;
   const anexo = c.anexoTipo?.startsWith("image/") ? `<img loading="lazy" src="${c.anexoData}" alt="Anexo">` : c.anexoTipo?.startsWith("video/") ? `<video preload="metadata" src="${c.anexoData}" controls></video>` : "Sem anexo";
-  document.getElementById("detalhes").innerHTML = `<h2>Chamado #${c.id}</h2><p><b>Hotel:</b> ${escapar(c.hotel)}</p><p><b>Apartamento:</b> ${escapar(c.apartamento)}</p><p><b>Assunto:</b> ${escapar(c.assunto)}</p><p><b>Categoria:</b> ${escapar(c.categoria)}</p><p><b>Descri\u00e7\u00e3o:</b> ${escapar(c.descricao)}</p><p><b>Status:</b> ${escapar(c.status || "Aberto")}</p><p><b>Data:</b> ${escapar(c.data)}</p><p><b>Arquivo:</b> ${escapar(c.anexoNome)}</p>${anexo}<p><button onclick="abrirFormularioOS(${Number(c.id)})">Abrir Card para este chamado</button></p>`;
+  document.getElementById("detalhes").innerHTML = `<h2>Chamado #${c.id}</h2><p><b>Hotel:</b> ${escapar(c.hotel)}</p><p><b>Apartamento:</b> ${escapar(c.apartamento)}</p><p><b>Assunto:</b> ${escapar(c.assunto)}</p><p><b>Categoria:</b> ${escapar(c.categoria)}</p><p><b>Descri\u00e7\u00e3o:</b> ${escapar(c.descricao)}</p><p><b>Status:</b> ${escapar(c.status || "Aberto")}</p><p><b>Data:</b> ${escapar(c.data)}</p><p><b>Arquivo:</b> ${escapar(c.anexoNome)}</p>${anexo}<p><button data-on-click="abrirFormularioOS(${Number(c.id)})">Abrir Card para este chamado</button></p>`;
   document.getElementById("modal").style.display = "block";
 }
 function fecharModal() { document.getElementById("modal").style.display = "none"; }
@@ -155,7 +158,7 @@ function mostrarOS() {
   area.innerHTML = items.length ? items.map(o => {
     const finalizada = o.status === "Finalizada", status = o.status || "Aberta";
     const vencida = !finalizada && o.vencimento && o.vencimento < dataLocalHoje();
-    return `<article class="chamado card-os ${finalizada ? "finalizado" : ""}" onclick="abrirOS(${Number(o.id)})" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();abrirOS(${Number(o.id)})}"><div class="os-topo"><strong>Card #${escapar(o.id)}</strong><span class="selo-status ${finalizada ? "selo-finalizado" : ""}">${escapar(status)}</span></div><p>${escapar(o.hotel)} - Apartamento ${escapar(o.apartamento)}</p><h3>${escapar(o.titulo)}</h3><p>Prioridade: ${escapar(o.prioridade || "Normal")} &middot; Respons&aacute;vel: ${escapar(o.responsavelLogin || "A definir")}</p><p>${escapar(o.descricao)}</p><p class="vencimento ${vencida ? "vencida" : ""}"><strong>Vencimento:</strong> ${formatarData(o.vencimento)}${vencida ? " - Vencida" : ""}</p>${o.chamadoId ? `<small>Vinculada ao chamado #${escapar(o.chamadoId)}</small>` : "<small>Card independente</small>"}<label class="status-os" onclick="event.stopPropagation()">Status do card<select onchange="alterarStatusOS(${Number(o.id)},this.value)"><option value="Aberta" ${status === "Aberta" ? "selected" : ""}>Aberta</option><option value="Em andamento" ${status === "Em andamento" ? "selected" : ""}>Em andamento</option><option value="Finalizada" ${finalizada ? "selected" : ""}>Finalizada</option></select></label></article>`;
+    return `<article class="chamado card-os ${finalizada ? "finalizado" : ""}" data-on-click="abrirOS(${Number(o.id)})" role="button" tabindex="0" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();abrirOS(${Number(o.id)})}"><div class="os-topo"><strong>Card #${escapar(o.id)}</strong><span class="selo-status ${finalizada ? "selo-finalizado" : ""}">${escapar(status)}</span></div><p>${escapar(o.hotel)} - Apartamento ${escapar(o.apartamento)}</p><h3>${escapar(o.titulo)}</h3><p>Prioridade: ${escapar(o.prioridade || "Normal")} &middot; Respons&aacute;vel: ${escapar(o.responsavelLogin || "A definir")}</p><p>${escapar(o.descricao)}</p><p class="vencimento ${vencida ? "vencida" : ""}"><strong>Vencimento:</strong> ${formatarData(o.vencimento)}${vencida ? " - Vencida" : ""}</p>${o.chamadoId ? `<small>Vinculada ao chamado #${escapar(o.chamadoId)}</small>` : "<small>Card independente</small>"}<label class="status-os" data-on-click="event.stopPropagation()">Status do card<select data-on-change="alterarStatusOS(${Number(o.id)},this.value)"><option value="Aberta" ${status === "Aberta" ? "selected" : ""}>Aberta</option><option value="Em andamento" ${status === "Em andamento" ? "selected" : ""}>Em andamento</option><option value="Finalizada" ${finalizada ? "selected" : ""}>Finalizada</option></select></label></article>`;
   }).join("") : "<p class=\"vazio\">Nenhum card encontrado para esse apartamento.</p>";
 }
 function dataLocalHoje() {
@@ -214,7 +217,7 @@ function abrirFechamentoOS(id) {
 function renderizarMateriaisOS(materiais = []) {
   const area=document.getElementById("materiaisOS"), dados=lerEstoque();
   area.dataset.hadMaterials = materiais.some(material => material.id) ? 'true' : 'false';
-  area.innerHTML=materiais.map((m,i)=>`<div class="linha-material-os"><select aria-label="Material do estoque" onchange="atualizarMateriaisOS()"><option value="">Selecione um material</option>${dados.itens.map(item=>`<option value="${escapar(item.id)}" ${item.id===m.id?"selected":""}>${escapar(item.nome||"Material sem nome")} (estoque: ${Number(item.quantidade)||0})</option>`).join("")}</select><input aria-label="Quantidade usada" type="number" min="0.01" step="0.01" value="${Number(m.quantidade)||1}" oninput="atualizarMateriaisOS()"><button type="button" class="botao-remover" onclick="this.parentElement.remove();atualizarMateriaisOS()">Remover</button></div>`).join(""); atualizarMateriaisOS();
+  area.innerHTML=materiais.map((m,i)=>`<div class="linha-material-os"><select aria-label="Material do estoque" data-on-change="atualizarMateriaisOS()"><option value="">Selecione um material</option>${dados.itens.map(item=>`<option value="${escapar(item.id)}" ${item.id===m.id?"selected":""}>${escapar(item.nome||"Material sem nome")} (estoque: ${Number(item.quantidade)||0})</option>`).join("")}</select><input aria-label="Quantidade usada" type="number" min="0.01" step="0.01" value="${Number(m.quantidade)||1}" data-on-input="atualizarMateriaisOS()"><button type="button" class="botao-remover" data-on-click="this.parentElement.remove();atualizarMateriaisOS()">Remover</button></div>`).join(""); atualizarMateriaisOS();
 }
 function adicionarMaterialOS() { const atuais=[...document.querySelectorAll("#materiaisOS .linha-material-os")].map(l=>({id:l.querySelector("select").value,quantidade:Number(l.querySelector("input").value)})); atuais.push({id:"",quantidade:1}); renderizarMateriaisOS(atuais); }
 function obterMateriaisOS() { return [...document.querySelectorAll("#materiaisOS .linha-material-os")].map(l=>({id:l.querySelector("select").value,quantidade:Number(l.querySelector("input").value)||0})).filter(m=>m.id&&m.quantidade>0); }
@@ -338,19 +341,19 @@ function atualizarTotaisVistorias() {
 }
 function selecionarHotelVistoria(hotel) {
   vistoriaHotel = hotel;
-  document.getElementById("areaVistorias").innerHTML = `<h3>${escapar(hotel)} - Apartamentos</h3><div class="apartamentos-vistoria">${apartamentos(hotel).map(ap => `<button type="button" onclick="selecionarApartamentoVistoria('${ap}')">Apartamento ${ap}</button>`).join("")}</div><div id="detalheApartamentoVistoria"><p class="vazio">Selecione um apartamento.</p></div>`;
+  document.getElementById("areaVistorias").innerHTML = `<h3>${escapar(hotel)} - Apartamentos</h3><div class="apartamentos-vistoria">${apartamentos(hotel).map(ap => `<button type="button" data-on-click="selecionarApartamentoVistoria('${ap}')">Apartamento ${ap}</button>`).join("")}</div><div id="detalheApartamentoVistoria"><p class="vazio">Selecione um apartamento.</p></div>`;
 }
 function selecionarApartamentoVistoria(apartamento) {
   vistoriaApartamento = apartamento;
   const itens = vistorias().filter(item => item.hotel === vistoriaHotel && String(item.apartamento) === apartamento)
     .sort((a, b) => String(b.data || "").localeCompare(String(a.data || "")));
   const ultima = itens[0];
-  document.getElementById("detalheApartamentoVistoria").innerHTML = `<div class="vistoria-resumo"><div><h3>Apartamento ${escapar(apartamento)}</h3><p><strong>Total de vistorias:</strong> ${itens.length}</p><p><strong>Última vistoria:</strong> ${ultima ? `${formatarData(ultima.data)} — ${escapar(ultima.responsavel)}` : "Ainda não há vistorias"}</p></div><button class="acao-principal" onclick="abrirFormularioVistoria()">+ Começar vistoria</button></div><button type="button" class="botao-secundario" onclick="abrirFormularioOS('', '${escapar(vistoriaHotel)}', '${escapar(apartamento)}')">Abrir Card para este apartamento</button><div class="historico-vistorias"><h4>Histórico de vistorias</h4>${itens.length ? itens.map(renderizarVistoria).join("") : '<p class="vazio">Nenhuma vistoria registrada neste apartamento.</p>'}</div>`;
+  document.getElementById("detalheApartamentoVistoria").innerHTML = `<div class="vistoria-resumo"><div><h3>Apartamento ${escapar(apartamento)}</h3><p><strong>Total de vistorias:</strong> ${itens.length}</p><p><strong>Última vistoria:</strong> ${ultima ? `${formatarData(ultima.data)} — ${escapar(ultima.responsavel)}` : "Ainda não há vistorias"}</p></div><button class="acao-principal" data-on-click="abrirFormularioVistoria()">+ Começar vistoria</button></div><button type="button" class="botao-secundario" data-on-click="abrirFormularioOS('', '${escapar(vistoriaHotel)}', '${escapar(apartamento)}')">Abrir Card para este apartamento</button><div class="historico-vistorias"><h4>Histórico de vistorias</h4>${itens.length ? itens.map(renderizarVistoria).join("") : '<p class="vazio">Nenhuma vistoria registrada neste apartamento.</p>'}</div>`;
 }
 function renderizarVistoria(item) {
   const checklist = Object.entries(item.checklist || {}).map(([grupo, respostas]) => `<h5>${escapar(grupo)}</h5><ul>${Object.entries(respostas).map(([nome, estado]) => `<li><strong>${escapar(nome)}:</strong> ${escapar(estado)}</li>`).join("")}</ul>`).join("");
   const fotos = (item.fotos || []).map(foto => `<a href="${foto.dados}" target="_blank" rel="noopener"><img loading="lazy" src="${foto.dados}" alt="${escapar(foto.nome)}"></a>`).join("");
-  return `<details class="vistoria-registro"><summary><strong>${formatarData(item.data)} — ${escapar(item.tipo)}</strong><span>Responsável: ${escapar(item.responsavel)}</span></summary><div class="vistoria-registro-detalhes"><p><strong>Responsável:</strong> ${escapar(item.responsavel)}</p>${checklist}<p><strong>Observações:</strong> ${escapar(item.observacoes || "Nenhuma")}</p><p><strong>Fotos:</strong> ${(item.fotos || []).length}</p><div class="galeria-vistoria">${fotos}</div><button type="button" class="botao-secundario" onclick="abrirFormularioOS('', '${escapar(item.hotel)}', '${escapar(item.apartamento)}')">Abrir Card deste apartamento</button></div></details>`;
+  return `<details class="vistoria-registro"><summary><strong>${formatarData(item.data)} — ${escapar(item.tipo)}</strong><span>Responsável: ${escapar(item.responsavel)}</span></summary><div class="vistoria-registro-detalhes"><p><strong>Responsável:</strong> ${escapar(item.responsavel)}</p>${checklist}<p><strong>Observações:</strong> ${escapar(item.observacoes || "Nenhuma")}</p><p><strong>Fotos:</strong> ${(item.fotos || []).length}</p><div class="galeria-vistoria">${fotos}</div><button type="button" class="botao-secundario" data-on-click="abrirFormularioOS('', '${escapar(item.hotel)}', '${escapar(item.apartamento)}')">Abrir Card deste apartamento</button></div></details>`;
 }
 function abrirFormularioVistoria() {
   document.getElementById("formVistoria").reset();
@@ -485,7 +488,7 @@ function totalNaoLidasChat() { return lerConversasChat().reduce((n,c)=>n+(c.mens
 function atualizarBadgeChat() { const total=totalNaoLidasChat(),badge=document.getElementById("chatBadge"); badge.hidden=!total; badge.textContent=total>99?"99+":String(total); }
 function mostrarConversasChat() {
  const area=document.getElementById("listaConversasChat"), conversas=lerConversasChat().slice().sort((a,b)=>String(b.mensagens?.at(-1)?.criadaEm||"").localeCompare(String(a.mensagens?.at(-1)?.criadaEm||"")));
- area.innerHTML=conversas.length?conversas.map(c=>{const ultima=c.mensagens?.at(-1),naoLidas=(c.mensagens||[]).filter(m=>m.autorTipo==="cliente"&&!m.lidoAdmin).length,key=chaveConversaChat(c);return `<button type="button" class="item-conversa-chat ${key===conversaSelecionada?"selecionada":""}" onclick="${escapar(`abrirConversaChat(${JSON.stringify(c.clienteLogin)},${JSON.stringify(c.chamadoId)})`)}"><strong>${escapar(c.clienteNome||c.clienteLogin)}</strong><span>Chamado #${escapar(c.chamadoId)}</span><small>${escapar(ultima?.texto||"Sem mensagens")}</small>${naoLidas?`<i>${naoLidas}</i>`:""}</button>`;}).join(""):'<p class="chat-vazio">Nenhuma conversa iniciada pelos clientes.</p>';
+ area.innerHTML=conversas.length?conversas.map(c=>{const ultima=c.mensagens?.at(-1),naoLidas=(c.mensagens||[]).filter(m=>m.autorTipo==="cliente"&&!m.lidoAdmin).length,key=chaveConversaChat(c);return `<button type="button" class="item-conversa-chat ${key===conversaSelecionada?"selecionada":""}" data-on-click="${escapar(`abrirConversaChat(${JSON.stringify(c.clienteLogin)},${JSON.stringify(c.chamadoId)})`)}"><strong>${escapar(c.clienteNome||c.clienteLogin)}</strong><span>Chamado #${escapar(c.chamadoId)}</span><small>${escapar(ultima?.texto||"Sem mensagens")}</small>${naoLidas?`<i>${naoLidas}</i>`:""}</button>`;}).join(""):'<p class="chat-vazio">Nenhuma conversa iniciada pelos clientes.</p>';
  atualizarBadgeChat(); if(conversaSelecionada)renderizarMensagensAdmin();
 }
 async function abrirConversaChat(login,id) { conversaSelecionada=`${login}::${id}`; const items=lerConversasChat(),c=items.find(x=>chaveConversaChat(x)===conversaSelecionada); if(c){c.mensagens.forEach(m=>{if(m.autorTipo==="cliente")m.lidoAdmin=true;});await salvarConversasChat(items);} const chamado=chamados().find(x=>String(x.id)===String(id));document.getElementById("cabecalhoConversaChat").innerHTML=`<strong>${escapar(c?.clienteNome||login)}</strong><span>Chamado #${escapar(id)} · ${escapar(chamado?.assunto||"Chamado")}</span>`;document.getElementById("textoAdmin").disabled=false;document.getElementById("enviarAdmin").disabled=false;mostrarConversasChat();renderizarMensagensAdmin(); }
@@ -498,9 +501,10 @@ function ativarNotificacoesChat() { if(!("Notification"in window)){alert("Este n
 window.addEventListener("storage",e=>{if(e.key===CHAVE_CHAT){verificarNovasMensagensChat();if(conversaSelecionada)renderizarMensagensAdmin();}});
 idsMensagensConhecidas=new Set(lerConversasChat().flatMap(c=>(c.mensagens||[]).map(m=>m.id)));
 atualizarBadgeChat();setInterval(verificarNovasMensagensChat,1500);
+BookStore.activate('chamados');
 document.getElementById("osVencimento").min = dataLocalHoje();
 atualizarPainel();
-const abaSolicitada = ({ "#chamados": "chamados", "#chat": "chat", "#cards": "os", "#vistorias": "vistorias", "#dashboard": "dashboard", "#condominios": "condominios", "#estoque": "estoque", "#usuarios": "usuarios", "#financeiro": "financeiro" })[location.hash];
+const abaSolicitada = ({ "#chamados": "chamados", "#chat": "chat", "#cards": "os", "#vistorias": "vistorias", "#dashboard": "dashboard", "#condominios": "condominios", "#estoque": "estoque", "#usuarios": "usuarios", "#financeiro": "financeiro", "#backup": "backup" })[location.hash];
 if (abaSolicitada) mostrarAba(abaSolicitada);
 
 

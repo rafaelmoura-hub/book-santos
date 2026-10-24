@@ -6,6 +6,8 @@ const { randomBytes, randomUUID, createHash } = require('node:crypto');
 const { COLLECTIONS, validId, validateChanges, storeAttachments } = require('./operations');
 const { validateUser } = require('./users');
 const Periods = require('../assets/periods');
+const { validateBackup, attachments } = require('./backup');
+const { sessionStore } = require('./session-store');
 const ROOT = path.resolve(__dirname, '..');
 const fail = (status, message) => Object.assign(new Error(message), { status });
 const digest = token => createHash('sha256').update(token).digest('hex');
@@ -22,9 +24,9 @@ async function readBody(req, limit = 15 * 1024 * 1024) {
   catch { throw fail(400, 'JSON inválido.'); }
 }
 
-function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Date.now } = {}) {
-  // Tokens stay on the server, never in localStorage. Restarting the server ends local sessions.
-  const sessions = new Map();
+function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Date.now, sessionKey, sessionFile } = {}) {
+  // Tokens stay on the server; optional encrypted storage preserves a single instance's sessions.
+  const sessions = sessionStore({ key: sessionKey, filename: sessionFile, clock });
   const attempts = new Map();
   const writes = new Map();
   return http.createServer(async (req, res) => {
@@ -41,7 +43,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('Referrer-Policy', 'same-origin');
-    res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
+    res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
     res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
     if (secure) res.setHeader('Strict-Transport-Security', 'max-age=31536000');
     const json = (status, data) => { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(data)); };
@@ -65,7 +67,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         const traffic = attempts.get(ip) || { count: 0, until: now + 60000 };
         if (traffic.count >= 300) throw fail(429, 'Muitas tentativas. Aguarde um minuto.');
         traffic.count++; attempts.set(ip, traffic);
-        const input = await readBody(req);
+        const input = await readBody(req, 16384);
         if (typeof input?.login !== 'string' || input.login.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.login.trim()) || typeof input.senha !== 'string' || !input.senha || input.senha.length > 100) throw fail(400, 'Informe seu e-mail e senha.');
         const account = digest(input.login.trim().toLowerCase());
         const attempt = attempts.get(account) || { count: 0, until: now + 900000 };
@@ -88,7 +90,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         if (session) await provider.logout(session.accessToken).catch(() => {});
         return json(200, { ok: true });
       }
-      const protectedFile = /^\/(adm|hotel|cliente)\//.test(route);
+      const protectedFile = /^\/(adm|hotel|cliente)\//.test(route) || route === '/assets/catalog.js';
       let user;
       if (route.startsWith('/api/') || protectedFile) {
         if (session) {
@@ -97,6 +99,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
               if (!session.refreshing) session.refreshing = provider.refresh(session.refreshToken).then(auth => {
                 session.accessToken = auth.access_token; session.refreshToken = auth.refresh_token;
                 session.authExpires = clock() + (Number(auth.expires_in) || 3600) * 1000;
+                sessions.persist?.();
               }).finally(() => { session.refreshing = null; });
               await session.refreshing;
             }
@@ -113,6 +116,17 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         }
       }
       if (route === '/api/session' && req.method === 'GET') return json(200, { ...user, provider: 'supabase' });
+      if (route === '/api/backup' && req.method === 'POST') {
+        if (user.funcao !== 'adm' || !user.mestre) throw fail(403, 'Somente o administrador mestre pode fazer backup.');
+        const selected = validateBackup(await readBody(req, 4096));
+        const quotaKey = `backup:${user.id}`;
+        const quota = writes.get(quotaKey) || { count: 0, until: now + 60000 };
+        if (quota.count >= 2) throw fail(429, 'Aguarde um minuto antes de iniciar outro backup.');
+        quota.count++; writes.set(quotaKey, quota);
+        const data = await provider.backup(session.accessToken, selected);
+        if (!data || !Array.isArray(data.records)) throw fail(502, 'O servidor não confirmou os dados do backup. Nenhuma cópia completa foi gerada.');
+        return json(200, { format: 'book-santos-backup', version: 1, selected, data, files: selected.includes('anexos') ? attachments(data.records) : [] });
+      }
       if (route === '/api/finance' && req.method === 'GET') {
         if (user.funcao !== 'adm') throw fail(403, 'Financeiro disponível somente para administradores.');
         const payer = url.searchParams.get('payer');
@@ -143,7 +157,12 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         try { pages = JSON.parse(url.searchParams.get('pages') || '{}'); }
         catch { throw fail(400, 'Paginação inválida.'); }
         if (!pages || Array.isArray(pages) || typeof pages !== 'object' || Object.values(pages).some(count => !Number.isInteger(count) || count < 1 || count > 20)) throw fail(400, 'Use entre 1 e 20 páginas por coleção.');
-        const active = COLLECTIONS.filter(key => user.funcao === 'adm' || ['chamados','conversasSuporte'].includes(key));
+        const permitted = COLLECTIONS.filter(key => user.funcao === 'adm' || ['chamados','conversasSuporte'].includes(key));
+        let active = permitted;
+        if (url.searchParams.has('collections')) {
+          try { active = JSON.parse(url.searchParams.get('collections')); } catch { throw fail(400, 'Coleções inválidas.'); }
+          if (!Array.isArray(active) || active.length > permitted.length || new Set(active).size !== active.length || active.some(key => !permitted.includes(key))) throw fail(400, 'Coleções inválidas.');
+        }
         const result = await Promise.all(active.map(async key => {
           let cursor = null; const loaded = [];
           for (let page = 0; page < (pages[key] || 1); page++) {
@@ -153,7 +172,9 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
           }
           return [key, { loaded, cursor }];
         }));
-        return json(200, Object.fromEntries(result));
+        const snapshot = Object.fromEntries(result);
+        if (provider.counts && user.funcao === 'adm') snapshot.__counts = await provider.counts(session.accessToken);
+        return json(200, snapshot);
       }
       if (route === '/api/data' && req.method === 'GET') {
         const collection = url.searchParams.get('collection');
@@ -192,10 +213,17 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
       }
       if (route === '/api/users' || route.startsWith('/api/users/')) throw fail(403, 'Gerencie as contas em Authentication → Users e os perfis em book_profiles no painel Supabase.');
       if (route.startsWith('/api/')) throw fail(404, 'Rota não encontrada.');
+      if (route === '/assets/catalog.js' && req.method === 'GET') {
+        const allowed = user.mestre ? hotels : (await provider.access(session.accessToken)).map(row => row.hotel === 'Unique' ? 'Unique Residence' : row.hotel);
+        const catalog = require('../assets/catalog');
+        const visible = hotels.filter(hotel => allowed.includes(hotel));
+        res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8' });
+        return res.end(`window.BookCatalog = ${JSON.stringify({ hotels: visible, apartments: Object.fromEntries(visible.map(hotel => [hotel, catalog.apartments[hotel]])) })};`);
+      }
       if (!['GET', 'HEAD'].includes(req.method)) throw fail(405, 'Método não permitido.');
       if (/^\/hotel\/(hotel\.html)?$/.test(route)) { res.writeHead(302, { Location: '/adm/admin.html#condominios' }); return res.end(); }
       const file = route === '/' ? '/login.html' : route;
-      if (!/^\/(login\.(html|css|js)|assets\/(api|session|store|money|periods|catalog)\.js|(adm|cliente|hotel)\/[a-z]+\.(html|css|js))$/.test(file)) throw fail(404, 'Arquivo não encontrado.');
+      if (!/^\/(login\.(html|css|js)|assets\/(api|session|store|money|periods|catalog|events)\.js|(adm|cliente|hotel)\/[a-z]+\.(html|css|js))$/.test(file)) throw fail(404, 'Arquivo não encontrado.');
       if (/^\/(adm|hotel)\//.test(file) && user?.funcao !== 'adm' || /^\/cliente\//.test(file) && user?.funcao !== 'cliente') {
         res.writeHead(302, { Location: '/login.html' }); return res.end();
       }

@@ -25,6 +25,24 @@ test('erros de rede e migração pendente têm mensagens claras', async () => {
   await assert.rejects(offline.check(), error => error.status === 503);
   const pending = createSupabase({ ...config, fetchImpl: async () => Response.json({ code: 'PGRST205' }, { status: 404 }) });
   await assert.rejects(pending.profile('token'), /migração SQL/);
+  const truncated = createSupabase({ ...config, fetchImpl: async () => new Response('{incompleto', { status: 200, headers: { 'Content-Type': 'application/json' } }) });
+  await assert.rejects(truncated.backup('token',['chamados']), /Resposta incompleta/);
+});
+
+test('leitura normaliza o histórico Unique e prontidão exige as migrações novas', async () => {
+  let version=3;
+  const client=createSupabase({url:'https://example.supabase.co',key:'sb_publishable_test',fetchImpl:async url=>{
+    if(url.pathname==='/auth/v1/settings')return Response.json({});
+    if(url.pathname.endsWith('book_schema_version'))return Response.json(version);
+    if(url.pathname.endsWith('book_finance_history'))return Response.json({records:[{hotel:'Unique'}],groups:[]});
+    if(url.pathname.endsWith('book_hotel_access'))return Response.json([{hotel:'Unique'}]);
+    return Response.json([{id:'1',version:1,hotel:'Unique',data:{hotel:'Unique',apartamento:'904'}}]);
+  }});
+  assert.equal((await client.records('token','chamados')).rows[0].data.hotel,'Unique Residence');
+  assert.equal((await client.finance('token')).records[0].hotel,'Unique Residence');
+  assert.equal((await client.access('token'))[0].hotel,'Unique Residence');
+  await assert.rejects(client.ready(),/202610230009/);
+  version=9;assert.deepEqual(await client.ready(),{ok:true});
 });
 
 test('servidor Supabase protege sessão, perfis, arquivos e saída', async t => {
