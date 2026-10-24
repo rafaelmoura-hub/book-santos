@@ -36,6 +36,8 @@ npm.cmd start
 
 Abra <http://localhost:3000>. Não use Live Server nem abra o HTML diretamente. Para reiniciar após uma alteração no servidor, Ctrl+C e `npm.cmd start`. `npm.cmd run check:supabase` verifica a conexão com Auth, sem verificar migrações ou permissões.
 
+No VS Code, pressione **F5** e selecione **Book Santos - abrir servidor local**. A tarefa inicia o servidor quando necessário ou reutiliza o que já estiver na porta 3000. O navegador abre `http://127.0.0.1:3000`; a configuração anterior de porta 8080 foi substituída. Se mudar `PORT` no ambiente, ajuste também a URL em `.vscode/launch.json`.
+
 O único pacote de desenvolvimento é PostgreSQL embutido para testes; o servidor não depende dele para iniciar. Os testes usam dados locais e respostas simuladas, sem escrever no projeto Supabase real.
 
 ## Organização
