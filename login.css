@@ -1,23 +1,20 @@
-:root { --azul: #0803b8; --fundo: #f3f5f9; --texto: #202638; --borda: #dce2ec; }
-* { box-sizing: border-box; }
-body { min-height: 100vh; margin: 0; display: grid; place-items: center; padding: 22px; color: var(--texto); background: radial-gradient(circle at 20% 10%, #2823db, transparent 42%), linear-gradient(145deg, #0803b8, #090b28 82%); font-family: Inter, "Segoe UI", Arial, sans-serif; }
-.login-box { width: min(100%, 390px); padding: 38px; border: 1px solid rgba(255,255,255,.55); border-radius: 18px; background: white; box-shadow: 0 24px 70px rgba(0,0,0,.28); text-align: center; }
-.login-box h1 { margin: 0; color: var(--azul); font-size: 34px; letter-spacing: -.7px; }
-.login-box p { color: #687386; }
-input { width: 100%; margin-top: 14px; padding: 13px 14px; border: 1px solid var(--borda); border-radius: 9px; font: inherit; }
-input:focus { border-color: var(--azul); outline: none; box-shadow: 0 0 0 3px rgba(8,3,184,.1); }
-button { width: 100%; margin-top: 20px; padding: 13px; border: 0; border-radius: 9px; color: white; background: var(--azul); font: inherit; font-weight: 700; cursor: pointer; transition: background .15s ease, transform .15s ease; }
-button:hover { transform: translateY(-1px); background: #07028f; }
-#mensagem { min-height: 20px; color: #b42318; }
-
-:root { --azul: #174a8b; --texto: #1d2939; --borda: #dce5ef; }
-body { color: var(--texto); background: radial-gradient(circle at 15% 15%, rgba(93, 148, 205, .36), transparent 30%), linear-gradient(145deg, #12365d, #172c48 78%); }
-.login-box { padding: 42px; border: 1px solid rgba(255, 255, 255, .72); border-radius: 20px; box-shadow: 0 28px 80px rgba(8, 23, 43, .34); }
-.login-box h1 { color: #174a8b; letter-spacing: -.9px; }
-.login-box > p:first-of-type { margin: 9px 0 27px; color: #66758a; font-size: 14px; }
-.login-box form { display: grid; gap: 4px; }
-input { padding: 14px 15px; border-color: var(--borda); border-radius: 10px; }
-button { margin-top: 13px; border-radius: 10px; background: #1d5b98; }
-button:hover { background: #103966; }
-:focus-visible { outline: 3px solid rgba(75, 134, 198, .45); outline-offset: 2px; }
-@media (max-width: 480px) { .login-box { padding: 30px 24px; } }
+:root { --azul:#245b9e; --texto:#243246; --suave:#7b8798; --borda:#e3e9f1; }
+* { box-sizing:border-box; }
+body { min-height:100vh; min-height:100svh; margin:0; padding:24px; display:grid; place-items:center; background:#f5f7fb; color:var(--texto); font-family:"Segoe UI",Arial,sans-serif; }
+.login-box { width:min(100%,410px); padding:40px; border:1px solid var(--borda); border-radius:16px; background:#fff; box-shadow:0 8px 32px #24324605; }
+.login-box h1 { display:flex; align-items:center; gap:12px; margin:0; color:var(--texto); font-size:25px; font-weight:650; letter-spacing:-.8px; }
+.login-box h1::before { content:'BS'; display:grid; place-items:center; width:42px; height:42px; border-radius:12px; background:#edf3fc; color:var(--azul); font-size:14px; letter-spacing:-.3px; }
+.login-box > p { margin:14px 0 30px; color:var(--suave); font-size:14px; }
+.login-box form { display:grid; }
+label { margin:16px 0 7px; color:#65748a; font-size:13px; font-weight:500; }
+label:first-child { margin-top:0; }
+input { width:100%; padding:12px 14px; border:1px solid var(--borda); border-radius:8px; background:#fff; color:var(--texto); font:inherit; font-size:14px; }
+input::placeholder { color:#a0a9b7; }
+input:focus { border-color:#8aafd9; outline:3px solid #245b9e0c; }
+button { width:100%; margin-top:26px; padding:12px; border:0; border-radius:8px; background:var(--azul); color:#fff; font:inherit; font-size:14px; font-weight:600; cursor:pointer; transition:background-color .15s; }
+button:hover { background:#1b467d; }
+button:focus-visible { outline:3px solid #b9d3f4; outline-offset:3px; }
+button:disabled { opacity:.6; cursor:wait; }
+#mensagem { min-height:18px; margin:16px 0 0; color:#ae4242; font-size:13px; line-height:1.5; }
+@media(max-width:480px) { body { padding:18px; } .login-box { padding:30px 24px; } }
+@media(prefers-reduced-motion:reduce) { button { transition:none; } }

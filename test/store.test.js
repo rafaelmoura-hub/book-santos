@@ -39,6 +39,10 @@ test('tela aguarda confirmação e preserva versão lida para impedir sobrescrit
   vm.runInNewContext(readFileSync('assets/store.js','utf8'),context);
   const store=context.BookStore;
   await store.init({id:'owner',funcao:'cliente'});
+  let broadcasts=0;
+  events.addEventListener('book:data',()=>broadcasts++);
+  await store.refresh();
+  assert.equal(broadcasts,0,'Uma resposta idêntica não deve reconstruir a tela.');
   assert.deepEqual(Array.from(store.apartments('Unlimited')), ['618','901','1111']);
   const photo={type:'image/jpeg',size:512*1024};
   store.validateFiles(Array(20).fill(photo));
@@ -59,6 +63,7 @@ test('tela aguarda confirmação e preserva versão lida para impedir sobrescrit
   const stale=JSON.parse(store.getItem('chamados'));
   rows[0]={...rows[0],version:3,data:{...rows[0].data,assunto:'Outro funcionário'}};
   await store.refresh(true);
+  assert.ok(broadcasts>0,'Uma versão nova deve atualizar a tela.');
   stale[0].assunto='Tentativa antiga';
   await assert.rejects(store.setItem('chamados',JSON.stringify(stale)),/Conflito/);
   assert.equal(rows[0].data.assunto,'Outro funcionário');

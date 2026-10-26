@@ -5,29 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin | Book Santos</title>
     <link rel="stylesheet" href="admin.css">
+    <link rel="stylesheet" href="../assets/ui.css">
 <script src="../assets/events.js" defer></script>
 </head>
 <body hidden data-screen="admin.js">
     <header>
-        <h1>Book Santos - Administra&ccedil;&atilde;o</h1>
+        <h1>Book Santos</h1>
         <button data-on-click="sair()">Sair</button>
     </header>
-    <nav>
+    <nav aria-label="Menu principal">
         <button id="abaChamados" class="aba ativa" data-on-click="mostrarAba('chamados')">Chamados</button>
         <button id="abaChat" class="aba" data-on-click="mostrarAba('chat')">Chat <span id="chatBadge" class="chat-badge" hidden>0</span></button>
-        <button id="abaOS" class="aba" data-on-click="mostrarAba('os')">Card</button>
+        <button id="abaOS" class="aba" data-on-click="mostrarAba('os')">Cards</button>
         <button id="abaVistorias" class="aba" data-on-click="mostrarAba('vistorias')">Vistorias</button>
         <button id="abaCondominios" class="aba" data-on-click="mostrarAba('condominios')">Condomínios</button>
         <button id="abaEstoque" class="aba" data-on-click="mostrarAba('estoque')">Estoque</button>
         <button id="abaFinanceiro" class="aba" data-on-click="mostrarAba('financeiro')">Financeiro</button>
-        <button id="abaDashboard" class="aba" data-on-click="mostrarAba('dashboard')">Dashboard</button>
+        <button id="abaDashboard" class="aba" data-on-click="mostrarAba('dashboard')">Visão geral</button>
         <button id="abaUsuarios" class="aba" data-on-click="mostrarAba('usuarios')" hidden>Usu&aacute;rios</button>
         <button id="abaBackup" class="aba" data-on-click="mostrarAba('backup')" hidden>Backup</button>
     </nav>
     <main>
         <section id="visaoBackup" hidden>
           <h2>Backup no HD externo</h2>
-          <p>Conecte seu HD e escolha o que copiar. Ao clicar em Fazer backup, escolha uma pasta no HD; a cópia e a conferência dos arquivos são automáticas.</p>
+          <p>Escolha os dados e salve uma cópia no HD externo.</p>
           <fieldset id="backupOpcoes" class="usuario-hoteis"><legend>Conteúdo da cópia</legend>
             <label><input type="checkbox" value="chamados" checked> Chamados</label>
             <label><input type="checkbox" value="ordensServico" checked> Cards e dados financeiros</label>
@@ -38,12 +39,12 @@
             <label><input type="checkbox" value="auditoria" checked> Histórico de alterações</label>
             <label><input type="checkbox" value="anexos" checked> Fotos, vídeos e arquivos vinculados aos dados selecionados</label>
           </fieldset>
-          <p>Inclui todos os registros selecionados do servidor, mesmo os que ainda não foram carregados na tela. Cadastros não incluem senhas nem sessões. Esta é uma exportação dos dados do aplicativo; não substitui um backup SQL completo do projeto Supabase.</p>
+          <p>Cada execução cria uma cópia completa. Os backups anteriores são mantidos.</p>
           <button id="backupIniciar" type="button" class="acao-principal">Fazer backup e escolher pasta</button>
           <button id="backupVerificar" type="button" class="botao-secundario">Conferir backup existente</button>
           <button id="backupCancelar" type="button" class="botao-secundario" hidden>Cancelar</button>
-          <p id="backupStatus" role="status" aria-live="polite">Cada execução faz uma cópia completa dos itens selecionados em uma pasta nova. Os anexos são copiados novamente e as cópias anteriores são preservadas.</p>
-          <p>Mantenha o computador ligado, o site aberto e o HD conectado até terminar. O botão não agenda cópias diárias. Proteja o HD, pois a cópia contém informações privadas.</p>
+          <p id="backupStatus" role="status" aria-live="polite">Escolha uma pasta no HD para iniciar.</p>
+          <details class="help-panel"><summary>O que está incluído e como guardar a cópia</summary><p>Inclui todos os registros selecionados do servidor, mesmo os que ainda não foram carregados na tela. Cadastros não incluem senhas nem sessões. Esta é uma exportação dos dados do aplicativo; não substitui um backup SQL completo do projeto Supabase.</p><p>Mantenha o computador ligado, o site aberto e o HD conectado até terminar. O botão não agenda cópias diárias. Proteja o HD, pois a cópia contém informações privadas.</p></details>
         </section>
         <section id="visaoChamados">
           <div class="cards">
@@ -52,15 +53,15 @@
             <div class="card"><h3>Total de cards</h3><p id="andamento">0</p></div>
             <div class="card"><h3>Fechados</h3><p id="resolvidos">0</p></div>
           </div>
-          <div class="titulo-secao"><div><h2>Chamados</h2><p>Selecione um chamado para consultar os detalhes.</p></div></div>
+          <div class="titulo-secao"><div><h2>Chamados</h2></div></div>
           <div id="listaChamados"></div>
         </section>
         <section id="visaoOS" hidden>
-          <div class="titulo-secao"><div><h2>Cards</h2><p>Acompanhe os cards e suas datas de vencimento.</p></div><button class="acao-principal" data-on-click="abrirFormularioOS()">+ Abrir Card</button></div>
-          <label class="filtro-apartamento" for="filtroApartamento">Filtrar por apartamento</label>
-          <input id="filtroApartamento" type="search" inputmode="numeric" maxlength="4" placeholder="Digite 1111 ou 2222" data-on-input="mostrarOS()">
+          <div class="titulo-secao"><div><h2>Cards</h2></div><button class="acao-principal" data-on-click="abrirFormularioOS()">+ Abrir Card</button></div>
+          <div class="filtros-card"><div><label class="filtro-apartamento" for="filtroApartamento">Filtrar por apartamento</label>
+          <input id="filtroApartamento" type="search" maxlength="20" placeholder="Ex.: 214 ou 194A" data-on-input="mostrarOS()"></div><div>
           <label class="filtro-apartamento" for="filtroStatusOS">Filtrar por status</label>
-          <select id="filtroStatusOS" data-on-change="mostrarOS()"><option value="">Todos os status</option><option value="Aberta">Aberta</option><option value="Em andamento">Em andamento</option><option value="Finalizada">Finalizada</option></select>
+          <select id="filtroStatusOS" data-on-change="mostrarOS()"><option value="">Todos os status</option><option value="Aberta">Aberta</option><option value="Em andamento">Em andamento</option><option value="Finalizada">Finalizada</option></select></div></div>
           <p id="resumoListaOS" aria-live="polite"></p>
           <div id="listaOS"></div>
         </section>
@@ -94,32 +95,34 @@
           <div id="areaVistorias"><p class="vazio">Selecione um condomínio para começar.</p></div>
         </section>
         <section id="visaoCondominios" hidden>
-        <h2>Condom&iacute;nios cadastrados</h2>
-        <div class="hoteis"><article class="hotel" data-hotel="Be Urban" role="button" tabindex="0" data-on-click="BookCondominios.mostrarHistorico('Be Urban')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Be Urban')}"><h2>Be Urban</h2><p>6 apartamento(s)</p><p id="totalBe Urban">0 chamados</p></article>
-<article class="hotel" data-hotel="Conde Luciano" role="button" tabindex="0" data-on-click="BookCondominios.mostrarHistorico('Conde Luciano')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Conde Luciano')}"><h2>Conde Luciano</h2><p>1 apartamento(s)</p><p id="totalConde Luciano">0 chamados</p></article>
-<article class="hotel" data-hotel="Embaré" role="button" tabindex="0" data-on-click="BookCondominios.mostrarHistorico('Embaré')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Embaré')}"><h2>Embaré</h2><p>2 apartamento(s)</p><p id="totalEmbaré">0 chamados</p></article>
-<article class="hotel" data-hotel="Helbor Stay" role="button" tabindex="0" data-on-click="BookCondominios.mostrarHistorico('Helbor Stay')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Helbor Stay')}"><h2>Helbor Stay</h2><p>1 apartamento(s)</p><p id="totalHelbor Stay">0 chamados</p></article>
-<article class="hotel" data-hotel="Housi" role="button" tabindex="0" data-on-click="BookCondominios.mostrarHistorico('Housi')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Housi')}"><h2>Housi</h2><p>6 apartamento(s)</p><p id="totalHousi">0 chamados</p></article>
-<article class="hotel" data-hotel="Houx" role="button" tabindex="0" data-on-click="BookCondominios.mostrarHistorico('Houx')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Houx')}"><h2>Houx</h2><p>1 apartamento(s)</p><p id="totalHoux">0 chamados</p></article>
-<article class="hotel" data-hotel="Ipanema" role="button" tabindex="0" data-on-click="BookCondominios.mostrarHistorico('Ipanema')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Ipanema')}"><h2>Ipanema</h2><p>1 apartamento(s)</p><p id="totalIpanema">0 chamados</p></article>
-<article class="hotel" data-hotel="Lume Alto da Boa Vista" role="button" tabindex="0" data-on-click="BookCondominios.mostrarHistorico('Lume Alto da Boa Vista')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Lume Alto da Boa Vista')}"><h2>Lume Alto da Boa Vista</h2><p>3 apartamento(s)</p><p id="totalLume Alto da Boa Vista">0 chamados</p></article>
-<article class="hotel" data-hotel="Maralta" role="button" tabindex="0" data-on-click="BookCondominios.mostrarHistorico('Maralta')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Maralta')}"><h2>Maralta</h2><p>1 apartamento(s)</p><p id="totalMaralta">0 chamados</p></article>
-<article class="hotel" data-hotel="Marco Aurelio" role="button" tabindex="0" data-on-click="BookCondominios.mostrarHistorico('Marco Aurelio')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Marco Aurelio')}"><h2>Marco Aurelio</h2><p>2 apartamento(s)</p><p id="totalMarco Aurelio">0 chamados</p></article>
-<article class="hotel" data-hotel="Nexone" role="button" tabindex="0" data-on-click="BookCondominios.mostrarHistorico('Nexone')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Nexone')}"><h2>Nexone</h2><p>4 apartamento(s)</p><p id="totalNexone">0 chamados</p></article>
-<article class="hotel" data-hotel="Type" role="button" tabindex="0" data-on-click="BookCondominios.mostrarHistorico('Type')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Type')}"><h2>Type</h2><p>9 apartamento(s)</p><p id="totalType">0 chamados</p></article>
-<article class="hotel" data-hotel="Unique Residence" role="button" tabindex="0" data-on-click="BookCondominios.mostrarHistorico('Unique Residence')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Unique Residence')}"><h2>Unique Residence</h2><p>42 apartamento(s)</p><p id="totalUnique Residence">0 chamados</p></article>
-<article class="hotel" data-hotel="Universo Palace" role="button" tabindex="0" data-on-click="BookCondominios.mostrarHistorico('Universo Palace')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Universo Palace')}"><h2>Universo Palace</h2><p>2 apartamento(s)</p><p id="totalUniverso Palace">0 chamados</p></article>
-<article class="hotel" data-hotel="Unlimited" role="button" tabindex="0" data-on-click="BookCondominios.mostrarHistorico('Unlimited')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Unlimited')}"><h2>Unlimited</h2><p>43 apartamento(s)</p><p id="totalUnlimited">0 chamados</p></article>
-<article class="hotel" data-hotel="VN Melo" role="button" tabindex="0" data-on-click="BookCondominios.mostrarHistorico('VN Melo')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('VN Melo')}"><h2>VN Melo</h2><p>1 apartamento(s)</p><p id="totalVN Melo">0 chamados</p></article>
-<article class="hotel" data-hotel="Xangô" role="button" tabindex="0" data-on-click="BookCondominios.mostrarHistorico('Xangô')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Xangô')}"><h2>Xangô</h2><p>1 apartamento(s)</p><p id="totalXangô">0 chamados</p></article></div>
+        <h2>Condomínios</h2>
+        <input class="busca-condominio" type="search" placeholder="Buscar condomínio" aria-label="Buscar condomínio" data-on-input="BookCondominios.filtrarLista('visaoCondominios',this.value)">
+        <p id="visaoCondominiosVazio" class="vazio" hidden>Nenhum condomínio encontrado.</p>
+        <div class="hoteis"><article class="hotel" data-hotel="Be Urban" role="button" tabindex="0" data-on-click="BookCondominios.mostrarHistorico('Be Urban')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Be Urban')}"><h2>Be Urban</h2><p>6 apartamentos</p><p id="totalBe Urban">0 chamados</p></article>
+<article class="hotel" data-hotel="Conde Luciano" role="button" tabindex="0" data-on-click="BookCondominios.mostrarHistorico('Conde Luciano')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Conde Luciano')}"><h2>Conde Luciano</h2><p>1 apartamento</p><p id="totalConde Luciano">0 chamados</p></article>
+<article class="hotel" data-hotel="Embaré" role="button" tabindex="0" data-on-click="BookCondominios.mostrarHistorico('Embaré')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Embaré')}"><h2>Embaré</h2><p>2 apartamentos</p><p id="totalEmbaré">0 chamados</p></article>
+<article class="hotel" data-hotel="Helbor Stay" role="button" tabindex="0" data-on-click="BookCondominios.mostrarHistorico('Helbor Stay')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Helbor Stay')}"><h2>Helbor Stay</h2><p>1 apartamento</p><p id="totalHelbor Stay">0 chamados</p></article>
+<article class="hotel" data-hotel="Housi" role="button" tabindex="0" data-on-click="BookCondominios.mostrarHistorico('Housi')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Housi')}"><h2>Housi</h2><p>6 apartamentos</p><p id="totalHousi">0 chamados</p></article>
+<article class="hotel" data-hotel="Houx" role="button" tabindex="0" data-on-click="BookCondominios.mostrarHistorico('Houx')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Houx')}"><h2>Houx</h2><p>1 apartamento</p><p id="totalHoux">0 chamados</p></article>
+<article class="hotel" data-hotel="Ipanema" role="button" tabindex="0" data-on-click="BookCondominios.mostrarHistorico('Ipanema')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Ipanema')}"><h2>Ipanema</h2><p>1 apartamento</p><p id="totalIpanema">0 chamados</p></article>
+<article class="hotel" data-hotel="Lume Alto da Boa Vista" role="button" tabindex="0" data-on-click="BookCondominios.mostrarHistorico('Lume Alto da Boa Vista')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Lume Alto da Boa Vista')}"><h2>Lume Alto da Boa Vista</h2><p>3 apartamentos</p><p id="totalLume Alto da Boa Vista">0 chamados</p></article>
+<article class="hotel" data-hotel="Maralta" role="button" tabindex="0" data-on-click="BookCondominios.mostrarHistorico('Maralta')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Maralta')}"><h2>Maralta</h2><p>1 apartamento</p><p id="totalMaralta">0 chamados</p></article>
+<article class="hotel" data-hotel="Marco Aurelio" role="button" tabindex="0" data-on-click="BookCondominios.mostrarHistorico('Marco Aurelio')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Marco Aurelio')}"><h2>Marco Aurelio</h2><p>2 apartamentos</p><p id="totalMarco Aurelio">0 chamados</p></article>
+<article class="hotel" data-hotel="Nexone" role="button" tabindex="0" data-on-click="BookCondominios.mostrarHistorico('Nexone')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Nexone')}"><h2>Nexone</h2><p>4 apartamentos</p><p id="totalNexone">0 chamados</p></article>
+<article class="hotel" data-hotel="Type" role="button" tabindex="0" data-on-click="BookCondominios.mostrarHistorico('Type')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Type')}"><h2>Type</h2><p>9 apartamentos</p><p id="totalType">0 chamados</p></article>
+<article class="hotel" data-hotel="Unique Residence" role="button" tabindex="0" data-on-click="BookCondominios.mostrarHistorico('Unique Residence')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Unique Residence')}"><h2>Unique Residence</h2><p>42 apartamentos</p><p id="totalUnique Residence">0 chamados</p></article>
+<article class="hotel" data-hotel="Universo Palace" role="button" tabindex="0" data-on-click="BookCondominios.mostrarHistorico('Universo Palace')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Universo Palace')}"><h2>Universo Palace</h2><p>2 apartamentos</p><p id="totalUniverso Palace">0 chamados</p></article>
+<article class="hotel" data-hotel="Unlimited" role="button" tabindex="0" data-on-click="BookCondominios.mostrarHistorico('Unlimited')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Unlimited')}"><h2>Unlimited</h2><p>43 apartamentos</p><p id="totalUnlimited">0 chamados</p></article>
+<article class="hotel" data-hotel="VN Melo" role="button" tabindex="0" data-on-click="BookCondominios.mostrarHistorico('VN Melo')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('VN Melo')}"><h2>VN Melo</h2><p>1 apartamento</p><p id="totalVN Melo">0 chamados</p></article>
+<article class="hotel" data-hotel="Xangô" role="button" tabindex="0" data-on-click="BookCondominios.mostrarHistorico('Xangô')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();BookCondominios.mostrarHistorico('Xangô')}"><h2>Xangô</h2><p>1 apartamento</p><p id="totalXangô">0 chamados</p></article></div>
         <section id="historico" aria-live="polite">
             <h2>Hist&oacute;rico</h2>
             <p>Selecione um condomínio e um apartamento para visualizar chamados e cards.</p>
         </section>
     </section>
         <section id="visaoFinanceiro" hidden>
-          <div class="titulo-secao"><div><h2>Financeiro</h2><p>Resumo dos valores registrados nos cards, separado por responsável pelo pagamento.</p></div><button class="botao-secundario" type="button" data-on-click="BookFinance.load()">Atualizar financeiro</button></div>
-          <p>Os totais incluem todos os cards dos condomínios autorizados. Valores em andamento são provisórios; esta tela não confirma recebimentos.</p>
+          <div class="titulo-secao"><div><h2>Financeiro</h2><p>Serviços e valores por responsável.</p></div><button class="botao-secundario" type="button" data-on-click="BookFinance.load()">Atualizar financeiro</button></div>
+          
           <div class="financeiro-periodo">
             <label>Histórico por<select id="financeiroPeriodo" data-on-change="BookFinance.changePeriod()"><option value="all">Todo o histórico</option><option value="dia">Dia</option><option value="semana">Semana</option><option value="mes">Mês</option><option value="ano">Ano</option></select></label>
             <label>Data de referência<input id="financeiroData" type="date" data-on-change="BookFinance.changePeriod()" disabled></label>
@@ -127,7 +130,7 @@
             <button id="financeiroProximo" class="botao-secundario" type="button" data-on-click="BookFinance.move(1)" disabled aria-label="Próximo período">Próximo</button>
           </div>
           <p id="financeiroIntervalo" class="financeiro-intervalo">Todo o histórico</p>
-          <p class="financeiro-ajuda">A data considerada é a do fechamento informado; na ausência dela, a data de abertura. A semana vai de segunda a domingo, no horário de São Paulo.</p>
+          <details class="help-panel"><summary>Sobre os valores e períodos</summary><p>Os totais incluem todos os cards dos condomínios autorizados. Valores em andamento são provisórios; esta tela não confirma recebimentos.</p><p>A data considerada é a do fechamento informado; na ausência dela, a data de abertura. A semana vai de segunda a domingo, no horário de São Paulo.</p></details>
           <div id="financeiroAbas" class="financeiro-abas" role="tablist" aria-label="Responsável pelo pagamento"></div>
           <p id="financeiroStatus" role="status" aria-live="polite"></p>
           <div id="financeiroTotais" class="cards"></div>
@@ -136,9 +139,9 @@
         </section>
         <section id="visaoUsuarios" hidden>
           <div class="titulo-secao"><div><h2>Usuários e permissões</h2><p>Cadastre pessoas e escolha a função e os condomínios que podem acessar.</p></div><div><button class="botao-secundario" type="button" data-on-click="mostrarUsuarios()">Recarregar usuários</button> <button id="novoUsuario" class="acao-principal" type="button" data-on-click="mostrarUsuarios(true)">+ Novo usuário</button></div></div>
-          <p id="usuariosStatus" role="status" aria-live="polite">Selecione Novo usuário ou Recarregar usuários para consultar os acessos.</p>
+          <p id="usuariosStatus" role="status" aria-live="polite"></p>
           <label class="filtro-apartamento" for="buscaUsuario">Buscar por nome ou e-mail</label><input id="buscaUsuario" type="search" placeholder="Buscar usuário" data-on-input="BookUsers.render()">
-          <div class="permissoes-ajuda"><p><strong>Cliente:</strong> abre e acompanha seus chamados. <strong>Administrador:</strong> gerencia os condomínios selecionados e o estoque global. <strong>Mestre:</strong> acesso completo; conta protegida.</p></div>
+          <details class="help-panel"><summary>Tipos de acesso</summary><p><strong>Cliente:</strong> abre e acompanha seus chamados. <strong>Administrador:</strong> gerencia os condomínios selecionados e o estoque global. <strong>Mestre:</strong> acesso completo; conta protegida.</p></details>
           <div id="listaUsuarios"></div>
         </section>
         <section id="visaoDashboard" hidden>

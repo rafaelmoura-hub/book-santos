@@ -73,11 +73,32 @@ async function main() {
     socket.addEventListener('message',event=>{const message=JSON.parse(event.data);if(message.method==='Page.javascriptDialogOpening'){dialogs.push(message.params.message);send('Page.handleJavaScriptDialog',{accept:true}).catch(()=>{});}});
     const evaluate=async expression=>{const result=await send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(result.exceptionDetails)throw new Error(JSON.stringify(result.exceptionDetails));return result.result.value;};
     const wait=async expression=>{for(let i=0;i<100;i++){if(await evaluate(expression))return;await delay(100);}throw new Error(`Tempo excedido: ${expression}`);};
+    const capture=async name=>{
+      if(!process.env.BOOK_PREVIEW_DIR)return;
+      const folder=path.resolve(process.env.BOOK_PREVIEW_DIR);fs.mkdirSync(folder,{recursive:true});
+      const screenshot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});
+      fs.writeFileSync(path.join(folder,name+'.png'),Buffer.from(screenshot.data,'base64'));
+    };
+    await send('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
     await wait("location.origin === '"+base+"' && document.readyState === 'complete'");
+    await capture('login-desktop');
     await evaluate("fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({login:'master@example.com',senha:'senha'})}).then(r=>{if(!r.ok)throw Error('login');})");
     await send('Page.navigate',{url:base+'/adm/admin.html'});
     await wait("typeof mostrarAba === 'function' && !document.body.hidden");
+    await evaluate(`(async()=>{const row=document.getElementById('listaChamados').firstElementChild;await BookStore.refresh();if(row!==document.getElementById('listaChamados').firstElementChild)throw Error('Uma resposta idêntica reconstruiu a lista');})()`);
+    await capture('painel-desktop');
     const tabs=await evaluate(`(() => {const result=[];for(const tab of ['chamados','chat','os','vistorias','condominios','estoque','financeiro','dashboard','usuarios','backup']){document.getElementById('aba'+(tab==='os'?'OS':tab[0].toUpperCase()+tab.slice(1))).click();const id=tab==='os'?'OS':tab[0].toUpperCase()+tab.slice(1);if(document.getElementById('visao'+id).hidden)throw Error(tab);if(document.querySelector('nav').getBoundingClientRect().height===0)throw Error('nav');result.push(tab);}return result;})()`);
+    await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+    for(const tab of tabs){
+      await evaluate(`mostrarAba(${JSON.stringify(tab)})`);
+      await evaluate(`if(document.documentElement.scrollWidth>innerWidth+1)throw Error('Rolagem horizontal na aba ${tab}');`);
+    }
+    await evaluate("mostrarAba('condominios')");await capture('condominios-mobile');
+    await evaluate(`(() => {const search=document.querySelector('.busca-condominio');search.value='embare';search.dispatchEvent(new Event('input',{bubbles:true}));})()`);
+    await wait("document.querySelectorAll('#visaoCondominios [data-hotel]:not([hidden])').length === 1");
+    await evaluate("if(document.querySelector('#visaoCondominios [data-hotel]:not([hidden])').dataset.hotel!=='Embaré')throw Error('Busca por condomínio sem acento');BookCondominios.filtrarLista('visaoCondominios','impossivel');if(document.getElementById('visaoCondominiosVazio').hidden)throw Error('Aviso de busca vazia');document.querySelector('.busca-condominio').value='';BookCondominios.filtrarLista('visaoCondominios','');");
+    await send('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
+    await capture('condominios-desktop');
     const catalogCheck=await evaluate(`(() => {
       mostrarAba('os');abrirFormularioOS();
       const hotel=document.getElementById('osHotel'),ap=document.getElementById('osApartamento');
@@ -150,6 +171,11 @@ async function main() {
     await wait("typeof entrar === 'function'");
     await evaluate("document.getElementById('login').value='cliente@example.com';document.getElementById('senha').value='senha';document.querySelector('form').requestSubmit()");
     await wait("location.pathname === '/cliente/cliente.html' && typeof abrirChamado === 'function'");
+    await capture('cliente-desktop');
+    await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+    await evaluate("if(document.documentElement.scrollWidth>innerWidth+1)throw Error('Rolagem horizontal no cliente');");
+    await capture('cliente-mobile');
+    await send('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
     const ticketId=await evaluate(`(async()=>{
       const hotels=[...document.getElementById('hotel').options].filter(o=>o.value).map(o=>o.value);
       if(hotels.join('|')!=='Be Urban|Lume Alto da Boa Vista')throw Error('Permissões do cliente');
@@ -180,7 +206,7 @@ async function main() {
     await wait("location.pathname === '/login.html'");
     if(errors.length)throw new Error(errors.join('; '));
     if(dialogs.length)throw new Error('Alertas inesperados: '+dialogs.join('; '));
-    console.log(JSON.stringify({browser:'Chrome headless',tabs,catalogCheck,created:1,permissionsUpdated:1,cardLifecycle:true,inspectionWithPhoto:true,inventorySaved:true,clientTicketWithPhoto:true,chatBothDirections:true,clientPermissions:true,backupAndVerification:true,externalDisk:'simulated',logout:true,uncaughtErrors:0}));
+    console.log(JSON.stringify({browser:'Chrome headless',tabs,catalogCheck,created:1,permissionsUpdated:1,cardLifecycle:true,inspectionWithPhoto:true,inventorySaved:true,clientTicketWithPhoto:true,chatBothDirections:true,clientPermissions:true,backupAndVerification:true,responsiveWidths:[390,1440],externalDisk:'simulated',logout:true,uncaughtErrors:0}));
   } finally {
     socket?.close();child.kill();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));
     await delay(500);

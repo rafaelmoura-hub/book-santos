@@ -35,7 +35,8 @@ function atualizarPainel() {
   document.getElementById("abertos").textContent = totals?.abertos ?? items.filter(c => (c.status || "Aberto") === "Aberto").length;
   document.getElementById("andamento").textContent = totals?.ordensServico ?? osList().length;
   document.getElementById("resolvidos").textContent = totals?.fechados ?? items.filter(c => c.status === "Fechado").length;
-  mostrarChamados(); mostrarOS();
+  if (!document.getElementById('visaoChamados').hidden) mostrarChamados();
+  if (!document.getElementById('visaoOS').hidden) mostrarOS();
 }
 function mostrarAba(aba) {
   if (["usuarios", "backup"].includes(aba) && !ehAdministradorMestre) return;
@@ -44,8 +45,10 @@ function mostrarAba(aba) {
     const sufixo = nome === "os" ? "OS" : nome[0].toUpperCase() + nome.slice(1);
     document.getElementById(`visao${sufixo}`).hidden = nome !== aba;
     if (document.getElementById(`aba${sufixo}`)) document.getElementById(`aba${sufixo}`).classList.toggle("ativa", nome === aba);
+    if (document.getElementById(`aba${sufixo}`)) document.getElementById(`aba${sufixo}`).setAttribute('aria-current', nome === aba ? 'page' : 'false');
   });
-  if (aba === "os") document.getElementById("filtroApartamento").focus();
+  if (aba === "os") mostrarOS();
+  if (aba === "chamados") mostrarChamados();
   if (aba === "vistorias") atualizarTotaisVistorias();
   if (aba === "usuarios") mostrarUsuarios();
   if (aba === "condominios") BookCondominios.atualizarTotais();
@@ -53,6 +56,11 @@ function mostrarAba(aba) {
   if (aba === "estoque") mostrarEstoque();
   if (aba === "financeiro") BookFinance.load();
   if (aba === "chat") mostrarConversasChat();
+  window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  if (window.matchMedia('(max-width: 760px)').matches) {
+    const suffix = aba === 'os' ? 'OS' : aba[0].toUpperCase() + aba.slice(1);
+    document.getElementById(`aba${suffix}`)?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
 }
 
 function mostrarEstoque() {
@@ -97,7 +105,7 @@ async function alterarStatus(id, status) {
 }
 function abrirChamado(id) {
   const c = chamados().find(item => item.id == id); if (!c) return;
-  const anexo = c.anexoTipo?.startsWith("image/") ? `<img loading="lazy" src="${c.anexoData}" alt="Anexo">` : c.anexoTipo?.startsWith("video/") ? `<video preload="metadata" src="${c.anexoData}" controls></video>` : "Sem anexo";
+  const anexo = c.anexoTipo?.startsWith("image/") ? `<img decoding="async" loading="lazy" src="${c.anexoData}" alt="Anexo">` : c.anexoTipo?.startsWith("video/") ? `<video preload="metadata" src="${c.anexoData}" controls></video>` : "Sem anexo";
   document.getElementById("detalhes").innerHTML = `<h2>Chamado #${c.id}</h2><p><b>Hotel:</b> ${escapar(c.hotel)}</p><p><b>Apartamento:</b> ${escapar(c.apartamento)}</p><p><b>Assunto:</b> ${escapar(c.assunto)}</p><p><b>Categoria:</b> ${escapar(c.categoria)}</p><p><b>Descri\u00e7\u00e3o:</b> ${escapar(c.descricao)}</p><p><b>Status:</b> ${escapar(c.status || "Aberto")}</p><p><b>Data:</b> ${escapar(c.data)}</p><p><b>Arquivo:</b> ${escapar(c.anexoNome)}</p>${anexo}<p><button data-on-click="abrirFormularioOS(${Number(c.id)})">Abrir Card para este chamado</button></p>`;
   document.getElementById("modal").style.display = "block";
 }
@@ -147,9 +155,9 @@ async function salvarOS(event) {
 }
 function mostrarOS() {
   const area = document.getElementById("listaOS"); if (!area) return;
-  const filtro = document.getElementById("filtroApartamento")?.value.trim() || "";
+  const filtro = document.getElementById("filtroApartamento")?.value.trim().toLocaleLowerCase('pt-BR') || "";
   const filtroStatus = document.getElementById("filtroStatusOS")?.value || "";
-  const items = osList().filter(o => (!filtro || String(o.apartamento).includes(filtro)) && (!filtroStatus || (o.status || "Aberta") === filtroStatus));
+  const items = osList().filter(o => (!filtro || String(o.apartamento).toLocaleLowerCase('pt-BR').includes(filtro)) && (!filtroStatus || (o.status || "Aberta") === filtroStatus));
   const andamento = items.filter(o => o.status === "Em andamento").length;
   const resumo = document.getElementById("resumoListaOS");
   if (resumo) resumo.textContent = `${items.length} cards exibidos · ${andamento} em andamento`;
@@ -171,11 +179,11 @@ function abrirOS(id) {
   const chamadoVinculado = o.chamadoId ? chamados().find(c => c.id == o.chamadoId) : null;
   const vinculo = o.chamadoId ? `<p><b>Chamado vinculado:</b> #${escapar(o.chamadoId)}${chamadoVinculado ? ` - ${escapar(chamadoVinculado.assunto)}` : ""}</p>` : "<p>Card independente</p>";
   const anexos = Array.isArray(o.anexos) && o.anexos.length ? o.anexos.map(a => {
-    if (a.tipo?.startsWith("image/")) return `<figure><img loading="lazy" src="${a.dados}" alt="${escapar(a.nome)}"><figcaption>${escapar(a.nome)}</figcaption></figure>`;
+    if (a.tipo?.startsWith("image/")) return `<figure><img decoding="async" loading="lazy" src="${a.dados}" alt="${escapar(a.nome)}"><figcaption>${escapar(a.nome)}</figcaption></figure>`;
     if (a.tipo?.startsWith("video/")) return `<p>${escapar(a.nome)}<video preload="metadata" src="${a.dados}" controls></video></p>`;
     return `<p><a href="${a.dados}" download="${escapar(a.nome)}">Baixar ${escapar(a.nome)}</a></p>`;
   }).join("") : "<p>Nenhum anexo neste card</p>";
-  const fotosFechamento = (o.fechamento?.fotos || []).map(f => `<figure><img loading="lazy" src="${f.dados}" alt="${escapar(f.nome)}"><figcaption>${escapar(f.nome)}</figcaption></figure>`).join("");
+  const fotosFechamento = (o.fechamento?.fotos || []).map(f => `<figure><img decoding="async" loading="lazy" src="${f.dados}" alt="${escapar(f.nome)}"><figcaption>${escapar(f.nome)}</figcaption></figure>`).join("");
   const fechamento = o.fechamento ? `<h3>Dados do fechamento</h3><p><b>Data de fechamento:</b> ${formatarData(o.fechamento.data)}</p><p><b>Serviço executado por terceiro:</b> ${escapar(o.fechamento.terceiro)}</p><p><b>Valor do serviço:</b> ${formatarMoeda(o.fechamento.valorServico)}</p><p><b>Tipo de material:</b> ${escapar(o.fechamento.tipoMaterial)}</p><p><b>Valor do material:</b> ${formatarMoeda(o.fechamento.valorMaterial)}</p><p><b>Descrição do material:</b> ${escapar(o.fechamento.descricaoMaterial || "Não informado")}</p><p><b>Responsável pelo pagamento:</b> ${escapar(o.fechamento.responsavelPagamento)}</p><p><b>Quem executou:</b> ${escapar(o.fechamento.executadoPor)}</p><p><b>Custo total:</b> ${formatarMoeda(o.fechamento.custoTotal)}</p><p><b>Observações:</b> ${escapar(o.fechamento.observacao || "Nenhuma")}</p><h4>Fotos do serviço concluído</h4>${fotosFechamento || "<p>Nenhuma foto anexada.</p>"}` : `<p>${o.status === "Finalizada" ? "Sem dados de fechamento registrados para este card." : "Este card ainda não foi finalizado."}</p>`;
   document.getElementById("osDetalhes").innerHTML = `<h2>${escapar(o.titulo || "Card")}</h2><p><b>Card #:</b> ${escapar(o.id)}</p><p><b>Hotel:</b> ${escapar(o.hotel)}</p><p><b>Apartamento:</b> ${escapar(o.apartamento)}</p><p><b>Descrição:</b> ${escapar(o.descricao)}</p><p><b>Status:</b> ${escapar(o.status || "Aberta")}</p><p><b>Abertura:</b> ${escapar(o.data)}</p><p><b>Vencimento:</b> ${formatarData(o.vencimento)}</p>${vinculo}<h3>Anexos e arquivos</h3>${anexos}${fechamento}`;
   const botaoFechamento = document.getElementById("botaoFinalizarOS");
@@ -352,7 +360,7 @@ function selecionarApartamentoVistoria(apartamento) {
 }
 function renderizarVistoria(item) {
   const checklist = Object.entries(item.checklist || {}).map(([grupo, respostas]) => `<h5>${escapar(grupo)}</h5><ul>${Object.entries(respostas).map(([nome, estado]) => `<li><strong>${escapar(nome)}:</strong> ${escapar(estado)}</li>`).join("")}</ul>`).join("");
-  const fotos = (item.fotos || []).map(foto => `<a href="${foto.dados}" target="_blank" rel="noopener"><img loading="lazy" src="${foto.dados}" alt="${escapar(foto.nome)}"></a>`).join("");
+  const fotos = (item.fotos || []).map(foto => `<a href="${foto.dados}" target="_blank" rel="noopener"><img decoding="async" loading="lazy" src="${foto.dados}" alt="${escapar(foto.nome)}"></a>`).join("");
   return `<details class="vistoria-registro"><summary><strong>${formatarData(item.data)} — ${escapar(item.tipo)}</strong><span>Responsável: ${escapar(item.responsavel)}</span></summary><div class="vistoria-registro-detalhes"><p><strong>Responsável:</strong> ${escapar(item.responsavel)}</p>${checklist}<p><strong>Observações:</strong> ${escapar(item.observacoes || "Nenhuma")}</p><p><strong>Fotos:</strong> ${(item.fotos || []).length}</p><div class="galeria-vistoria">${fotos}</div><button type="button" class="botao-secundario" data-on-click="abrirFormularioOS('', '${escapar(item.hotel)}', '${escapar(item.apartamento)}')">Abrir Card deste apartamento</button></div></details>`;
 }
 function abrirFormularioVistoria() {
@@ -500,7 +508,7 @@ function verificarNovasMensagensChat() { const conversas=lerConversasChat();let 
 function ativarNotificacoesChat() { if(!("Notification"in window)){alert("Este navegador não oferece notificações do sistema.");return;}Notification.requestPermission().then(p=>alert(p==="granted"?"Notificações ativadas.":"Permissão de notificações não concedida.")); }
 window.addEventListener("storage",e=>{if(e.key===CHAVE_CHAT){verificarNovasMensagensChat();if(conversaSelecionada)renderizarMensagensAdmin();}});
 idsMensagensConhecidas=new Set(lerConversasChat().flatMap(c=>(c.mensagens||[]).map(m=>m.id)));
-atualizarBadgeChat();setInterval(verificarNovasMensagensChat,1500);
+atualizarBadgeChat();
 BookStore.activate('chamados');
 document.getElementById("osVencimento").min = dataLocalHoje();
 atualizarPainel();
@@ -510,11 +518,12 @@ if (abaSolicitada) mostrarAba(abaSolicitada);
 
 
 window.addEventListener('book:data', () => {
-  atualizarPainel(); atualizarTotaisVistorias(); atualizarBadgeChat();
+  atualizarPainel();
+  if (!document.getElementById('visaoVistorias').hidden) atualizarTotaisVistorias();
   if (!document.getElementById('visaoEstoque').hidden) mostrarEstoque();
   if (!document.getElementById('visaoDashboard').hidden) atualizarDashboard();
   if (vistoriaHotel && vistoriaApartamento && !document.getElementById('visaoVistorias').hidden) selecionarApartamentoVistoria(vistoriaApartamento);
-  verificarNovasMensagensChat(); if (conversaSelecionada) renderizarMensagensAdmin();
+  verificarNovasMensagensChat();
 });
 
 BookMoney.bind(document);

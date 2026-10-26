@@ -4,7 +4,7 @@ window.BookStore = (() => {
     const cache = new Map();
     const pages = new Map();
     const cursors = new Map();
-    let user, busy = false, refreshing = false, status, toolbar;
+    let user, busy = false, refreshing = false, status, toolbar, moreButton;
     let apartmentCatalog = [];
     let totals = null, activeCollections = keys;
     function activate(tab) {
@@ -15,7 +15,11 @@ window.BookStore = (() => {
     const clone = value => JSON.parse(JSON.stringify(value));
     const notify = () => window.dispatchEvent(new Event('book:data'));
     function message(text, error = false) {
-        if (status) { status.textContent = text; status.style.color = error ? '#a61b1b' : '#154b35'; }
+        if (status) {
+            status.textContent = error ? text : /^(Salvando|Carregando)/.test(text) ? text.replace(/no servidor.*/, '…') : 'Atualizado';
+            status.title = text;
+            status.setAttribute('data-state', error ? 'error' : 'ok');
+        }
     }
     function rows(key) { return cache.get(key) || []; }
     function recordId(key, data) {
@@ -32,17 +36,21 @@ window.BookStore = (() => {
         if (!force && !activeCollections.length) return;
         if (refreshing || busy || !force && (document.hidden || document.querySelector('.modal[style*="block"]') || /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName))) return;
         refreshing = true;
+        let changed = false;
         try {
             const filter = force ? '' : `&collections=${encodeURIComponent(JSON.stringify(activeCollections))}`;
-            const result = await BookAPI.request(`/api/snapshot?pages=${encodeURIComponent(JSON.stringify(Object.fromEntries(pages)))}${filter}`);
+            const result = await BookAPI.request(`/api/snapshot?pages=${encodeURIComponent(JSON.stringify(Object.fromEntries(pages)))}${filter}`, { timeoutMs: 30000 });
             for (const [key, data] of Object.entries(result)) {
-                if (key === '__counts') { totals = data; continue; }
-                cache.set(key, data.loaded); cursors.set(key, data.cursor);
+                if (key === '__counts') { if (JSON.stringify(totals) !== JSON.stringify(data)) changed = true; totals = data; continue; }
+                const previous = cache.get(key);
+                const different = force || !previous || previous.length !== data.loaded.length || cursors.get(key) !== data.cursor || data.loaded.some((row, index) => row.id !== previous[index]?.id || row.version !== previous[index]?.version || row.updated_at !== previous[index]?.updated_at);
+                if (different) { cache.set(key, data.loaded); cursors.set(key, data.cursor); changed = true; }
             }
-            message(`Dados sincronizados às ${new Date().toLocaleTimeString('pt-BR')}. Totais e filtros consideram os registros carregados.${[...cursors.values()].some(Boolean) ? ' Há registros anteriores: use Carregar mais.' : ''}`);
+            if (moreButton) moreButton.hidden = ![...cursors.values()].some(Boolean);
+            message(`Atualizado às ${new Date().toLocaleTimeString('pt-BR')}. Filtros e gráficos usam os registros carregados.${[...cursors.values()].some(Boolean) ? ' Use Carregar mais para consultar registros anteriores.' : ''}`);
         } catch (error) { message(error.message, true); if (force) throw error; }
         finally { refreshing = false; }
-        notify();
+        if (changed) notify();
     }
     function getItem(key) {
         if (!keys.includes(key)) return localStorage.getItem(key);
@@ -96,34 +104,38 @@ window.BookStore = (() => {
         user = profile;
         if (profile.funcao === 'cliente') activeCollections = ['chamados', 'conversasSuporte'];
         toolbar = document.createElement('aside');
-        toolbar.style.cssText = 'padding:12px;background:#eef5ff;border-bottom:1px solid #b8c9e3;font:14px system-ui;display:flex;gap:12px;align-items:center;flex-wrap:wrap';
+        toolbar.className = 'sync-toolbar';
         status = document.createElement('span'); status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
         toolbar.appendChild(status);
         const action = (label, fn) => {
             const button = document.createElement('button'); button.type = 'button'; button.textContent = label;
-            button.style.cssText = 'padding:8px;cursor:pointer';
             button.onclick = async () => { button.disabled = true; try { await fn(); } catch (error) { message(error.message, true); } finally { button.disabled = false; } };
             toolbar.appendChild(button);
+            return button;
         };
         action('Atualizar', () => refresh(true));
-        action('Carregar mais', async () => {
+        moreButton = action('Carregar mais', async () => {
             for (const [key, cursor] of cursors) if (cursor) {
                 if ((pages.get(key) || 1) >= 20) throw new Error('Limite de 2000 registros por coleção nesta tela. Consulte o histórico no banco.');
                 pages.set(key, (pages.get(key) || 1) + 1);
             }
             await refresh(true);
         });
-        action('Exportar dados antigos deste navegador', () => {
+        const exportButton = action('Exportar dados antigos deste navegador', () => {
             const legacy = Object.fromEntries(keys.map(key => [key, JSON.parse(localStorage.getItem(key) || 'null')]));
             const url = URL.createObjectURL(new Blob([JSON.stringify(legacy, null, 2)], { type: 'application/json' }));
             const link = document.createElement('a'); link.href = url; link.download = 'book-santos-dados-antigos.json'; link.click();
             setTimeout(() => URL.revokeObjectURL(url), 1000);
         });
+        const tools = document.createElement('details'); tools.className = 'sync-tools';
+        const summary = document.createElement('summary'); summary.textContent = 'Opções';
+        tools.appendChild(summary); tools.appendChild(exportButton);
+        const help = document.createElement('p'); help.textContent = 'Filtros e gráficos usam os registros carregados. Use Carregar mais para consultar o histórico anterior.'; tools.appendChild(help);
+        toolbar.appendChild(tools);
         document.body.prepend(toolbar);
         message('Carregando dados do Supabase…');
-        await refresh(true);
-        const hotels = await BookAPI.request('/api/access');
-        apartmentCatalog = await BookAPI.request('/api/apartments');
+        const [, hotels, catalog] = await Promise.all([refresh(true), BookAPI.request('/api/access'), BookAPI.request('/api/apartments')]);
+        apartmentCatalog = catalog;
         document.querySelectorAll('[data-hotel]').forEach(card => { card.hidden = !hotels.includes(card.dataset.hotel); });
         document.querySelectorAll('#hotel option, #osHotel option').forEach(option => { if (option.value && !hotels.includes(option.value)) option.remove(); });
         const compare = (a, b) => a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' });
@@ -134,6 +146,7 @@ window.BookStore = (() => {
             [...select.options].filter(option => option.value).sort((a, b) => compare(a.textContent, b.textContent)).forEach(option => select.appendChild(option));
         });
         setInterval(() => refresh(), 15000);
+        document.addEventListener?.('visibilitychange', () => { if (!document.hidden) refresh(); });
         window.addEventListener('unhandledrejection', event => { event.preventDefault(); message(event.reason?.message || 'Falha na operação.', true); });
     }
     function validateFiles(files) {

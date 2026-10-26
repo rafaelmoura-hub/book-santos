@@ -32,7 +32,7 @@ function mostrarArquivo() {
     preview.innerHTML = "";
     if (!arquivo) return;
     const url = URL.createObjectURL(arquivo);
-    if (arquivo.type.startsWith("image/")) preview.innerHTML = `<img loading="lazy" src="${url}" alt="Prévia da imagem">`;
+    if (arquivo.type.startsWith("image/")) preview.innerHTML = `<img decoding="async" loading="lazy" src="${url}" alt="Prévia da imagem">`;
     else if (arquivo.type.startsWith("video/")) preview.innerHTML = `<video preload="metadata" src="${url}" controls></video>`;
 }
 
@@ -77,7 +77,7 @@ function mostrarChamados() {
     const meusItems = items.filter(c => c.criadaPorLogin === sessaoCliente.login);
     if (!meusItems.length) { lista.innerHTML = "<p>Nenhum chamado cadastrado.</p>"; return; }
     meusItems.sort((a, b) => Number(a.status === "Fechado") - Number(b.status === "Fechado"));
-    lista.innerHTML = meusItems.map(c => `<div class="chamado ${c.status === "Fechado" ? "finalizado" : ""}"><strong>${escaparHTML(c.assunto || "Chamado sem assunto")}</strong><p>Chamado #${escaparHTML(c.id)}</p><p>Condomínio: ${escaparHTML(c.hotel)}</p><p>Apartamento: ${escaparHTML(c.apartamento)}</p><p>Categoria: ${escaparHTML(c.categoria)}</p><p>Status: ${escaparHTML(c.status || "Aberto")}</p><p>Data: ${escaparHTML(c.data)}</p></div>`).join("");
+    lista.innerHTML = meusItems.map(c => `<article class="chamado ${c.status === "Fechado" ? "finalizado" : ""}"><div class="chamado-cabecalho"><strong>${escaparHTML(c.assunto || "Chamado sem assunto")}</strong><span class="status-tag" data-state="${c.status === 'Fechado' ? 'closed' : 'open'}">${escaparHTML(c.status || "Aberto")}</span></div><p>${escaparHTML(c.hotel)} · Apartamento ${escaparHTML(c.apartamento)}</p><details class="chamado-info"><summary>Detalhes do chamado</summary><p>Chamado #${escaparHTML(c.id)}</p><p>Categoria: ${escaparHTML(c.categoria)}</p><p>Data: ${escaparHTML(c.data)}</p></details></article>`).join("");
 }
 function sair() { return BookAPI.logout(); }
 mostrarChamados();

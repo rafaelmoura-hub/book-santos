@@ -80,6 +80,10 @@ test('servidor Supabase protege sessão, perfis, arquivos e saída', async t => 
   assert.equal((await req('/adm/admin.html')).status, 302);
   assert.equal((await req('/.env')).status, 404);
   assert.equal((await req('/server/supabase.js')).status, 404);
+  const css=await req('/assets/ui.css');
+  assert.equal(css.status,200);assert.ok(css.headers.get('etag'));
+  const cached=await fetch(base+'/assets/ui.css',{headers:{'If-None-Match':css.headers.get('etag')}});
+  assert.equal(cached.status,304);assert.equal(await cached.text(),'');
   assert.equal((await req('/api/login', 'POST', { login: 'teste', senha: 'senha-correta' })).status, 400);
   assert.equal((await req('/api/login', 'POST', { login: 'teste@example.com', senha: 'errada' })).status, 401);
   const response = await req('/api/login', 'POST', { login: 'teste@example.com', senha: 'senha-correta' });

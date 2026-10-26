@@ -65,7 +65,7 @@ window.BookFinance = (() => {
       groups = data.groups;
       rows = append ? [...new Map([...rows,...data.records].map(row=>[row.id,row])).values()] : data.records;
       cursor = data.next;
-      el('financeiroStatus').textContent = `${rows.length} card(s) exibido(s). Os totais consultam todos os registros autorizados, inclusive os das próximas páginas.`;
+      el('financeiroStatus').textContent = `${rows.length} ${rows.length === 1 ? 'card carregado' : 'cards carregados'}${cursor ? ' · Há mais resultados' : ''}`;
       render();
     } catch (error) { if (current === generation) el('financeiroStatus').textContent = error.message; }
     finally { if (current === generation) { busy = false; el('financeiroMais').disabled = false; } }

@@ -1,0 +1,154 @@
+/* Book Santos: shared, lightweight visual system. No external fonts or assets. */
+:root {
+  --azul: #245b9e;
+  --azul-escuro: #1b467d;
+  --fundo: #f6f8fb;
+  --texto: #243246;
+  --suave: #6c788a;
+  --borda: #e4e9f0;
+  --sombra: 0 2px 6px #20345304;
+}
+[hidden] { display: none !important; }
+body[data-screen] { background: var(--fundo); color: var(--texto); font-size: 14px; line-height: 1.5; }
+body[data-screen] > header {
+  position: fixed; inset: 0 0 auto; z-index: 20; height: 72px; min-height: 72px;
+  padding: 0 24px; color: var(--texto); background: #fff;
+  border-bottom: 1px solid var(--borda); box-shadow: none;
+}
+header h1 { display: flex; align-items: center; gap: 11px; font-size: 19px; font-weight: 700; letter-spacing: -.6px; }
+header h1::before { content: 'BS'; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; color: var(--azul); background: #edf3fc; font-size: 12px; letter-spacing: -.4px; }
+body[data-screen] header > button { padding: 8px 14px; border: 1px solid var(--borda); color: var(--suave); background: #fff; font-size: 13px; }
+body[data-screen] > nav {
+  position: fixed; top: 72px; bottom: 0; left: 0; z-index: 10; width: 208px;
+  display: flex; flex-direction: column; flex-wrap: nowrap; align-items: stretch;
+  justify-content: flex-start; gap: 5px; padding: 24px 12px;
+  overflow-y: auto; background: #fff; border: 0; border-right: 1px solid var(--borda); box-shadow: none;
+}
+body[data-screen] nav button { flex: none; min-height: 42px; margin: 0; padding: 10px 16px; text-align: left; color: #637085; border-radius: 8px; font-size: 14px; font-weight: 500; }
+body[data-screen] nav button:hover { color: var(--azul); background: #f5f8fc; }
+body[data-screen] nav button.ativa { color: var(--azul); background: #edf3fc; font-weight: 650; }
+#abaUsuarios { margin-top: 16px; }
+body[data-screen="admin.js"] > main { width: auto; max-width: 1360px; margin: 104px 32px 64px 240px; }
+button { transition: background-color .15s, border-color .15s; }
+button:hover, .hotel:hover, .hotel:focus-visible { transform: none; }
+button, summary, a { -webkit-tap-highlight-color: transparent; }
+button:focus-visible, summary:focus-visible, a:focus-visible { outline: 3px solid #b9d3f4; outline-offset: 3px; }
+input, select, textarea { box-shadow: none; }
+input:focus, select:focus, textarea:focus { border-color: #8aafd9; box-shadow: 0 0 0 3px #245b9e0c; }
+.sync-toolbar { position: fixed; z-index: 25; top: 20px; right: 102px; display: flex; align-items: center; gap: 10px; color: var(--suave); font: 12px "Segoe UI", Arial, sans-serif; }
+.sync-toolbar > span { display: flex; align-items: center; gap: 7px; max-width: 350px; }
+.sync-toolbar > span::before { content: ''; width: 6px; height: 6px; flex-shrink: 0; border-radius: 50%; background: #439271; }
+.sync-toolbar > span[data-state="error"] { color: #a63232; }
+.sync-toolbar > span[data-state="error"]::before { background: #c14949; }
+.sync-toolbar button, .sync-tools summary { padding: 7px 10px; border: 1px solid var(--borda); border-radius: 7px; color: #637085; background: white; font-size: 12px; cursor: pointer; }
+.sync-toolbar button:hover, .sync-tools summary:hover { background: #f6f8fb; }
+.sync-tools { position: relative; }
+.sync-tools summary { list-style: none; }
+.sync-tools summary::-webkit-details-marker { display: none; }
+.sync-tools[open] { position: relative; }
+.sync-tools[open] > button { position: absolute; top: 38px; right: 0; width: 260px; padding: 14px; text-align: left; box-shadow: 0 8px 20px #2432460d; }
+.sync-tools[open] > p { position: absolute; top: 76px; right: 0; width: 260px; margin: 0; padding: 12px 14px; background: white; border: 1px solid var(--borda); border-radius: 8px; line-height: 1.5; }
+.titulo-secao { margin: 0 0 24px; gap: 16px; }
+.titulo-secao h2, main > section > h2 { color: #26374f; font-size: 24px; font-weight: 650; letter-spacing: -.65px; }
+.titulo-secao p { margin-top: 4px; font-size: 13px; }
+.cards { gap: 14px; margin-bottom: 28px; }
+.card, .chamado, .dashboard-painel, #historico, .hotel, .hotel-vistoria { border: 1px solid var(--borda); border-radius: 12px; box-shadow: var(--sombra); background: #fff; }
+.card { padding: 20px 22px; }
+.card h3 { color: var(--suave); font-size: 12px; font-weight: 500; }
+.card p { margin-top: 10px; color: var(--texto); font-size: 30px; font-weight: 650; letter-spacing: -.8px; }
+.acao-principal, #formOS button, #formFechamentoOS button, #formVistoria button[type="submit"] { padding: 10px 16px; border-radius: 8px; background: var(--azul); box-shadow: none; font-size: 13px; font-weight: 600; }
+.botao-secundario { padding: 9px 13px; border: 1px solid var(--borda); border-radius: 8px; background: white; color: #5f6e83; box-shadow: none; }
+.botao-secundario:hover { border-color: #b9cbe0; background: #f8fafc; }
+.chamado { padding: 18px 20px; }
+.chamado p { margin: 6px 0; }
+.chamado-cabecalho { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.status-tag { flex-shrink: 0; padding: 3px 8px; border-radius: 6px; background: #edf3fc; color: var(--azul); font-size: 11px; }
+.status-tag[data-state="closed"] { color: #7b8797; background: #eef1f5; }
+.chamado-info { margin-top: 12px; color: var(--suave); font-size: 12px; }
+.chamado-info summary { cursor: pointer; }
+.chamado, .registro, .vistoria-registro { content-visibility: auto; contain-intrinsic-size: auto 140px; }
+.finalizado { background: #f8fafc; color: #7b8797; filter: none; }
+.vazio { border: 1px dashed #dae2ec; padding: 36px 22px; border-radius: 12px; background: #fff; color: #8690a0; font-size: 14px; }
+.hoteis, .hoteis-vistoria { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; margin-top: 20px; }
+.hotel, .hotel-vistoria { padding: 20px; text-align: left; }
+.hotel h2 { font-size: 16px; font-weight: 600; color: #354a66; letter-spacing: -.2px; }
+.hotel p, .hotel-vistoria span { margin-top: 7px; color: var(--suave); font-size: 12px; }
+.hotel-vistoria strong { color: #354a66; font-size: 15px; }
+.hotel:hover, .hotel:focus-visible, .hotel-vistoria:hover { border-color: #abc3df; box-shadow: none; }
+#historico { padding: 24px; }
+#historico h2 { font-size: 19px; }
+.apartamentos, .apartamentos-vistoria { gap: 8px; }
+.apartamento-opcao, .apartamentos-vistoria button { min-width: 70px; padding: 10px 14px; border: 1px solid var(--borda); border-radius: 7px; color: #436180; background: white; font-size: 13px; box-shadow: none; }
+.apartamento-opcao:hover, .apartamentos-vistoria button:hover { border-color: #8daed4; color: var(--azul); background: #f1f6fc; }
+.apartamentos-vistoria { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+.filtros-card { display: grid; grid-template-columns: minmax(160px, 1fr) minmax(160px, 1fr); gap: 16px; max-width: 640px; margin-bottom: 14px; }
+.filtros-card label { display: block; margin: 0 0 6px; color: var(--suave); font-size: 12px; font-weight: 500; }
+.filtros-card input, .filtros-card select { width: 100%; padding: 10px 12px; border: 1px solid var(--borda); border-radius: 8px; background: white; }
+.busca-condominio { width: min(100%, 380px); padding: 11px 14px; border: 1px solid var(--borda); border-radius: 8px; background: #fff; color: var(--texto); font: inherit; }
+#resumoListaOS, #financeiroStatus, #usuariosStatus { color: var(--suave); font-size: 12px; }
+.financeiro-periodo { padding: 16px; border: 1px solid var(--borda); border-radius: 10px; background: white; gap: 12px; }
+.financeiro-periodo label { color: var(--suave); font-size: 12px; font-weight: 500; }
+.financeiro-abas { gap: 6px; margin: 18px 0; }
+.financeiro-abas button { padding: 8px 12px; font-size: 12px; }
+.financeiro-abas button.ativa { background: #edf3fc; border-color: #c9daee; color: var(--azul); }
+.financeiro-card dl { gap: 28px; }
+.help-panel { margin: 16px 0; padding: 12px 16px; border: 1px solid var(--borda); border-radius: 9px; background: #fff; color: var(--suave); font-size: 13px; }
+.help-panel summary { cursor: pointer; color: #5c6e85; font-size: 12px; }
+.help-panel p { max-width: 850px; line-height: 1.65; }
+#backupOpcoes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; margin: 20px 0; padding: 22px; background: #fff; border-radius: 12px; }
+#backupOpcoes label { margin: 0 !important; font-size: 13px; }
+#backupOpcoes legend { color: var(--suave); font-size: 12px; }
+#backupStatus { padding: 12px 0; max-width: 820px; color: var(--suave); font-size: 13px; }
+#visaoBackup > button { margin: 0 8px 10px 0; }
+.client-panel, .planilha-wrap { min-width: 0; max-width: 100%; }
+.chamado strong, .chamado p { overflow-wrap: anywhere; }
+.modal { backdrop-filter: none; background: #16263c66; }
+.modal-conteudo { border-radius: 14px; box-shadow: 0 20px 70px #14263d26; }
+.modal-conteudo h2 { font-size: 21px; letter-spacing: -.5px; }
+.usuario-hoteis label { line-height: 1.5; }
+.painel-chat { border-radius: 12px; box-shadow: none; }
+body[data-screen="cliente.js"] > main { display: grid; grid-template-columns: 1.05fr .95fr; align-items: start; gap: 24px; width: min(calc(100% - 48px), 1120px); max-width: none; margin: 104px auto 80px; padding: 0; border: 0; background: transparent; box-shadow: none; }
+.client-panel { padding: 28px; border: 1px solid var(--borda); border-radius: 12px; background: #fff; }
+.client-panel h2 { font-size: 21px; letter-spacing: -.5px; }
+#formChamado label { margin-top: 14px; font-size: 12px; color: #68778b; }
+#formChamado input, #formChamado select, #formChamado textarea { margin-top: 5px; border: 1px solid var(--borda); border-radius: 8px; padding: 10px 12px; }
+#formChamado button[type="submit"] { width: 100%; margin-top: 20px; border: 0; border-radius: 8px; padding: 12px; background: var(--azul); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
+#formChamado textarea { min-height: 90px; }
+#formChamado small { color: var(--suave); font-size: 12px; }
+.botao-suporte { border-radius: 12px; box-shadow: 0 6px 20px #24324614; background: var(--azul); }
+.chat-cliente { border: 1px solid var(--borda); border-radius: 14px; box-shadow: 0 10px 32px #2432461a; }
+@media (max-width: 1050px) {
+  body[data-screen] > nav { width: 176px; }
+  body[data-screen="admin.js"] > main { margin-left: 200px; margin-right: 24px; }
+}
+@media (max-width: 760px) {
+  body[data-screen] { display: flex; flex-direction: column; }
+  body[data-screen] > header { position: relative; order: 0; padding: 0 18px; height: 64px; min-height: 64px; }
+  header h1 { font-size: 17px; }
+  body[data-screen] > nav { position: sticky; order: 1; top: 0; bottom: auto; width: 100%; flex-direction: row; gap: 4px; overflow-x: auto; overflow-y: hidden; padding: 10px 12px; border-right: 0; border-bottom: 1px solid var(--borda); scrollbar-width: thin; }
+  body[data-screen] > nav::-webkit-scrollbar { height: 3px; }
+  body[data-screen] > nav::-webkit-scrollbar-thumb { background: #ccd9ea; border-radius: 6px; }
+  body[data-screen] nav button { padding: 9px 13px; min-height: 38px; white-space: nowrap; font-size: 13px; }
+  #abaUsuarios { margin-top: 0; }
+  .sync-toolbar { position: relative; order: 2; top: auto; right: auto; padding: 10px 18px 0; gap: 8px; min-height: 40px; flex-wrap: wrap; }
+  .sync-toolbar > span { max-width: 100%; margin-right: auto; font-size: 11px; }
+  .sync-tools[open] > button, .sync-tools[open] > p { z-index: 30; }
+  body[data-screen="admin.js"] > main { order: 3; width: auto; max-width: none; margin: 22px 18px 48px; }
+  body[data-screen="cliente.js"] > main { order: 3; width: auto; grid-template-columns: 1fr; margin: 22px 18px 72px; gap: 18px; }
+  .cards { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .card { padding: 16px; }
+  .card p { font-size: 26px; }
+  .titulo-secao { flex-direction: column; align-items: flex-start; margin-bottom: 18px; }
+  .titulo-secao h2 { font-size: 22px; }
+  .titulo-secao > div:last-child { max-width: 100%; }
+  .hoteis, .hoteis-vistoria { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+  .hotel, .hotel-vistoria { padding: 16px; }
+  .hotel h2 { font-size: 15px; }
+  .client-panel { padding: 22px; }
+  #backupOpcoes { grid-template-columns: 1fr; }
+}
+@media (max-width: 390px) {
+  .filtros-card { grid-template-columns: 1fr; gap: 10px; }
+  .hoteis, .hoteis-vistoria { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; } }

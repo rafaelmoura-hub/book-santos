@@ -10,10 +10,12 @@
 <body>
     <div class="login-box">
         <h1>Book Santos</h1>
-        <p>Sistema de Apoio &agrave; Decis&atilde;o</p>
+        <p>Entre para continuar.</p>
         <form data-on-submit="entrar(event)">
-        <input type="email" id="login" aria-label="E-mail" placeholder="Digite seu e-mail" maxlength="254" autocomplete="username" required>
-        <input type="password" id="senha" placeholder="Digite sua senha" maxlength="100" autocomplete="current-password" required>
+        <label for="login">E-mail</label>
+        <input type="email" id="login" aria-label="E-mail" placeholder="seu@email.com" maxlength="254" autocomplete="username" required>
+        <label for="senha">Senha</label>
+        <input type="password" id="senha" placeholder="Sua senha" maxlength="100" autocomplete="current-password" required>
         <button type="submit">Entrar</button>
         </form>
         <p id="mensagem" role="status" aria-live="polite"></p>
