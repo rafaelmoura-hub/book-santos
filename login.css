@@ -3,7 +3,7 @@
 body { min-height:100vh; min-height:100svh; margin:0; padding:24px; display:grid; place-items:center; background:#f5f7fb; color:var(--texto); font-family:"Segoe UI",Arial,sans-serif; }
 .login-box { width:min(100%,410px); padding:40px; border:1px solid var(--borda); border-top:4px solid var(--azul); border-radius:16px; background:#fff; box-shadow:0 8px 32px #24324605; }
 .login-box h1 { display:flex; align-items:center; gap:12px; margin:0; color:var(--texto); font-size:25px; font-weight:650; letter-spacing:-.8px; }
-.login-box h1::before { content:'BS'; display:grid; place-items:center; width:42px; height:42px; border-radius:12px; background:var(--azul); color:#fff; font-size:14px; letter-spacing:-.3px; }
+.login-box h1::before { content:'BT'; display:grid; place-items:center; width:42px; height:42px; border-radius:12px; background:var(--azul); color:#fff; font-size:14px; letter-spacing:-.3px; }
 .login-box > p { margin:14px 0 30px; color:var(--suave); font-size:14px; }
 .login-box form { display:grid; }
 label { margin:16px 0 7px; color:#65748a; font-size:13px; font-weight:500; }

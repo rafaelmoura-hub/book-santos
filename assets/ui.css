@@ -1,4 +1,4 @@
-/* Book Santos: shared, lightweight visual system. No external fonts or assets. */
+/* BOOK TESC: shared, lightweight visual system. No external fonts or assets. */
 :root {
   --azul: #174a8b;
   --azul-escuro: #103966;
@@ -16,7 +16,7 @@ body[data-screen] > header {
   border-bottom: 2px solid var(--azul); box-shadow: none;
 }
 header h1 { display: flex; align-items: center; gap: 11px; font-size: 19px; font-weight: 700; letter-spacing: -.6px; }
-header h1::before { content: 'BS'; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; color: #fff; background: var(--azul); font-size: 12px; letter-spacing: -.4px; }
+header h1::before { content: 'BT'; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; color: #fff; background: var(--azul); font-size: 12px; letter-spacing: -.4px; }
 body[data-screen] header > button { padding: 8px 14px; border: 1px solid var(--borda); color: var(--suave); background: #fff; font-size: 13px; }
 body[data-screen] > nav {
   position: fixed; top: 72px; bottom: 0; left: 0; z-index: 10; width: 208px;

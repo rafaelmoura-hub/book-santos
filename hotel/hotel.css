@@ -40,7 +40,7 @@ main > h2 { margin-bottom: 18px; font-size: 23px; }
 .chamado img, .chamado video { display: block; max-width: 100%; max-height: 360px; margin-top: 12px; border-radius: 8px; }
 @media (max-width: 620px) { header { padding: 14px 4%; } header h1 { font-size: 18px; } .hoteis { grid-template-columns: 1fr; } main { margin-top: 20px; } #historico { padding: 18px; } .registro summary { align-items: flex-start; flex-direction: column; gap: 5px; } }
 
-/* Acabamento visual Book Santos */
+/* Acabamento visual BOOK TESC */
 :root { --azul: #174a8b; --azul-escuro: #103966; --fundo: #f4f7fb; --borda: #dce5ef; --sombra: 0 14px 38px rgba(25, 48, 80, .08); }
 body { color: #1d2939; background: linear-gradient(180deg, #edf3f9 0, var(--fundo) 320px); }
 header { background: linear-gradient(110deg, #12365d, #1f5b9c); box-shadow: 0 5px 22px rgba(16, 57, 102, .16); }

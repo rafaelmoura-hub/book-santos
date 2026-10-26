@@ -122,6 +122,6 @@ function createApp(db, { secure = false } = {}) {
 if (require.main === module) {
   const db = openDatabase(process.env.DATABASE_PATH || path.join(ROOT, 'data', 'book-santos.sqlite'));
   const port = Number(process.env.PORT || 3000);
-  createApp(db, { secure: process.env.COOKIE_SECURE === 'true' }).listen(port, '127.0.0.1', () => console.log(`Book Santos: http://localhost:${port}`));
+  createApp(db, { secure: process.env.COOKIE_SECURE === 'true' }).listen(port, '127.0.0.1', () => console.log(`BOOK TESC: http://localhost:${port}`));
 }
 module.exports = { createApp };

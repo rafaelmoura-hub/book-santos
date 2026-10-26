@@ -20,7 +20,7 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
       catch { throw failure(503, 'Resposta incompleta do Supabase. Atualize os dados antes de tentar novamente.'); }
     }
     if (!response.ok) {
-      if (['PGRST205', 'PGRST202', '42P01', '42703'].includes(data?.code)) throw failure(503, 'Execute primeiro a migração SQL do Book Santos no Supabase.');
+      if (['PGRST205', 'PGRST202', '42P01', '42703'].includes(data?.code)) throw failure(503, 'Execute primeiro a migração SQL do BOOK TESC no Supabase.');
       if (response.status === 409 || data?.code === 'PT409') throw failure(409, data?.message || 'Registro alterado por outro usuário. Atualize e tente novamente.');
       if (data?.code === '22023') throw failure(400, data.message || 'Dados inválidos.');
       if (data?.code === '42501') throw failure(403, 'Sem permissão para esta operação.');

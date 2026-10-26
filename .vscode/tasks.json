@@ -2,7 +2,7 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Book Santos: iniciar servidor",
+            "label": "BOOK TESC: iniciar servidor",
             "type": "process",
             "command": "node",
             "args": ["scripts/dev-server.js"],
@@ -13,8 +13,8 @@
                 "pattern": { "regexp": "^(.+):(\\d+):(\\d+): (error|warning): (.*)$", "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5 },
                 "background": {
                     "activeOnStart": true,
-                    "beginsPattern": "Book Santos: verificando servidor",
-                    "endsPattern": "Book Santos: pronto em"
+                    "beginsPattern": "BOOK TESC: verificando servidor",
+                    "endsPattern": "BOOK TESC: pronto em"
                 }
             },
             "presentation": { "reveal": "always", "panel": "dedicated" },
