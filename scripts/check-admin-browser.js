@@ -139,10 +139,22 @@ async function main() {
       document.getElementById('vistoriaTipo').value='Simplificada';renderizarChecklistVistoria();
       if(!document.querySelector('select[data-grupo="Banheiro"][data-item="Secador de cabelo"]')||!document.querySelector('select[data-grupo="Sacada"]'))throw Error('Checklist simplificado de banheiro e sacada');
       const canvas=document.createElement('canvas');canvas.width=2;canvas.height=2;const photo=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
-      const selection=new DataTransfer();selection.items.add(new File([photo],'vistoria.png',{type:'image/png'}));document.getElementById('vistoriaFotos').files=selection.files;
+      const selection=new DataTransfer();selection.items.add(new File([photo],'remover.png',{type:'image/png'}));selection.items.add(new File([photo],'vistoria.png',{type:'image/png'}));document.getElementById('vistoriaFotos').files=selection.files;
       document.getElementById('vistoriaFotos').dispatchEvent(new Event('change'));
-      document.querySelectorAll('#gruposVistoria select').forEach(s=>s.value='Em ordem');await salvarVistoria({preventDefault(){}});
-      const inspection=JSON.parse(BookStore.getItem('vistorias'))[0];if(inspection.checklist.Banheiro?.['Secador de cabelo']!=='Em ordem'||!inspection.checklist.Sacada||inspection.responsavel!=='Mestre'||inspection.responsavelLogin!=='master@example.com'||inspection.apartamento!=='194A'||!inspection.fotos[0].dados.startsWith('/api/files/'))throw Error('Salvar vistoria com foto, ambientes e administrador');
+      const fileList=document.getElementById('vistoriaFotos').closest('label').nextElementSibling;
+      if(fileList.querySelectorAll('.attachment-row').length!==2)throw Error('Lista de arquivos selecionados');
+      fileList.querySelector('.attachment-remove').click();
+      if(document.getElementById('vistoriaFotos').files.length!==1||document.getElementById('vistoriaFotos').files[0].name!=='vistoria.png'||fileList.querySelectorAll('.attachment-row').length!==1)throw Error('Remover arquivo antes do envio');
+      document.querySelectorAll('#gruposVistoria select').forEach(s=>s.value='Em ordem');
+      const originalRequest=BookAPI.request;let release;
+      BookAPI.request=async (...args)=>{if(args[0]==='/api/data'&&args[1]?.method==='POST')await new Promise(resolve=>{release=resolve;});return originalRequest(...args);};
+      const saving=salvarVistoria({preventDefault(){}});
+      try {
+        for(let i=0;i<200&&!release;i++)await new Promise(resolve=>setTimeout(resolve,10));
+        if(!release||fileList.dataset.sending!=='true'||fileList.querySelector('progress').hidden||!fileList.querySelector('button').disabled)throw Error('Indicador de envio de anexos');
+      } finally { if(release)release(); BookAPI.request=originalRequest; }
+      await saving;
+      const inspection=JSON.parse(BookStore.getItem('vistorias'))[0];if(inspection.fotos.length!==1||inspection.fotos[0].nome!=='vistoria.png'||inspection.checklist.Banheiro?.['Secador de cabelo']!=='Em ordem'||!inspection.checklist.Sacada||inspection.responsavel!=='Mestre'||inspection.responsavelLogin!=='master@example.com'||inspection.apartamento!=='194A'||!inspection.fotos[0].dados.startsWith('/api/files/'))throw Error('Salvar vistoria com foto, ambientes e administrador');
       mostrarAba('estoque');await adicionarLinhaEstoque();if(JSON.parse(BookStore.getItem('estoqueBookSantos')).itens.length!==1)throw Error('Adicionar estoque');
       mostrarAba('dashboard');atualizarDashboard();
     })()`);

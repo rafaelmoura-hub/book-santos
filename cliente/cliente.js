@@ -26,12 +26,15 @@ document.getElementById("hotel").addEventListener("change", function () {
         : '<option value="">Selecione primeiro o hotel</option>';
 });
 
+let arquivoPreviewUrl = null;
 function mostrarArquivo() {
+    if (arquivoPreviewUrl) { URL.revokeObjectURL(arquivoPreviewUrl); arquivoPreviewUrl = null; }
     const arquivo = document.getElementById("arquivo").files[0];
     const preview = document.getElementById("preview");
     preview.innerHTML = "";
     if (!arquivo) return;
     const url = URL.createObjectURL(arquivo);
+    arquivoPreviewUrl = url;
     if (arquivo.type.startsWith("image/")) preview.innerHTML = `<img decoding="async" loading="lazy" src="${url}" alt="Prévia da imagem">`;
     else if (arquivo.type.startsWith("video/")) preview.innerHTML = `<video preload="metadata" src="${url}" controls></video>`;
 }
@@ -65,7 +68,7 @@ async function abrirChamado(event) {
         await salvarChamados(items);
         formulario.reset();
         document.getElementById('hotel').dispatchEvent(new Event('change'));
-        document.getElementById('preview').innerHTML = '';
+        mostrarArquivo();
         mensagem.textContent = 'Chamado salvo no servidor.';
         mostrarChamados();
     } catch (error) { mensagem.textContent = error.message; }

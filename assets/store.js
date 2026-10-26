@@ -7,6 +7,55 @@ window.BookStore = (() => {
     let user, busy = false, refreshing = false, status, toolbar, moreButton;
     let apartmentCatalog = [];
     let totals = null, activeCollections = keys;
+    const attachmentFields = new Map();
+    function setupAttachments() {
+        document.querySelectorAll('input[type="file"]').forEach(input => {
+            const list = document.createElement('div');
+            list.className = 'attachment-list'; list.setAttribute('aria-live', 'polite');
+            input.closest('label')?.insertAdjacentElement('afterend', list) || input.insertAdjacentElement('afterend', list);
+            let urls = [];
+            const render = () => {
+                urls.forEach(url => URL.revokeObjectURL(url)); urls = []; list.replaceChildren();
+                [...input.files].forEach((file, index) => {
+                    const row = document.createElement('div'); row.className = 'attachment-row';
+                    const info = document.createElement('div');
+                    const name = document.createElement('strong'); name.textContent = file.name;
+                    const state = document.createElement('small'); state.className = 'attachment-state';
+                    state.textContent = `${(file.size / 1024 / 1024).toLocaleString('pt-BR', {maximumFractionDigits: 2})} MB · Selecionado para envio`;
+                    const progress = document.createElement('progress'); progress.hidden = true;
+                    progress.setAttribute('aria-label', `Enviando ${file.name}`);
+                    info.append(name, state, progress);
+                    if (file.type.startsWith('image/')) {
+                        const img = document.createElement('img'); img.alt = `Prévia de ${file.name}`;
+                        const url = URL.createObjectURL(file); urls.push(url); img.src = url;
+                        row.append(img);
+                    }
+                    const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'attachment-remove'; remove.textContent = 'Remover';
+                    remove.setAttribute('aria-label', `Remover ${file.name}`);
+                    remove.addEventListener('click', event => {
+                        event.preventDefault(); event.stopPropagation(); if (busy) return;
+                        const selection = new DataTransfer();
+                        [...input.files].forEach((item, position) => { if (position !== index) selection.items.add(item); });
+                        input.files = selection.files; input.dispatchEvent(new Event('change', {bubbles: true}));
+                    });
+                    row.append(info, remove); list.append(row);
+                });
+            };
+            input.addEventListener('change', render);
+            input.form?.addEventListener('reset', () => setTimeout(render, 0));
+            attachmentFields.set(input, list);
+        });
+    }
+    function attachmentStatus(key, text, sending) {
+        const ids = { chamados: ['arquivo'], ordensServico: ['osAnexos', 'fechamentoFotos'], vistorias: ['vistoriaFotos'] };
+        for (const [input, list] of attachmentFields) {
+            if (!ids[key]?.includes(input.id)) continue;
+            list.dataset.sending = String(sending);
+            list.querySelectorAll('.attachment-state').forEach(label => { label.textContent = text; });
+            list.querySelectorAll('progress').forEach(progress => { progress.hidden = !sending; });
+            list.querySelectorAll('button').forEach(button => { button.disabled = sending; });
+        }
+    }
     function activate(tab) {
         const groups = { chamados: ['chamados'], chat: ['chamados','conversasSuporte'], os: ['ordensServico','chamados','estoqueBookSantos'], vistorias: ['vistorias','ordensServico'], condominios: ['chamados','ordensServico'], estoque: ['estoqueBookSantos','ordensServico'], dashboard: ['chamados','ordensServico'], financeiro: [], usuarios: [], backup: [] };
         activeCollections = groups[tab] || keys;
@@ -70,6 +119,7 @@ window.BookStore = (() => {
         }).filter(Boolean);
         if (!changes.length) return;
         busy = true;
+        attachmentStatus(key, 'Enviando arquivos… Aguarde a confirmação.', true);
         message('Salvando no servidor…');
         document.body.setAttribute('aria-busy', 'true');
         const blocker = document.createElement('div');
@@ -80,6 +130,7 @@ window.BookStore = (() => {
         try {
             await BookAPI.request('/api/data', { method: 'POST', body: JSON.stringify({ changes }) });
             committed = true;
+            attachmentStatus(key, 'Envio confirmado.', false);
             // Preserve confirmed records even if the subsequent network refresh fails.
             const next = clone(rows(key));
             for (const change of changes) {
@@ -89,6 +140,7 @@ window.BookStore = (() => {
             }
             cache.set(key, next);
         } catch (error) {
+            attachmentStatus(key, 'Envio não confirmado. Confira a mensagem e tente novamente.', false);
             message(error.message, true);
             alert(error.message);
             throw error;
@@ -101,6 +153,7 @@ window.BookStore = (() => {
         }
     }
     async function init(profile) {
+        setupAttachments();
         user = profile;
         if (profile.funcao === 'cliente') activeCollections = ['chamados', 'conversasSuporte'];
         toolbar = document.createElement('aside');

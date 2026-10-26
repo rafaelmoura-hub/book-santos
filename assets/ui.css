@@ -9,6 +9,17 @@
   --sombra: 0 2px 6px #20345304;
 }
 [hidden] { display: none !important; }
+.attachment-list { display: grid; gap: 8px; margin: 10px 0; }
+.attachment-list:empty { display: none; }
+.attachment-row { display: flex; align-items: center; gap: 12px; padding: 10px; border: 1px solid var(--borda); border-radius: 8px; background: #f0f6fd; }
+.attachment-row > div { flex: 1; min-width: 0; }
+.attachment-row strong { display: block; overflow-wrap: anywhere; font-size: 13px; color: var(--texto); }
+.attachment-row small { display: block; color: var(--azul); font-size: 12px; }
+.attachment-row progress { display: block; width: 100%; height: 6px; margin-top: 7px; accent-color: var(--azul); }
+.attachment-row img { width: 44px; height: 44px; object-fit: cover; border-radius: 6px; }
+.attachment-row .attachment-remove { flex: none; width: auto; margin: 0; padding: 7px 10px; border: 1px solid #8eabcd; border-radius: 6px; background: white; color: var(--azul); font-size: 12px; cursor: pointer; }
+.attachment-list[data-sending="true"] .attachment-row { border-color: var(--azul); }
+.attachment-remove:disabled { opacity: .6; cursor: wait; }
 body[data-screen] { background: var(--fundo); color: var(--texto); font-size: 14px; line-height: 1.5; }
 body[data-screen] > header {
   position: fixed; inset: 0 0 auto; z-index: 20; height: 72px; min-height: 72px;
