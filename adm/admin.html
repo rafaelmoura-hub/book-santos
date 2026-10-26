@@ -194,7 +194,7 @@
         <p id="vistoriaLocal"></p>
         <form id="formVistoria" data-on-submit="salvarVistoria(event)">
           <label>Data da vistoria<input id="vistoriaData" type="date" required></label>
-          <label>Quem fez a vistoria<input id="vistoriaResponsavel" required></label>
+          <label>Quem fez a vistoria<select id="vistoriaResponsavel" required><option value="">Selecione o administrador</option></select></label>
           <label>Tipo de vistoria<select id="vistoriaTipo" required><option value="">Selecione</option><option>Completa</option><option>Simplificada</option></select></label>
           <div id="gruposVistoria"></div>
           <label>Observações gerais<textarea id="vistoriaObservacoes"></textarea></label>

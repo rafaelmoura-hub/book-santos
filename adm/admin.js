@@ -363,8 +363,15 @@ function renderizarVistoria(item) {
   const fotos = (item.fotos || []).map(foto => `<a href="${foto.dados}" target="_blank" rel="noopener"><img decoding="async" loading="lazy" src="${foto.dados}" alt="${escapar(foto.nome)}"></a>`).join("");
   return `<details class="vistoria-registro"><summary><strong>${formatarData(item.data)} — ${escapar(item.tipo)}</strong><span>Responsável: ${escapar(item.responsavel)}</span></summary><div class="vistoria-registro-detalhes"><p><strong>Responsável:</strong> ${escapar(item.responsavel)}</p>${checklist}<p><strong>Observações:</strong> ${escapar(item.observacoes || "Nenhuma")}</p><p><strong>Fotos:</strong> ${(item.fotos || []).length}</p><div class="galeria-vistoria">${fotos}</div><button type="button" class="botao-secundario" data-on-click="abrirFormularioOS('', '${escapar(item.hotel)}', '${escapar(item.apartamento)}')">Abrir Card deste apartamento</button></div></details>`;
 }
-function abrirFormularioVistoria() {
+async function abrirFormularioVistoria() {
+  try { await atualizarUsuarios(); }
+  catch (erro) { alert('Não foi possível carregar os administradores. Tente abrir a vistoria novamente.'); return; }
   document.getElementById("formVistoria").reset();
+  const responsavel = document.getElementById('vistoriaResponsavel');
+  responsavel.replaceChildren(new Option('Selecione o administrador', ''), ...usuariosQueFinalizam()
+    .slice().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+    .map(usuario => new Option(usuario.nome, usuario.login)));
+  if (!responsavel.options[1]) { alert('Nenhum administrador disponível para realizar a vistoria.'); return; }
   document.getElementById("vistoriaData").value = dataLocalHoje();
   document.getElementById("vistoriaLocal").textContent = `${vistoriaHotel} — Apartamento ${vistoriaApartamento}`;
   document.getElementById("vistoriaFotosAjuda").textContent = "0 de 20 fotos selecionadas.";
@@ -381,6 +388,8 @@ function renderizarChecklistVistoria() {
 function fecharVistoriaModal() { document.getElementById("vistoriaModal").style.display = "none"; }
 async function salvarVistoria(event) {
   event.preventDefault();
+  const responsavel = usuariosQueFinalizam().find(usuario => usuario.login === document.getElementById('vistoriaResponsavel').value);
+  if (!responsavel) { alert('Selecione o administrador que realizou a vistoria.'); return; }
   const arquivos = [...document.getElementById("vistoriaFotos").files];
   BookStore.validateFiles(arquivos);
   if (arquivos.length > 20) { alert("Selecione no máximo 20 fotos por vistoria."); return; }
@@ -396,7 +405,7 @@ async function salvarVistoria(event) {
       checklist[campo.dataset.grupo][campo.dataset.item] = campo.value;
     });
     const item = { id: BookStore.id(), hotel: vistoriaHotel, apartamento: vistoriaApartamento,
-      data: document.getElementById("vistoriaData").value, responsavel: document.getElementById("vistoriaResponsavel").value.trim(),
+      data: document.getElementById("vistoriaData").value, responsavel: responsavel.nome, responsavelLogin: responsavel.login,
       tipo: document.getElementById("vistoriaTipo").value, checklist,
       observacoes: document.getElementById("vistoriaObservacoes").value.trim(), fotos };
     const itens = vistorias(); itens.push(item);

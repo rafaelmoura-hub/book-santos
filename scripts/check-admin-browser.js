@@ -26,7 +26,7 @@ async function main() {
       return {exported_at:new Date().toISOString(),schema_version:9,records:[...records.entries()].filter(([key])=>selected.includes(key.split('/')[0])).map(([,row])=>row),profiles:selected.includes('cadastros')?users:[],access:[],apartments:[],audit:[],user_audit:[]};
     },
     async logout() {},
-    async users() { return users; },
+    async users() { return [...users,client]; },
     async managedUsers() { return users; },
     async finance(token,payer,cursor,start,end) {
       const records=[{id:'1',date:'2026-10-22',hotel:'Unlimited',apartment:'1111',title:'Conserto',description:'Troca de torneira',status:'Finalizada',payer:'Book Santos',service:'0.10',material:'0.20',total:'0.30'},{id:'2',date:'2026-09-14',hotel:'Unique Residence',apartment:'1111',title:'Limpeza',description:'Limpeza geral',status:'Em andamento',payer:'Airbnb',service:'2.50',material:'0.00',total:'2.50'}].filter(row=>!start || row.date>=start&&row.date<end);
@@ -131,13 +131,15 @@ async function main() {
       await salvarRascunhoFechamentoOS();abrirFechamentoOS(order.id);await salvarFechamentoOS({preventDefault(){}});
       const saved=JSON.parse(BookStore.getItem('ordensServico'))[0];if(saved.status!=='Finalizada'||saved.fechamento.custoTotal!==12.34)throw Error('Finalizar card');
       document.getElementById('osDetalhesModal').style.display='none';
-      mostrarAba('vistorias');selecionarHotelVistoria('Lume Alto da Boa Vista');selecionarApartamentoVistoria('194A');abrirFormularioVistoria();
-      document.getElementById('vistoriaResponsavel').value='Gestor teste';document.getElementById('vistoriaTipo').value='Simplificada';renderizarChecklistVistoria();
+      mostrarAba('vistorias');selecionarHotelVistoria('Lume Alto da Boa Vista');selecionarApartamentoVistoria('194A');await abrirFormularioVistoria();
+      const inspectors=document.getElementById('vistoriaResponsavel');
+      if(inspectors.tagName!=='SELECT'||!inspectors.querySelector('option[value="master@example.com"]')||[...inspectors.options].some(option=>option.value==='cliente@example.com'))throw Error('Lista de administradores da vistoria');
+      inspectors.value='master@example.com';document.getElementById('vistoriaTipo').value='Simplificada';renderizarChecklistVistoria();
       const canvas=document.createElement('canvas');canvas.width=2;canvas.height=2;const photo=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
       const selection=new DataTransfer();selection.items.add(new File([photo],'vistoria.png',{type:'image/png'}));document.getElementById('vistoriaFotos').files=selection.files;
       document.getElementById('vistoriaFotos').dispatchEvent(new Event('change'));
       document.querySelectorAll('#gruposVistoria select').forEach(s=>s.value='Em ordem');await salvarVistoria({preventDefault(){}});
-      const inspection=JSON.parse(BookStore.getItem('vistorias'))[0];if(inspection.apartamento!=='194A'||!Object.keys(inspection.checklist).length||!inspection.fotos[0].dados.startsWith('/api/files/'))throw Error('Salvar vistoria com foto');
+      const inspection=JSON.parse(BookStore.getItem('vistorias'))[0];if(inspection.responsavel!=='Mestre'||inspection.responsavelLogin!=='master@example.com'||inspection.apartamento!=='194A'||!Object.keys(inspection.checklist).length||!inspection.fotos[0].dados.startsWith('/api/files/'))throw Error('Salvar vistoria com foto e administrador');
       mostrarAba('estoque');await adicionarLinhaEstoque();if(JSON.parse(BookStore.getItem('estoqueBookSantos')).itens.length!==1)throw Error('Adicionar estoque');
       mostrarAba('dashboard');atualizarDashboard();
     })()`);
