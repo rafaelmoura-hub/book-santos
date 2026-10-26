@@ -1,9 +1,9 @@
-:root { --azul:#245b9e; --texto:#243246; --suave:#7b8798; --borda:#e3e9f1; }
+:root { --azul:#174a8b; --texto:#243246; --suave:#65748a; --borda:#e3e9f1; }
 * { box-sizing:border-box; }
 body { min-height:100vh; min-height:100svh; margin:0; padding:24px; display:grid; place-items:center; background:#f5f7fb; color:var(--texto); font-family:"Segoe UI",Arial,sans-serif; }
-.login-box { width:min(100%,410px); padding:40px; border:1px solid var(--borda); border-radius:16px; background:#fff; box-shadow:0 8px 32px #24324605; }
+.login-box { width:min(100%,410px); padding:40px; border:1px solid var(--borda); border-top:4px solid var(--azul); border-radius:16px; background:#fff; box-shadow:0 8px 32px #24324605; }
 .login-box h1 { display:flex; align-items:center; gap:12px; margin:0; color:var(--texto); font-size:25px; font-weight:650; letter-spacing:-.8px; }
-.login-box h1::before { content:'BS'; display:grid; place-items:center; width:42px; height:42px; border-radius:12px; background:#edf3fc; color:var(--azul); font-size:14px; letter-spacing:-.3px; }
+.login-box h1::before { content:'BS'; display:grid; place-items:center; width:42px; height:42px; border-radius:12px; background:var(--azul); color:#fff; font-size:14px; letter-spacing:-.3px; }
 .login-box > p { margin:14px 0 30px; color:var(--suave); font-size:14px; }
 .login-box form { display:grid; }
 label { margin:16px 0 7px; color:#65748a; font-size:13px; font-weight:500; }
@@ -12,7 +12,7 @@ input { width:100%; padding:12px 14px; border:1px solid var(--borda); border-rad
 input::placeholder { color:#a0a9b7; }
 input:focus { border-color:#8aafd9; outline:3px solid #245b9e0c; }
 button { width:100%; margin-top:26px; padding:12px; border:0; border-radius:8px; background:var(--azul); color:#fff; font:inherit; font-size:14px; font-weight:600; cursor:pointer; transition:background-color .15s; }
-button:hover { background:#1b467d; }
+button:hover { background:#103966; }
 button:focus-visible { outline:3px solid #b9d3f4; outline-offset:3px; }
 button:disabled { opacity:.6; cursor:wait; }
 #mensagem { min-height:18px; margin:16px 0 0; color:#ae4242; font-size:13px; line-height:1.5; }
