@@ -1,4 +1,4 @@
-:root { --azul:#174a8b; --texto:#243246; --suave:#65748a; --borda:#e3e9f1; }
+:root { --azul:#174a8b; --texto:#242b35; --suave:#65748a; --borda:#b8cde5; }
 * { box-sizing:border-box; }
 body { min-height:100vh; min-height:100svh; margin:0; padding:24px; display:grid; place-items:center; background:#f5f7fb; color:var(--texto); font-family:"Segoe UI",Arial,sans-serif; }
 .login-box { width:min(100%,410px); padding:40px; border:1px solid var(--borda); border-top:4px solid var(--azul); border-radius:16px; background:#fff; box-shadow:0 8px 32px #24324605; }
@@ -10,7 +10,7 @@ label { margin:16px 0 7px; color:#65748a; font-size:13px; font-weight:500; }
 label:first-child { margin-top:0; }
 input { width:100%; padding:12px 14px; border:1px solid var(--borda); border-radius:8px; background:#fff; color:var(--texto); font:inherit; font-size:14px; }
 input::placeholder { color:#a0a9b7; }
-input:focus { border-color:#8aafd9; outline:3px solid #245b9e0c; }
+input:focus { border-color:var(--azul); outline:3px solid #174a8b14; }
 button { width:100%; margin-top:26px; padding:12px; border:0; border-radius:8px; background:var(--azul); color:#fff; font:inherit; font-size:14px; font-weight:600; cursor:pointer; transition:background-color .15s; }
 button:hover { background:#103966; }
 button:focus-visible { outline:3px solid #b9d3f4; outline-offset:3px; }

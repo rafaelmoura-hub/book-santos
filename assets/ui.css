@@ -3,9 +3,9 @@
   --azul: #174a8b;
   --azul-escuro: #103966;
   --fundo: #f6f8fb;
-  --texto: #243246;
+  --texto: #242b35;
   --suave: #6c788a;
-  --borda: #e4e9f0;
+  --borda: #c4d5e9;
   --sombra: 0 2px 6px #20345304;
 }
 [hidden] { display: none !important; }
@@ -34,7 +34,7 @@ button:hover, .hotel:hover, .hotel:focus-visible { transform: none; }
 button, summary, a { -webkit-tap-highlight-color: transparent; }
 button:focus-visible, summary:focus-visible, a:focus-visible { outline: 3px solid #b9d3f4; outline-offset: 3px; }
 input, select, textarea { box-shadow: none; }
-input:focus, select:focus, textarea:focus { border-color: #8aafd9; box-shadow: 0 0 0 3px #245b9e0c; }
+input:focus, select:focus, textarea:focus { border-color: var(--azul); box-shadow: 0 0 0 3px #174a8b14; }
 .sync-toolbar { position: fixed; z-index: 25; top: 20px; right: 102px; display: flex; align-items: center; gap: 10px; color: var(--suave); font: 12px "Segoe UI", Arial, sans-serif; }
 .sync-toolbar > span { display: flex; align-items: center; gap: 7px; max-width: 350px; }
 .sync-toolbar > span::before { content: ''; width: 6px; height: 6px; flex-shrink: 0; border-radius: 50%; background: #439271; }
@@ -54,6 +54,9 @@ input:focus, select:focus, textarea:focus { border-color: #8aafd9; box-shadow: 0
 .cards { gap: 14px; margin-bottom: 28px; }
 .card, .chamado, .dashboard-painel, #historico, .hotel, .hotel-vistoria { border: 1px solid var(--borda); border-radius: 12px; box-shadow: var(--sombra); background: #fff; }
 .card { padding: 20px 22px; }
+.chamado, .dashboard-painel { border-top: 2px solid #5180b5; }
+.modal-conteudo { border: 1px solid #8eabcd; border-top: 3px solid #303944; }
+.titulo-secao h2, main > section > h2, .client-panel h2 { color: #242b35; }
 .card h3 { color: var(--suave); font-size: 12px; font-weight: 500; }
 .card p { margin-top: 10px; color: var(--texto); font-size: 30px; font-weight: 650; letter-spacing: -.8px; }
 .cards > .card:first-child { border-color: var(--azul); background: var(--azul); }
@@ -80,11 +83,11 @@ input:focus, select:focus, textarea:focus { border-color: #8aafd9; box-shadow: 0
 .hotel h2 { font-size: 16px; font-weight: 600; color: #354a66; letter-spacing: -.2px; }
 .hotel p, .hotel-vistoria span { margin-top: 7px; color: var(--suave); font-size: 12px; }
 .hotel-vistoria strong { color: #354a66; font-size: 15px; }
-.hotel:hover, .hotel:focus-visible, .hotel-vistoria:hover { border-color: #abc3df; box-shadow: none; }
+.hotel:hover, .hotel:focus-visible, .hotel-vistoria:hover { border-color: var(--azul); box-shadow: none; }
 #historico { padding: 24px; }
 #historico h2 { font-size: 19px; }
 .apartamentos, .apartamentos-vistoria { gap: 8px; }
-.apartamento-opcao, .apartamentos-vistoria button { min-width: 70px; padding: 10px 14px; border: 1px solid var(--borda); border-radius: 7px; color: #436180; background: white; font-size: 13px; box-shadow: none; }
+.apartamento-opcao, .apartamentos-vistoria button { min-width: 70px; padding: 10px 14px; border: 1px solid #8eabcd; border-radius: 7px; color: var(--azul); background: white; font-size: 13px; box-shadow: none; }
 .apartamento-opcao:hover, .apartamentos-vistoria button:hover { border-color: #8daed4; color: var(--azul); background: #f1f6fc; }
 .apartamentos-vistoria { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
 .filtros-card { display: grid; grid-template-columns: minmax(160px, 1fr) minmax(160px, 1fr); gap: 16px; max-width: 640px; margin-bottom: 14px; }
@@ -114,7 +117,7 @@ input:focus, select:focus, textarea:focus { border-color: #8aafd9; box-shadow: 0
 .usuario-hoteis label { line-height: 1.5; }
 .painel-chat { border-radius: 12px; box-shadow: none; }
 body[data-screen="cliente.js"] > main { display: grid; grid-template-columns: 1.05fr .95fr; align-items: start; gap: 24px; width: min(calc(100% - 48px), 1120px); max-width: none; margin: 104px auto 80px; padding: 0; border: 0; background: transparent; box-shadow: none; }
-.client-panel { padding: 28px; border: 1px solid var(--borda); border-radius: 12px; background: #fff; }
+.client-panel { padding: 28px; border: 1px solid var(--borda); border-top: 2px solid #5180b5; border-radius: 12px; background: #fff; }
 .client-panel h2 { font-size: 21px; letter-spacing: -.5px; }
 #formChamado label { margin-top: 14px; font-size: 12px; color: #68778b; }
 #formChamado input, #formChamado select, #formChamado textarea { margin-top: 5px; border: 1px solid var(--borda); border-radius: 8px; padding: 10px 12px; }
