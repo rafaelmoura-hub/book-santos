@@ -336,6 +336,8 @@ const gruposChecklistVistoria = {
   "Estrutura física": ["Paredes e pintura", "Piso e revestimentos", "Teto e forro", "Portas e fechaduras", "Janelas e vidros", "Instalações hidráulicas", "Instalações elétricas", "Banheiro e louças"],
   "Eletrônicos": ["Ar-condicionado", "Televisão e controle", "Geladeira", "Micro-ondas", "Fogão/cooktop", "Máquina de lavar", "Luminárias"],
   "Cozinha": ["Pia e torneira", "Armários", "Louças e copos", "Talheres e utensílios", "Panelas", "Bancada"],
+  "Banheiro": ["Pia, cuba e torneira", "Vaso sanitário, assento e descarga", "Chuveiro, ducha e aquecimento", "Secador de cabelo", "Box, vidros e vedação", "Ralos, escoamento e sifão", "Vazamentos e infiltrações", "Piso, paredes, rejuntes e teto", "Espelho", "Bancada, armário e gavetas", "Iluminação, tomadas e interruptores", "Janela, ventilação e exaustor", "Ducha higiênica", "Toalheiros, ganchos e porta-papel", "Saboneteira e dispensadores", "Lixeira", "Toalhas e tapete"],
+  "Sacada": ["Guarda-corpo e corrimão", "Piso, revestimentos e rejuntes", "Ralo e escoamento de água", "Porta de acesso, trilhos e fechaduras", "Fechamento de vidro e vedações", "Rede de proteção", "Paredes, teto e infiltrações", "Iluminação, tomadas e interruptores", "Mesa, cadeiras e bancos", "Sofá, poltronas e almofadas", "Churrasqueira, grelha e exaustão", "Pia, torneira e bancada", "Armários", "Persianas, cortinas e toldo", "Varal", "Vasos e plantas", "Limpeza e conservação geral"],
   "Móveis": ["Cama e colchão", "Sofá e poltronas", "Mesa e cadeiras", "Guarda-roupa", "Criados-mudos", "Cortinas e persianas"]
 };
 let vistoriaHotel = "", vistoriaApartamento = "";
@@ -381,7 +383,7 @@ async function abrirFormularioVistoria() {
 function renderizarChecklistVistoria() {
   const simplificada = document.getElementById("vistoriaTipo").value === "Simplificada";
   document.getElementById("gruposVistoria").innerHTML = Object.entries(gruposChecklistVistoria).map(([grupo, itens]) => {
-    const lista = simplificada ? itens.slice(0, 2) : itens;
+    const lista = simplificada ? itens.slice(0, grupo === 'Banheiro' || grupo === 'Sacada' ? 4 : 2) : itens;
     return `<fieldset class="grupo-checklist"><legend>${escapar(grupo)}</legend>${lista.map((nome, i) => `<label>${escapar(nome)}<select name="check-${Object.keys(gruposChecklistVistoria).indexOf(grupo)}-${i}" data-grupo="${escapar(grupo)}" data-item="${escapar(nome)}" required><option value="">Selecione</option><option>Em ordem</option><option>Com problema</option><option>Não se aplica</option></select></label>`).join("")}</fieldset>`;
   }).join("");
 }
