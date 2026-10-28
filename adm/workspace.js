@@ -6,10 +6,29 @@ window.BookWorkspace = (() => {
   const el = id => document.getElementById(id);
   const esc = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const can = tab => !!user?.mestre || (user?.tabs ?? Object.keys(labels)).includes(tab);
+  const panels={aiDialog:'IA',supportDialog:'Suporte',notesDialog:'Notas'};
+  function openPanel(node){
+    if(node.open)return false;
+    if(saving||aiBusy)return false;
+    for(const id of Object.keys(panels)){
+      const previous=el(id);
+      if(previous?.open){previous.close();if(id==='aiDialog')el('aiKey').value='';}
+    }
+    node.show();document.body.classList.add('workspace-open');
+    if(node.id==='aiDialog'&&!el('aiKey').value)el('aiConnection').open=true;
+    document.querySelectorAll('[data-workspace-target]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.workspaceTarget===node.id)));
+    node.querySelector('.workspace-heading button').focus({preventScroll:true});
+    return true;
+  }
   async function request(route, body) { return BookAPI.request(route, body ? {method:'POST',body:JSON.stringify(body)} : {}); }
   function dialog(id, title, body) {
-    const node = document.createElement('dialog');node.id=id;node.className='workspace-dialog';
-    node.innerHTML=`<div class="workspace-heading"><h2>${title}</h2><button type="button" class="botao-secundario" aria-label="Fechar">Fechar</button></div>${body}<p class="workspace-status" role="status"></p>`;
+    const node = document.createElement('dialog');node.id=id;node.className='workspace-dialog';node.setAttribute('aria-labelledby',id+'Title');
+    node.innerHTML=`<div class="workspace-heading"><h2 id="${id}Title">${title}</h2><button type="button" class="botao-secundario" aria-label="Fechar painel lateral">Fechar</button></div><div class="workspace-panel-tabs" role="group" aria-label="Ferramentas do painel"></div><div class="workspace-panel-content">${body}</div><p class="workspace-status" role="status"></p>`;
+    for(const [target,label]of Object.entries(panels)){
+      const button=document.createElement('button');button.type='button';button.textContent=label;button.dataset.workspaceTarget=target;button.setAttribute('aria-controls',target);button.setAttribute('aria-pressed','false');
+      button.onclick=()=>target==='notesDialog'?openNotes():target==='supportDialog'?openSupport():openPanel(el(target));
+      node.querySelector('.workspace-panel-tabs').append(button);
+    }
     node.querySelector('.workspace-heading button').onclick=()=>close(node);
     node.addEventListener('cancel',event=>{event.preventDefault();close(node);});document.body.append(node);return node;
   }
@@ -18,7 +37,12 @@ window.BookWorkspace = (() => {
     if(node.id==='notesDialog'&&dirty&&!confirm('Fechar sem salvar as alterações desta nota?'))return;
     if(node.id==='supportDialog'&&el('supportBody')?.value.trim()&&!confirm('Descartar a mensagem ainda não enviada?'))return;
     if(node.id==='aiDialog'){if(aiBusy)return;el('aiKey').value='';}
+    if(node.id==='notesDialog')dirty=false;
+    if(node.id==='supportDialog')el('supportBody').value='';
     node.close();
+    document.body.classList.remove('workspace-open');
+    document.querySelectorAll('[data-workspace-target]').forEach(button=>button.setAttribute('aria-pressed','false'));
+    document.querySelector(`.workspace-actions [data-workspace-target="${node.id}"]`)?.focus({preventScroll:true});
   }
   async function run(node, action) {
     if(saving)return; saving=true;node.setAttribute('aria-busy','true');
@@ -41,8 +65,8 @@ window.BookWorkspace = (() => {
     if(!notes.length)el('notesList').textContent='Nenhuma nota salva.';
   }
   async function openNotes() {
-    const node=el('notesDialog');if(node.open)return;node.showModal();node.querySelector('.workspace-status').textContent='Carregando notas…';
-    try{await loadNotes();dirty=false;editNote(notes[0]);node.querySelector('.workspace-status').textContent='Notas privadas, salvas na sua conta.';}
+    const node=el('notesDialog');if(!openPanel(node))return;node.querySelector('.workspace-status').textContent='Carregando notas…';
+    try{await loadNotes();if(!dirty)editNote(notes.find(item=>item.id===note?.id)||notes[0]);node.querySelector('.workspace-status').textContent=dirty?'Alterações não salvas.':'Notas privadas, salvas na sua conta.';}
     catch(error){node.querySelector('.workspace-status').textContent=error.message;}
   }
   async function saveNote(remove=false) {
@@ -85,8 +109,8 @@ window.BookWorkspace = (() => {
     }catch(error){el('supportDialog').querySelector('.workspace-status').textContent=error.message;throw error;}
   }
   async function openSupport() {
-    const node=el('supportDialog');if(node.open)return;node.showModal();newTicket();
-    try{await loadTickets();node.querySelector('.workspace-status').textContent=user.mestre?'Chamados dos administradores.':'Conversa privada entre você e o mestre.';}
+    const node=el('supportDialog');if(!openPanel(node))return;if(!node.dataset.initialized){newTicket();node.dataset.initialized='true';}
+    try{await loadTickets();if(ticket)await selectTicket(ticket.id,true);else node.querySelector('.workspace-status').textContent=user.mestre?'Chamados dos administradores.':'Conversa privada entre você e o mestre.';}
     catch(error){node.querySelector('.workspace-status').textContent=error.message;}
   }
   async function sendSupport(status) {
@@ -163,14 +187,22 @@ window.BookWorkspace = (() => {
   function init(profile) {
     user=profile;
     const actions=document.createElement('div');actions.className='workspace-actions';
-    for(const [label,fn] of [['IA',()=>el('aiDialog').showModal()],['Suporte',openSupport],['▤ Notas',openNotes]]){
-      const button=document.createElement('button');button.type='button';button.className='botao-secundario';button.textContent=label;button.onclick=fn;actions.append(button);
+    for(const [target,label,fn] of [['aiDialog','IA',()=>openPanel(el('aiDialog'))],['supportDialog','Suporte',openSupport],['notesDialog','▤ Notas',openNotes]]){
+      const button=document.createElement('button');button.type='button';button.className='botao-secundario';button.textContent=label;button.onclick=fn;button.dataset.workspaceTarget=target;button.setAttribute('aria-controls',target);button.setAttribute('aria-pressed','false');actions.append(button);
     }
     document.querySelector('header').append(actions);
+    document.addEventListener('keydown',event=>{
+      if(event.key!=='Escape'||event.defaultPrevented||document.querySelector('dialog:modal'))return;
+      const active=Object.keys(panels).map(el).find(node=>node?.open);
+      if(active){event.preventDefault();close(active);}
+    });
     const ai=dialog('aiDialog','Assistente de IA','<form id="aiForm"><div class="ai-settings"><label>Serviço<select id="aiProvider"><option value="openai">OpenAI</option><option value="gemini">Gemini</option><option value="claude">Claude</option></select></label><label>Modelo<input id="aiModel" maxlength="100" value="gpt-4.1-mini" required></label><label>Sua chave de API<input id="aiKey" type="password" minlength="16" maxlength="512" autocomplete="off" required></label></div><p class="workspace-hint">A API tem cobrança própria, separada da assinatura do aplicativo de IA. A chave não é salva e é apagada ao fechar. Apenas as mensagens desta conversa são enviadas ao provedor escolhido. O histórico fica nesta página até recarregá-la.</p><div id="aiThread" class="workspace-thread" aria-live="polite"></div><label>Mensagem<textarea id="aiPrompt" rows="3" maxlength="4000" required></textarea></label><button id="aiSend" type="submit" class="acao-principal">Enviar</button> <button id="aiNew" type="button" class="botao-secundario">Nova conversa</button></form>');
     const capabilities=document.createElement('p');capabilities.className='workspace-hint';capabilities.textContent='O assistente pode consultar dados autorizados e preparar ações no sistema. Qualquer gravação será mostrada para sua revisão e confirmação.';
     const actionArea=document.createElement('div');actionArea.id='aiActions';el('aiThread').after(capabilities,actionArea);
     ai.querySelector('.workspace-hint').textContent='Use a sua chave de API, com cobrança própria no provedor. A chave não é salva e é apagada ao fechar. As mensagens e os dados consultados pelas ferramentas são enviados somente ao provedor escolhido. O histórico fica nesta página até recarregá-la.';
+    const connection=document.createElement('details');connection.id='aiConnection';connection.className='workspace-connection';connection.open=true;
+    const connectionTitle=document.createElement('summary');connectionTitle.textContent='Conexão com a IA';connection.append(connectionTitle);
+    const settings=ai.querySelector('.ai-settings'),connectionHint=ai.querySelector('.workspace-hint');settings.before(connection);connection.append(settings,connectionHint);
     el('aiNew').onclick=()=>{if(aiBusy)return;aiMessages=[];el('aiThread').replaceChildren();el('aiActions').replaceChildren();el('aiPrompt').value='';};
     el('aiProvider').onchange=()=>{aiMessages=[];el('aiThread').replaceChildren();el('aiActions').replaceChildren();el('aiKey').value='';el('aiModel').value={openai:'gpt-4.1-mini',gemini:'gemini-2.5-flash',claude:'claude-sonnet-4-5'}[el('aiProvider').value];};
     el('aiForm').onsubmit=async event=>{
@@ -180,6 +212,7 @@ window.BookWorkspace = (() => {
       try{
         const result=await BookAPI.request('/api/ai',{method:'POST',body:JSON.stringify({provider:el('aiProvider').value,model:el('aiModel').value.trim(),apiKey:el('aiKey').value.trim(),messages:pending}),timeoutMs:150000});
         aiMessages=[...pending,{role:'assistant',content:result.answer}];el('aiPrompt').value='';
+        connection.open=false;
         renderAIThread();showAIActions(result.actions);status.textContent=result.actions?.length?'Ações preparadas; nenhuma gravação foi feita. Revise e confirme abaixo.':'Resposta recebida. Nenhuma alteração foi executada no site.';
       }catch(error){status.textContent=error.message;}finally{aiBusyState(false);}
     };

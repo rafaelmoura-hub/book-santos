@@ -219,4 +219,46 @@ body[data-screen="cliente.js"] > main { display: grid; grid-template-columns: 1.
   .filtros-card { grid-template-columns: 1fr; gap: 10px; }
   .hoteis, .hoteis-vistoria { grid-template-columns: 1fr; }
 }
+/* Ferramentas ao lado da área de trabalho, sem bloquear o restante do site. */
+:root { --workspace-width: 420px; }
+.workspace-dialog {
+ position: fixed; inset: 72px 0 0 auto; z-index: 40; margin: 0;
+ width: min(var(--workspace-width), 100%); max-width: 100%; height: calc(100dvh - 72px);
+ max-height: none; padding: 0; border: 0; border-left: 1px solid #8eabcd;
+ border-radius: 0; background: #fff; box-shadow: -8px 0 24px #1039660c; overflow: hidden;
+}
+.workspace-dialog[open] { display: flex; flex-direction: column; }
+.workspace-dialog .workspace-heading { position: static; flex: none; margin: 0; padding: 16px; border-bottom: 1px solid var(--borda); background: #f5f9ff; }
+.workspace-heading h2 { font-size: 17px; }
+.workspace-panel-tabs { display: flex; flex: none; gap: 4px; padding: 8px 12px; border-bottom: 1px solid var(--borda); background: white; }
+.workspace-panel-tabs button { flex: 1; padding: 10px 8px; border: 1px solid transparent; border-radius: 7px; background: white; color: var(--suave); cursor: pointer; font-weight: 600; }
+.workspace-panel-tabs button[aria-pressed="true"] { color: var(--azul); background: #eaf3ff; border-color: #a9c9ed; }
+.workspace-actions button[aria-pressed="true"] { color: var(--azul); border-color: var(--azul); background: #eaf3ff; }
+.workspace-panel-content { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 16px; scrollbar-width: thin; }
+.workspace-dialog .workspace-status { flex: none; margin: 0; padding: 10px 16px; border-top: 1px solid var(--borda); background: #f7faff; overflow-wrap: anywhere; }
+.workspace-dialog .workspace-split { grid-template-columns: minmax(0,1fr); gap: 16px; }
+.workspace-dialog .workspace-split > aside { padding-bottom: 12px; border-bottom: 1px solid var(--borda); }
+.workspace-dialog .workspace-list { max-height: 150px; }
+.workspace-dialog form, .workspace-dialog aside { min-width: 0; }
+.workspace-dialog .ai-settings { grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 0 10px; }
+.workspace-dialog .ai-settings label:last-child { grid-column: 1 / -1; }
+.workspace-dialog .workspace-thread { height: clamp(180px,32dvh,420px); margin: 12px 0; }
+.workspace-dialog .workspace-hint { line-height: 1.5; }
+.workspace-connection { padding: 10px 12px; border: 1px solid var(--borda); border-radius: 8px; background: #f7faff; }
+.workspace-connection summary { color: var(--azul); font-size: 13px; font-weight: 600; cursor: pointer; }
+.workspace-dialog #aiForm { min-height: 100%; display: flex; flex-direction: column; }
+.workspace-dialog #aiThread { flex: 1; min-height: 180px; }
+.workspace-dialog .mensagem-chat { max-width: 100%; overflow-wrap: anywhere; }
+.workspace-dialog .ai-action { padding: 12px; }
+.workspace-dialog :focus-visible { outline: 2px solid var(--azul); outline-offset: 2px; }
+@media (min-width: 1200px) {
+ body.workspace-open[data-screen="admin.js"] > main { margin-right: calc(var(--workspace-width) + 24px); }
+ body.workspace-open .sync-toolbar { right: calc(var(--workspace-width) + 24px) !important; }
+ body.workspace-open .cards { grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); }
+}
+@media (max-width: 760px) {
+ .workspace-dialog { inset: 0 0 0 auto; height: 100dvh; width: 100%; border-left: 0; }
+ .workspace-dialog .workspace-heading { padding-top: max(16px,env(safe-area-inset-top)); }
+ .workspace-dialog .workspace-status { padding-bottom: max(10px,env(safe-area-inset-bottom)); }
+}
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; } }

@@ -109,6 +109,22 @@ async function main() {
     await wait("document.querySelector('#notesDialog .workspace-status').textContent==='Salvo.'");
     await evaluate("document.getElementById('noteNew').click();document.getElementById('noteTitle').value='Outra nota';document.getElementById('noteBody').value='Outro assunto';document.getElementById('notesForm').requestSubmit()");
     await wait("document.querySelectorAll('#notesList button').length===2");
+    await evaluate(`(() => {
+      const panel=document.getElementById('notesDialog'),bounds=panel.getBoundingClientRect();
+      if(panel.matches(':modal'))throw Error('Painel lateral bloqueia o site');
+      if(Math.abs(bounds.right-document.documentElement.clientWidth)>1||bounds.width>440)throw Error('Painel não está ancorado à direita');
+      document.getElementById('abaCondominios').click();
+      if(document.getElementById('visaoCondominios').hidden)throw Error('Site inacessível com painel aberto');
+      document.getElementById('noteBody').value='Rascunho lateral';document.getElementById('noteBody').dispatchEvent(new Event('input',{bubbles:true}));
+      panel.querySelector('[data-workspace-target="aiDialog"]').click();
+      if(panel.open||!document.getElementById('aiDialog').open)throw Error('Troca de painel falhou');
+      document.getElementById('aiKey').value='chave-temporaria';
+      document.querySelector('#aiDialog [data-workspace-target="notesDialog"]').click();
+      if(document.getElementById('aiKey').value)throw Error('Chave permaneceu ao trocar de painel');
+    })()`);
+    await wait("document.getElementById('noteBody').value==='Rascunho lateral' && document.querySelector('#notesDialog .workspace-status').textContent==='Alterações não salvas.'");
+    await evaluate("document.getElementById('noteBody').value='Outro assunto';document.getElementById('notesForm').requestSubmit()");
+    await wait("document.querySelector('#notesDialog .workspace-status').textContent==='Salvo.'");
     await capture('notas-desktop');
     await evaluate("document.getElementById('notesDialog').querySelector('.workspace-heading button').click();BookWorkspace.openNotes()");
     await wait("document.querySelectorAll('#notesList button').length===2");
@@ -264,7 +280,7 @@ async function main() {
     await wait("typeof abrirChamado === 'function' && location.pathname === '/cliente/cliente.html'");
     await evaluate(`(async()=>{alternarChatCliente();document.getElementById('chamadoChat').value=${JSON.stringify(String(ticketId))};await renderizarConversaCliente();if(!document.getElementById('mensagensCliente').textContent.includes('Resposta do administrador'))throw Error('Cliente não recebeu resposta');})()`);
     await evaluate("sair()");
-    await wait("location.pathname === '/login.html'");
+    await wait("location.pathname === '/login.html' && typeof BookAPI !== 'undefined' && document.readyState === 'complete'");
     if(users[1].tabs.join('|')!=='vistorias')throw Error('Permissões por aba não foram salvas');
     await evaluate("BookAPI.request('/api/login',{method:'POST',body:JSON.stringify({login:'pessoa@example.com',senha:'senha'})})");
     await send('Page.navigate',{url:base+'/adm/admin.html'});

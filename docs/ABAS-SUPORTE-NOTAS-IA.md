@@ -15,6 +15,8 @@ As migrações são transacionais e podem ser reaplicadas. Não apagam registros
 
 ## Abas de administradores
 
+IA, Suporte e Notas abrem um painel lateral à direita. Use os atalhos do topo ou as abas internas para alternar entre as ferramentas. Em telas grandes, o conteúdo do site se ajusta para continuar acessível ao lado do painel; em celulares, o painel ocupa a tela. Feche pelo botão Fechar ou pela tecla Escape. A troca entre ferramentas preserva rascunhos de notas e mensagens; fechar com alterações pendentes pede confirmação. A chave da IA é apagada ao sair do painel da IA. A conexão com o provedor pode ser expandida em “Conexão com a IA”. Essa mudança de interface não requer migração adicional.
+
 O mestre escolhe as abas no cadastro e na edição de usuários quando a função é Administrador. Os administradores já existentes mantêm as abas anteriores por padrão. O mestre mantém acesso integral; Usuários e Backup continuam exclusivos do mestre. Nenhuma aba selecionada deixa apenas os atalhos do topo e a tela de orientação de acesso.
 
 Ocultar menus não é a proteção: API e funções PostgreSQL também conferem as permissões. As telas compartilham alguns dados necessários: por exemplo, Cards consulta estoque para materiais, e Condomínios consulta chamados e cards. Permissão de consulta a esses dados não concede permissão para alterá-los. Os valores de um card continuam presentes nos detalhes do próprio card; a aba Financeiro controla a consulta do relatório financeiro.
