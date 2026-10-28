@@ -1,5 +1,7 @@
 # BOOK TESK
 
+Rotina adaptada à demonstração da equipe: Reservas, Onboarding, Projetos, Compras e Danos, com melhorias em Cards, Vistorias, Feedbacks e Avaliações. Veja [análise e uso](docs/ROTINA-BOOK-TESK.md). Esta versão requer as migrações **13 e 14**, em ordem, após a versão 12; não publique o servidor antes de confirmar a versão 14 no banco.
+
 Suporte com contadores e notificações, lembretes em notas, Feedbacks e Avaliações da equipe: veja [ativação e uso](docs/COLABORACAO.md). Esta versão exige `supabase/migrations/202610280013_collaboration.sql` após as migrações anteriores, antes de publicar o servidor.
 
 Permissões por aba, notas privadas, suporte ao mestre e assistente de IA com ações revisáveis: veja [ativação e uso](docs/ABAS-SUPORTE-NOTAS-IA.md). Antes do deploy, aplique em ordem as migrações `202610280010_permissions.sql`, `202610280011_notes_support.sql` e `202610280012_security.sql`. Veja também a [revisão de segurança](docs/SEGURANCA-20261028.md).

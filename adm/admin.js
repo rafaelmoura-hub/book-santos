@@ -43,7 +43,7 @@ function mostrarAba(aba) {
   if (aba==='suporte'&&!ehAdministradorMestre) return;
   if (["usuarios", "backup"].includes(aba) && !ehAdministradorMestre) return;
   BookStore.activate(aba);
-  ["chamados", "chat", "os", "vistorias", "condominios", "estoque", "financeiro", "usuarios", "dashboard", "backup", "suporte", "inicio", "feedbacks", "avaliacoes"].forEach(nome => {
+  ["chamados", "chat", "os", "vistorias", "condominios", "estoque", "financeiro", "usuarios", "dashboard", "backup", "suporte", "inicio", "feedbacks", "avaliacoes", "reservas", "onboarding", "projetos", "compras", "danos"].forEach(nome => {
     const sufixo = nome === "os" ? "OS" : nome[0].toUpperCase() + nome.slice(1);
     document.getElementById(`visao${sufixo}`).hidden = nome !== aba;
     if (document.getElementById(`aba${sufixo}`)) document.getElementById(`aba${sufixo}`).classList.toggle("ativa", nome === aba);
@@ -56,6 +56,7 @@ function mostrarAba(aba) {
   if (aba === 'suporte') BookWorkspace.loadMaster();
   if(aba==='feedbacks')BookCollaboration.loadFeedbacks();
   if(aba==='avaliacoes')BookCollaboration.loadEvaluations();
+  window.BookRoutine?.activate(aba);
   if (aba === "condominios") BookCondominios.atualizarTotais();
   if (aba === "dashboard") atualizarDashboard();
   if (aba === "estoque") mostrarEstoque();
@@ -199,6 +200,7 @@ function abrirOS(id) {
   reabrir.hidden=o.status!=='Finalizada'||!BookWorkspace.can('os');
   botaoFechamento.textContent = o.status === "Em andamento" || o.fechamento ? "Preencher/editar informações do serviço" : "Registrar informações e finalizar o card";
   document.getElementById("osDetalhesModal").style.display = "block";
+  window.BookRoutine?.orderOpened(String(o.id));
 }
 function formatarMoeda(valor) { return BookMoney.format(valor); }
 function atualizarCustoTotal() {
@@ -377,11 +379,13 @@ function selecionarApartamentoVistoria(apartamento) {
     .sort((a, b) => String(b.data || "").localeCompare(String(a.data || "")));
   const ultima = itens[0];
   document.getElementById("detalheApartamentoVistoria").innerHTML = `<div class="vistoria-resumo"><div><h3>Apartamento ${escapar(apartamento)}</h3><p><strong>Total de vistorias:</strong> ${itens.length}</p><p><strong>Última vistoria:</strong> ${ultima ? `${formatarData(ultima.data)} — ${escapar(ultima.responsavel)}` : "Ainda não há vistorias"}</p></div><button class="acao-principal" data-on-click="abrirFormularioVistoria()">+ Começar vistoria</button></div><button type="button" class="botao-secundario" data-on-click="abrirFormularioOS('', '${escapar(vistoriaHotel)}', '${escapar(apartamento)}')">Abrir Card para este apartamento</button><div class="historico-vistorias"><h4>Histórico de vistorias</h4>${itens.length ? itens.map(renderizarVistoria).join("") : '<p class="vazio">Nenhuma vistoria registrada neste apartamento.</p>'}</div>`;
+  const proxima=window.BookProcesses?.nextInspection(ultima?.data);
+  if(proxima){const aviso=document.createElement('p');aviso.textContent='Próxima vistoria trimestral: '+formatarData(proxima);if(proxima<dataLocalHoje()){aviso.textContent+=' · Vencida';aviso.className='routine-overdue';}document.querySelector('#detalheApartamentoVistoria .vistoria-resumo > div')?.append(aviso);}
 }
 function renderizarVistoria(item) {
   const checklist = Object.entries(item.checklist || {}).map(([grupo, respostas]) => `<h5>${escapar(grupo)}</h5><ul>${Object.entries(respostas).map(([nome, estado]) => `<li><strong>${escapar(nome)}:</strong> ${escapar(estado)}</li>`).join("")}</ul>`).join("");
   const fotos = (item.fotos || []).map(foto => `<a href="${foto.dados}" target="_blank" rel="noopener"><img decoding="async" loading="lazy" src="${foto.dados}" alt="${escapar(foto.nome)}"></a>`).join("");
-  return `<details class="vistoria-registro"><summary><strong>${formatarData(item.data)} — ${escapar(item.tipo)}</strong><span>Responsável: ${escapar(item.responsavel)}</span></summary><div class="vistoria-registro-detalhes"><p><strong>Responsável:</strong> ${escapar(item.responsavel)}</p>${checklist}<p><strong>Observações:</strong> ${escapar(item.observacoes || "Nenhuma")}</p><p><strong>Fotos:</strong> ${(item.fotos || []).length}</p><div class="galeria-vistoria">${fotos}</div><button type="button" class="botao-secundario" data-on-click="abrirFormularioOS('', '${escapar(item.hotel)}', '${escapar(item.apartamento)}')">Abrir Card deste apartamento</button></div></details>`;
+  return `<details class="vistoria-registro"><summary><strong>${formatarData(item.data)} — ${escapar(item.tipo)}</strong><span>Responsável: ${escapar(item.responsavel)}</span></summary><div class="vistoria-registro-detalhes"><p><strong>Responsável:</strong> ${escapar(item.responsavel)}</p>${checklist}<p><strong>Observações:</strong> ${escapar(item.observacoes || "Nenhuma")}</p><p><strong>Fotos:</strong> ${(item.fotos || []).length}</p><div class="galeria-vistoria">${fotos}</div><button type="button" class="botao-secundario" data-on-click="BookRoutine.openFlow('vistorias','${Number(item.id)}')">Acompanhamento e serviço desta vistoria</button></div></details>`;
 }
 async function abrirFormularioVistoria() {
   try { await atualizarUsuarios(); }
@@ -540,6 +544,7 @@ idsMensagensConhecidas=new Set(lerConversasChat().flatMap(c=>(c.mensagens||[]).m
 atualizarBadgeChat();
 BookWorkspace.init(sessao);
 BookCollaboration.init(sessao);
+BookRoutine.init(sessao);
 BookNotifications.init(sessao);
 document.getElementById('masterSupportRefresh').onclick=()=>BookWorkspace.loadMaster();
 const primeiraAba=Object.keys(BookWorkspace.labels).find(tab=>BookWorkspace.can(tab))||'inicio';

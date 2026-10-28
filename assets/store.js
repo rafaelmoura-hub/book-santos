@@ -58,6 +58,7 @@ window.BookStore = (() => {
         }
     }
     function activate(tab) {
+        if(['reservas','onboarding','projetos','compras','danos'].includes(tab)){activeCollections=[];return;}
         const groups = { chamados: ['chamados'], chat: ['chamados','conversasSuporte'], os: ['ordensServico','chamados','estoqueBookSantos'], vistorias: ['vistorias','ordensServico'], condominios: ['chamados','ordensServico'], estoque: ['estoqueBookSantos','ordensServico'], dashboard: ['chamados','ordensServico'], financeiro: [], usuarios: [], backup: [], feedbacks:[],avaliacoes:[],suporte:[],inicio:[] };
         activeCollections = groups[tab] || keys;
     }
@@ -72,6 +73,10 @@ window.BookStore = (() => {
         }
     }
     function rows(key) { return cache.get(key) || []; }
+    function includeRecord(key,row){
+        if(!keys.includes(key)||!row||typeof row.id!=='string'||!row.data||!Number.isSafeInteger(Number(row.version)))throw new Error('Registro inválido.');
+        const current=rows(key),index=current.findIndex(item=>item.id===row.id),next=[...current];if(index<0)next.push(row);else next[index]=row;cache.set(key,next);
+    }
     function recordId(key, data) {
         if (key === 'estoqueBookSantos') return 'singleton';
         if (key === 'conversasSuporte') {
@@ -225,5 +230,5 @@ window.BookStore = (() => {
             };
         }
     }
-    return { init, getItem, setItem, refresh, validateFiles, protectActions, apartments, activate, setupAttachments, totals: () => totals, id: () => Date.now() * 1000 + crypto.getRandomValues(new Uint16Array(1))[0] % 1000 };
+    return { init, getItem, setItem, refresh, validateFiles, protectActions, apartments, activate, setupAttachments, includeRecord, totals: () => totals, id: () => Date.now() * 1000 + crypto.getRandomValues(new Uint16Array(1))[0] % 1000 };
 })();

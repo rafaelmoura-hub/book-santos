@@ -9,8 +9,9 @@ Esta versão requer as migrações anteriores até 9. Antes de publicar o novo s
 3. Em uma nova consulta, execute todo o arquivo `supabase/migrations/202610280011_notes_support.sql`.
 4. Em uma nova consulta, execute todo o arquivo `supabase/migrations/202610280012_security.sql`.
 5. Execute `supabase/migrations/202610280013_collaboration.sql` para ativar notificações, lembretes, Feedbacks e Avaliações.
-6. Execute `select public.book_schema_version();`. O resultado deve ser **13**.
-7. Publique a nova versão do servidor e entre novamente no site. Veja [as novas funções](COLABORACAO.md).
+6. Execute `supabase/migrations/202610280014_routine.sql` para ativar a adaptação da rotina.
+7. Execute `select public.book_schema_version();`. O resultado deve ser **14**.
+8. Publique a nova versão do servidor e entre novamente no site. Veja [colaboração](COLABORACAO.md) e [rotina da equipe](ROTINA-BOOK-TESK.md).
 
 As migrações são transacionais e podem ser reaplicadas. Não apagam registros anteriores. Preserve o backup habitual antes da atualização. O servidor verifica a versão em `/ready` para evitar publicar funcionalidades sem as tabelas necessárias.
 

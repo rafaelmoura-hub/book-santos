@@ -301,4 +301,32 @@ body[data-screen="cliente.js"] > main { display: grid; grid-template-columns: 1.
  .support-totals h3 { font-size: 12px; }
  .support-totals p { font-size: 20px; }
 }
+.routine-surface { min-width: 0; margin: 18px 0; }
+.routine-filters { display: grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap: 12px; margin: 18px 0; }
+.routine-filters label { display: grid; gap: 6px; font-size: 12px; color: var(--suave); }
+.routine-filters input,.routine-filters select { width: 100%; min-width: 0; padding: 10px; border: 1px solid var(--borda); border-radius: 8px; background: white; color: var(--texto); font: inherit; }
+.routine-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+.routine-actions [aria-pressed="true"] { background: #eaf3ff; border-color: var(--azul); color: var(--azul); }
+.routine-board { display: flex; align-items: flex-start; gap: 14px; width: 100%; max-width: 100%; overflow-x: auto; padding-bottom: 16px; overscroll-behavior-x: contain; scrollbar-width: thin; }
+.routine-column { flex: 0 0 260px; min-width: 0; border: 1px solid var(--borda); border-top: 3px solid var(--azul); border-radius: 10px; padding: 12px; background: #edf3fa; }
+.routine-column > h3 { margin: 0 0 14px; color: var(--azul); font-size: 14px; }
+.routine-card { min-width: 0; margin-bottom: 12px; padding: 14px; border: 1px solid var(--borda); border-radius: 9px; background: white; overflow-wrap: anywhere; }
+.routine-card h3 { margin: 0 0 10px; font-size: 15px; color: var(--texto); }
+.routine-card p { font-size: 12px; line-height: 1.5; margin: 7px 0; color: var(--suave); }
+.routine-card button { max-width: 100%; margin-top: 8px; }
+.routine-card small { display: block; margin-top: 10px; }
+.routine-card p.routine-overdue { color: #a52e2c; font-weight: 600; }
+.routine-card .routine-stage { color: var(--azul); font-weight: 700; }
+.routine-list { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,280px),1fr)); gap: 14px; }
+.routine-dialog { width: min(820px,calc(100vw - 24px)); }
+.routine-dialog h2 { font-size: 22px; overflow-wrap: anywhere; }
+.routine-dialog fieldset { min-width: 0; border: 1px solid var(--borda); border-radius: 8px; margin: 14px 0; }
+.routine-dialog input,.routine-dialog textarea,.routine-dialog select { min-width: 0; }
+.routine-event { border: 1px solid var(--borda); border-left: 3px solid #5180b5; border-radius: 8px; margin: 12px 0; padding: 12px; }
+.routine-event small { display: block; margin-top: 5px; color: var(--suave); }
+.routine-event pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 11px; }
+.routine-team-plans { margin: 24px 0; padding: 16px; border: 1px solid var(--borda); border-radius: 10px; background: white; }
+.routine-team-plans > summary { color: var(--azul); font-weight: 600; cursor: pointer; }
+@media (max-width: 760px) { .routine-filters { grid-template-columns: minmax(0,1fr) minmax(0,1fr); } .routine-column { flex-basis: min(280px,85vw); } .routine-actions button { flex: 1 1 120px; } }
+@media (max-width: 760px) { .routine-surface .routine-actions { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); } .routine-surface .routine-actions button { font-size: 11px; padding: 9px 5px; } .routine-surface .routine-actions .acao-principal { grid-column: 1 / -1; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; } }

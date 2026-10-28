@@ -1,5 +1,5 @@
 window.BookWorkspace = (() => {
-  const labels = {chamados:'Chamados',chat:'Chat',os:'Cards',vistorias:'Vistorias',condominios:'Condomínios',estoque:'Estoque',financeiro:'Financeiro',dashboard:'Visão geral',feedbacks:'Feedbacks',avaliacoes:'Avaliações'};
+  const labels = {chamados:'Chamados',chat:'Chat',os:'Cards',vistorias:'Vistorias',condominios:'Condomínios',estoque:'Estoque',financeiro:'Financeiro',dashboard:'Visão geral',feedbacks:'Feedbacks',avaliacoes:'Avaliações',reservas:'Reservas',onboarding:'Onboarding',projetos:'Projetos',compras:'Compras',danos:'Danos e reposições'};
   let user, notes=[], note=null, tickets=[], ticket=null, offset=0, dirty=false, saving=false;
   let aiMessages=[],aiBusy=false;
   let supportRequest=0,supportRefreshing=false;
@@ -123,9 +123,10 @@ window.BookWorkspace = (() => {
   }
   async function loadMaster() {
     if(!user?.mestre)return;
-    const node=el('masterSupportList');node.textContent='Carregando…';
+    const node=el('masterSupportList');if(!node.children.length)node.textContent='Carregando…';const generation=++masterGeneration;node.setAttribute('aria-busy','true');
     try{
       const [summary,rows]=await Promise.all([request('/api/workspace/support-summary'),request('/api/workspace/support?offset='+masterOffset+'&status='+encodeURIComponent(el('masterSupportFilter').value))]);
+      if(generation!==masterGeneration)return;
       el('supportTotal').textContent=summary.total;el('supportOpen').textContent=summary.open;el('supportClosed').textContent=summary.closed;
       el('masterSupportPrevious').disabled=masterOffset===0;el('masterSupportNext').disabled=rows.length<=50;
       node.replaceChildren(...rows.slice(0,50).map(item=>{
@@ -136,9 +137,10 @@ window.BookWorkspace = (() => {
         card.append(button,select);return card;
       }));if(!node.children.length)node.textContent='Nenhum chamado nesta página com esse status.';
     }
-    catch(error){node.textContent=error.message;}
+    catch(error){if(generation===masterGeneration)node.textContent=error.message;}
+    finally{if(generation===masterGeneration)node.removeAttribute('aria-busy');}
   }
-  let masterOffset=0;
+  let masterOffset=0,masterGeneration=0;
   function renderAIThread(){
     el('aiThread').innerHTML=aiMessages.map(m=>`<article class="mensagem-chat ${m.role==='user'?'minha-mensagem':''}"><strong>${m.role==='user'?'Você':'Assistente'}</strong><p>${esc(m.content)}</p></article>`).join('');el('aiThread').scrollTop=el('aiThread').scrollHeight;
   }

@@ -31,6 +31,8 @@ As cópias contêm informações privadas e não são cifradas pelo aplicativo. 
 
 ## Recuperação
 
+Com a migração 14, o grupo Colaboração inclui também Reservas, Onboarding, Projetos, Compras, Danos, planos da equipe, históricos, acompanhamentos e vínculos de serviços de vistorias. Os anexos desses processos entram quando a opção Anexos está selecionada. Este grupo pode conter dados pessoais de hóspedes/proprietários e deve permanecer em armazenamento privado.
+
 A migração 13 acrescenta a opção **Feedbacks, avaliações, suporte e minhas notas/lembretes**. Ela inclui feedbacks e vínculos a cards, comentários da equipe, chamados e mensagens de suporte, além das notas e lembretes do próprio mestre. Notas privadas de outros usuários continuam fora dessa exportação. Ao selecionar também Anexos, os arquivos dos feedbacks são incluídos. Para preservar todas as notas privadas, mantenha também o backup completo do banco, com acesso restrito aos responsáveis pela infraestrutura.
 
 Esta é uma exportação dos dados e dos arquivos do aplicativo, não um dump SQL completo do Supabase. Não contém senhas, tokens, sessões, políticas de infraestrutura, contas completas de Auth ou chaves do ambiente. As definições das tabelas e regras ficam nas migrações deste repositório.

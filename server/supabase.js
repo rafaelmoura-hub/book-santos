@@ -21,6 +21,7 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
       catch { throw failure(503, 'Resposta incompleta do Supabase. Atualize os dados antes de tentar novamente.'); }
     }
     if (!response.ok) {
+      if(data?.code==='23505')throw failure(409,'Já existe um registro com esse identificador ou código. Confira a lista antes de tentar novamente.');
       if (['PGRST205', 'PGRST202', '42P01', '42703'].includes(data?.code)) throw failure(503, 'Execute primeiro a migração SQL do BOOK TESK no Supabase.');
       if (response.status === 409 || data?.code === 'PT409') throw failure(409, data?.message || 'Registro alterado por outro usuário. Atualize e tente novamente.');
       if (data?.code === '22023') throw failure(400, data.message || 'Dados inválidos.');
@@ -57,6 +58,14 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
     if (profile.funcao !== 'adm' || !profile.mestre) throw failure(403, 'Somente o administrador mestre pode gerenciar usuários.');
   }
   const provider = {
+    processes(token,kind,offset,filters){return request('/rest/v1/rpc/book_process_page',{token,method:'POST',body:{process_kind:kind,page_offset:offset,filters}});},
+    servicePage(token,offset,filters){return request('/rest/v1/rpc/book_service_page',{token,method:'POST',body:{page_offset:offset,filters}});},
+    saveProcess(token,input){return request('/rest/v1/rpc/book_process_save',{token,method:'POST',body:{process_id:input.id,process_kind:input.kind,expected_version:input.version,site:input.hotel,unit:input.apartment,new_phase:input.phase,document:input.data}});},
+    flowDetails(token,source,id,before){return request('/rest/v1/rpc/book_flow_details',{token,method:'POST',body:{source_name:source,target_id:id,before_id:before||null}});},
+    saveFlow(token,input){return request('/rest/v1/rpc/book_flow_save',{token,method:'POST',body:{source_name:input.source,target_id:input.id,expected_version:input.version,expected_record_version:input.recordVersion,new_phase:input.phase,document:input.data}});},
+    flowComment(token,input){return request('/rest/v1/rpc/book_flow_comment',{token,method:'POST',body:{source_name:input.source,target_id:input.id,message_body:input.body}});},
+    processService(token,input){return request('/rest/v1/rpc/book_process_service',{token,method:'POST',body:{source_name:input.source,target_id:input.id,expected_version:input.version,record_id:input.recordId}});},
+    receivePurchase(token,input){return request('/rest/v1/rpc/book_purchase_receive',{token,method:'POST',body:{process_id:input.id,expected_version:input.version,stock_version:input.stockVersion,material_id:input.materialId,quantity:input.quantity}});},
     aiCommit(token,changes,stockVersion=null){return request('/rest/v1/rpc/book_ai_commit',{token,method:'POST',body:{changes,expected_stock_version:stockVersion}});},
     async record(token,collection,id) {
       const query=new URLSearchParams({select:'id,data,owner_id,version,hotel',collection:`eq.${collection}`,id:`eq.${id}`,limit:'1'});
@@ -76,7 +85,7 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
     dueReminders(token){return request('/rest/v1/rpc/book_due_reminders',{token,method:'POST',body:{}});},
     ackReminder(token,id,due){return request('/rest/v1/rpc/book_ack_reminder',{token,method:'POST',body:{target_note:id,delivered_due:due}});},
     saveReminder(token,input){return request('/rest/v1/rpc/book_save_reminder',{token,method:'POST',body:{target_note:input.id,expected_version:input.version,next_due:input.due,repeat_mode:input.repeat,is_enabled:input.enabled}});},
-    feedbacks(token,offset=0,grade){const query=new URLSearchParams({select:'*',order:'created_at.desc,id.desc',limit:'51',offset:String(offset)});if(grade)query.set('data->>grau','eq.'+grade);return request('/rest/v1/book_feedbacks?'+query,{token});},
+    async feedbacks(token,offset=0,grade){const query=new URLSearchParams({select:'*',order:'created_at.desc,id.desc',limit:'51',offset:String(offset)});if(grade)query.set('data->>grau','eq.'+grade);const rows=await request('/rest/v1/book_feedbacks?'+query,{token});if(!rows.length)return rows;const q=new URLSearchParams({select:'record_id,phase',source:'eq.feedbacks',record_id:'in.('+rows.map(r=>r.id).join(',')+')',limit:'51'});const meta=await request('/rest/v1/book_flow_meta?'+q,{token});return rows.map(r=>({...r,flowPhase:meta.find(m=>m.record_id===r.id)?.phase||'Feedback'}));},
     saveFeedback(token,input){return request('/rest/v1/rpc/book_save_feedback',{token,method:'POST',body:{feedback_id:input.id,expected_version:input.version,document:input.data}});},
     feedbackService(token,input){return request('/rest/v1/rpc/book_feedback_service',{token,method:'POST',body:{feedback_id:input.id,expected_version:input.version,record_id:input.recordId}});},
     evaluations(token,before,beforeId){const q=new URLSearchParams({select:'*',order:'created_at.desc,id.desc',limit:'51'});if(before&&beforeId)q.set('or',`(created_at.lt.${before},and(created_at.eq.${before},id.lt.${beforeId}))`);return request('/rest/v1/book_team_messages?'+q,{token});},
@@ -132,7 +141,7 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
     apartments(token) { return request('/rest/v1/book_apartments?select=hotel,apartment&order=apartment&limit=10000', { token }); },
     async ready() {
       await request('/auth/v1/settings');
-      if (await request('/rest/v1/rpc/book_schema_version', { method: 'POST', body: {} }) !== 13) throw failure(503, 'Aplique as migrações até 202610280013_collaboration.sql antes de publicar esta versão.');
+      if (await request('/rest/v1/rpc/book_schema_version', { method: 'POST', body: {} }) !== 14) throw failure(503, 'Aplique as migrações até 202610280014_routine.sql antes de publicar esta versão.');
       return { ok: true };
     },
     commit(token, changes) { return request('/rest/v1/rpc/book_commit', { token, method: 'POST', body: { changes } }); },

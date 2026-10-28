@@ -1,5 +1,7 @@
 # Suporte, notificações, lembretes, Feedbacks e Avaliações
 
+A atualização de rotina também exige a migração **14**, após a 13. O servidor atual verifica a versão 14. Veja [ativação e melhorias da rotina](ROTINA-BOOK-TESK.md); as instruções abaixo descrevem a etapa de colaboração da versão 13.
+
 ## Ativar esta versão
 
 Com o banco já na versão 12, execute no SQL Editor do projeto correto **todo** o arquivo `supabase/migrations/202610280013_collaboration.sql`. Confirme:

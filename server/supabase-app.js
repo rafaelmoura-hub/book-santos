@@ -14,6 +14,8 @@ const { generateAI } = require('./ai');
 const { createAgent } = require('./ai-agent');
 const { boundedBytes,requireJSON,validateProfile } = require('./security');
 const {validateCollaboration}=require('./collaboration');
+const {validateProcess,validateFlow}=require('./processes');
+const {definitions:processDefinitions,flowPhases}=require('../assets/processes');
 const ROOT = path.resolve(__dirname, '..');
 const fail = (status, message) => Object.assign(new Error(message), { status });
 const digest = token => createHash('sha256').update(token).digest('hex');
@@ -145,6 +147,41 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         }
       }
       if (route === '/api/session' && req.method === 'GET') return json(200, { ...user, provider: 'supabase' });
+      if(['/api/processes','/api/processes/services','/api/processes/flow','/api/processes/comment','/api/processes/service','/api/processes/receive'].includes(route)){
+        if(user.funcao!=='adm')throw fail(403,'Somente administradores.');
+        const validSource=(source,id)=>['process',...Object.keys(flowPhases)].includes(source)&&typeof id==='string'&&(['process','feedbacks'].includes(source)?uuid(id):/^\d{1,16}$/.test(id));
+        const flowAllowed=(source,writing=false)=>source==='process'?Object.entries(processDefinitions).some(([kind,definition])=>canTab(user,definition.tab||kind)):source==='feedbacks'?canTab(user,'feedbacks'):canCollection(user,source,writing);
+        if(req.method==='GET'){
+          if(route==='/api/processes/flow'){const source=url.searchParams.get('source'),id=url.searchParams.get('id'),before=url.searchParams.get('before');if(!validSource(source,id)||before&&!/^\d{1,16}$/.test(before))throw fail(400,'Registro inválido.');if(!flowAllowed(source))throw fail(403,'Sem acesso ao acompanhamento.');return json(200,await provider.flowDetails(session.accessToken,source,id,before));}
+          if(!['/api/processes','/api/processes/services'].includes(route))throw fail(405,'Método inválido.');
+          const kind=url.searchParams.get('kind'),offset=Number(url.searchParams.get('offset')||0);let filters;
+          try{filters=JSON.parse(url.searchParams.get('filters')||'{}');}catch{throw fail(400,'Filtros inválidos.');}
+          if(!Number.isSafeInteger(offset)||offset<0||offset>100000||!filters||typeof filters!=='object'||Array.isArray(filters)||Object.keys(filters).some(k=>!['search','phase','assignee','hotel','period'].includes(k))||Object.values(filters).some(v=>typeof v!=='string'||v.length>200)||filters.assignee&&!uuid(filters.assignee)||filters.period&&!['all','today','week','late'].includes(filters.period))throw fail(400,'Filtros inválidos.');
+          const tab=route.endsWith('/services')?'os':processDefinitions[kind]?.tab||kind;
+          if(route==='/api/processes'&&!Object.hasOwn(processDefinitions,kind))throw fail(400,'Processo inválido.');
+          if(!canTab(user,tab))throw fail(403,'Sem acesso a esta aba.');
+          return json(200,route.endsWith('/services')?await provider.servicePage(session.accessToken,offset,filters):await provider.processes(session.accessToken,kind,offset,filters));
+        }
+        if(req.method!=='POST')throw fail(405,'Método inválido.');
+        const key='routine:'+user.id,quota=writes.get(key)||{count:0,until:now+60000};if(quota.count>=40)throw fail(429,'Aguarde antes de salvar novamente.');quota.count++;writes.set(key,quota);
+        const input=await readBody(req);
+        if(route==='/api/processes'){
+          const valid=validateProcess(input),definition=processDefinitions[valid.kind];
+          if(!canTab(user,definition.tab||valid.kind))throw fail(403,'Sem acesso a esta aba.');
+          if(valid.hotel){if(!hotels.includes(valid.hotel))throw fail(400,'Condomínio inválido.');const allowed=user.mestre?hotels:(await provider.access(session.accessToken)).map(a=>a.hotel);if(!allowed.includes(valid.hotel))throw fail(403,'Sem acesso ao condomínio.');}
+          else if(!definition.global||valid.apartment||valid.data.anexos.length)throw fail(400,'Selecione condomínio e apartamento para anexar arquivos.');
+          const paths=[];try{const prepared=await storeAttachments([{data:{...valid.data,hotel:valid.hotel}}],user,(p,b,t)=>provider.upload(session.accessToken,p,b,t),paths);const {hotel,...data}=prepared[0].data;await provider.saveProcess(session.accessToken,{...valid,data});}
+          catch(error){if(paths.length)await provider.removeFiles(session.accessToken,paths).catch(()=>{});throw error;}
+        }else if(route==='/api/processes/flow'){const valid=validateFlow(input);if(!flowAllowed(valid.source,true))throw fail(403,'Sem acesso para alterar o acompanhamento.');await provider.saveFlow(session.accessToken,valid);}
+        else if(route==='/api/processes/comment'){
+          if(!validSource(input?.source,input?.id)||typeof input.body!=='string'||!input.body.trim()||input.body.length>2000)throw fail(400,'Comentário inválido.');if(!flowAllowed(input.source,true))throw fail(403,'Sem acesso para comentar.');await provider.flowComment(session.accessToken,{source:input.source,id:input.id,body:input.body.trim()});
+        }else if(route==='/api/processes/service'){
+          if(!canTab(user,'os'))throw fail(403,'Sem acesso a Cards.');if(!['process','vistorias'].includes(input?.source)||!validSource(input.source,input.id)||!Number.isSafeInteger(input.version)||input.version<1||typeof input.recordId!=='string'||!/^\d{1,16}$/.test(input.recordId))throw fail(400,'Vínculo inválido.');return json(200,{id:await provider.processService(session.accessToken,input)});
+        }else if(route==='/api/processes/receive'){
+          if(!canTab(user,'compras')||!canTab(user,'estoque'))throw fail(403,'Exige acesso a Compras e Estoque.');if(!uuid(input?.id)||!Number.isSafeInteger(input.version)||input.version<1||!Number.isSafeInteger(input.stockVersion)||input.stockVersion<1||typeof input.materialId!=='string'||!/^[\w-]{1,100}$/.test(input.materialId)||typeof input.quantity!=='number'||!Number.isFinite(input.quantity)||input.quantity<=0||input.quantity>10000)throw fail(400,'Recebimento inválido.');await provider.receivePurchase(session.accessToken,input);
+        }else throw fail(405,'Método inválido.');
+        return json(200,{ok:true});
+      }
       if(route==='/api/notifications'&&req.method==='GET')return json(200,await provider.notifications(session.accessToken));
       if(['/api/workspace/support-summary','/api/workspace/support-read','/api/workspace/reminders','/api/workspace/reminders-due','/api/workspace/reminders-ack','/api/feedbacks','/api/feedbacks/service','/api/evaluations'].includes(route)){
         if(user.funcao!=='adm')throw fail(403,'Somente administradores.');
@@ -341,7 +378,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
       if (!['GET', 'HEAD'].includes(req.method)) throw fail(405, 'Método não permitido.');
       if (/^\/hotel\/(hotel\.html)?$/.test(route)) { res.writeHead(302, { Location: '/adm/admin.html#condominios' }); return res.end(); }
       const file = route === '/' ? '/login.html' : route;
-      if (!/^\/(login\.(html|css|js)|assets\/(api|session|store|money|periods|catalog|events|notifications)\.js|assets\/ui\.css|(adm|cliente|hotel)\/[a-z]+\.(html|css|js))$/.test(file)) throw fail(404, 'Arquivo não encontrado.');
+      if (!/^\/(login\.(html|css|js)|assets\/(api|session|store|money|periods|catalog|events|notifications|processes)\.js|assets\/ui\.css|(adm|cliente|hotel)\/[a-z]+\.(html|css|js))$/.test(file)) throw fail(404, 'Arquivo não encontrado.');
       if (/^\/(adm|hotel)\//.test(file) && user?.funcao !== 'adm' || /^\/cliente\//.test(file) && user?.funcao !== 'cliente') {
         res.writeHead(302, { Location: '/login.html' }); return res.end();
       }
