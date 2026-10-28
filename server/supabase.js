@@ -48,12 +48,21 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
     }
     return data;
   }
-  const manageProfile = (token, id, input, version) => request('/rest/v1/rpc/book_manage_user', { token, method: 'POST', body: { target_id: id, display_name: input.nome, role_name: input.funcao, hotels: input.hotels, expected_version: version } });
+  const manageProfile = (token, id, input, version) => request('/rest/v1/rpc/book_manage_user', { token, method: 'POST', body: { target_id: id, display_name: input.nome, role_name: input.funcao, hotels: input.hotels, expected_version: version, ...(input.tabs !== undefined ? { selected_tabs: input.tabs } : {}) } });
   async function ensureMaster(token) {
     const profile = await provider.profile(token);
     if (profile.funcao !== 'adm' || !profile.mestre) throw failure(403, 'Somente o administrador mestre pode gerenciar usuários.');
   }
   const provider = {
+    notes(token) { return request('/rest/v1/book_notes?select=id,title,body,version,updated_at&order=updated_at.desc&limit=200', { token }); },
+    saveNote(token, input) { return request('/rest/v1/rpc/book_save_note', { token, method: 'POST', body: {note_id:input.id,note_title:input.title,note_body:input.body,expected_version:input.version,remove_note:input.remove === true} }); },
+    support(token, id, offset = 0) {
+      const query = new URLSearchParams({select: id ? '*,book_support_messages(*)' : '*', order:'updated_at.desc,id.desc',limit:id?'1':'51',offset:String(offset)});
+      if (id) query.set('id', `eq.${id}`);
+      return request(`/rest/v1/book_support_tickets?${query}`, { token });
+    },
+    sendSupport(token, input) { return request('/rest/v1/rpc/book_support_send', { token, method:'POST',body:{ticket_id:input.id,subject:input.subject || '',body:input.body || '',expected_version:input.version,new_status:input.status || null} }); },
+    reopenOrder(token, input) { return request('/rest/v1/rpc/book_reopen_order', { token, method:'POST',body:{record_id:input.id,expected_version:input.version,reason:input.reason} }); },
     backup(token, selected) { return request('/rest/v1/rpc/book_backup', { token, method: 'POST', body: { selected }, timeoutMs: 120000 }); },
     async finance(token, payer, cursor, start, end) {
       const result = await request('/rest/v1/rpc/book_finance_history', { token, method: 'POST', body: { payer: payer || null, cursor_id: cursor || null, page_size: 50, start_date: start || null, end_date: end || null } });
@@ -64,7 +73,7 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
     canCreateUsers: !!secretKey?.startsWith('sb_secret_'),
     async managedUsers(token) {
       await ensureMaster(token);
-      return request('/rest/v1/book_profiles?select=id,nome,login,funcao,mestre,version,book_hotel_access(hotel)&order=nome&limit=10000', { token });
+      return request('/rest/v1/book_profiles?select=id,nome,login,funcao,mestre,version,tabs,book_hotel_access(hotel)&order=nome&limit=10000', { token });
     },
     async saveUser(token, input) {
       await ensureMaster(token);
@@ -96,7 +105,7 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
     apartments(token) { return request('/rest/v1/book_apartments?select=hotel,apartment&order=apartment&limit=10000', { token }); },
     async ready() {
       await request('/auth/v1/settings');
-      if (await request('/rest/v1/rpc/book_schema_version', { method: 'POST', body: {} }) !== 9) throw failure(503, 'Aplique as migrações até 202610230009_hardening.sql antes de publicar esta versão.');
+      if (await request('/rest/v1/rpc/book_schema_version', { method: 'POST', body: {} }) !== 11) throw failure(503, 'Aplique as migrações até 202610280011_notes_support.sql antes de publicar esta versão.');
       return { ok: true };
     },
     commit(token, changes) { return request('/rest/v1/rpc/book_commit', { token, method: 'POST', body: { changes } }); },
@@ -124,7 +133,7 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
     refresh(refreshToken) { return request('/auth/v1/token?grant_type=refresh_token', { method: 'POST', body: { refresh_token: refreshToken } }); },
     async profile(token) {
       const user = await request('/auth/v1/user', { token });
-      const rows = await request(`/rest/v1/book_profiles?select=id,nome,login,funcao,mestre&id=eq.${encodeURIComponent(user.id)}`, { token });
+      const rows = await request(`/rest/v1/book_profiles?select=id,nome,login,funcao,mestre,tabs&id=eq.${encodeURIComponent(user.id)}`, { token });
       if (!rows?.[0]) throw failure(403, 'Seu acesso ainda não foi liberado. Peça ao administrador para cadastrar seu perfil.');
       return rows[0];
     },

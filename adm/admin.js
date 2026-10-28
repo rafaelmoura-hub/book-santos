@@ -39,9 +39,11 @@ function atualizarPainel() {
   if (!document.getElementById('visaoOS').hidden) mostrarOS();
 }
 function mostrarAba(aba) {
+  if (window.BookWorkspace && aba in BookWorkspace.labels && !BookWorkspace.can(aba)) return;
+  if (aba==='suporte'&&!ehAdministradorMestre) return;
   if (["usuarios", "backup"].includes(aba) && !ehAdministradorMestre) return;
   BookStore.activate(aba);
-  ["chamados", "chat", "os", "vistorias", "condominios", "estoque", "financeiro", "usuarios", "dashboard", "backup"].forEach(nome => {
+  ["chamados", "chat", "os", "vistorias", "condominios", "estoque", "financeiro", "usuarios", "dashboard", "backup", "suporte", "inicio"].forEach(nome => {
     const sufixo = nome === "os" ? "OS" : nome[0].toUpperCase() + nome.slice(1);
     document.getElementById(`visao${sufixo}`).hidden = nome !== aba;
     if (document.getElementById(`aba${sufixo}`)) document.getElementById(`aba${sufixo}`).classList.toggle("ativa", nome === aba);
@@ -51,6 +53,7 @@ function mostrarAba(aba) {
   if (aba === "chamados") mostrarChamados();
   if (aba === "vistorias") atualizarTotaisVistorias();
   if (aba === "usuarios") mostrarUsuarios();
+  if (aba === 'suporte') BookWorkspace.loadMaster();
   if (aba === "condominios") BookCondominios.atualizarTotais();
   if (aba === "dashboard") atualizarDashboard();
   if (aba === "estoque") mostrarEstoque();
@@ -188,6 +191,10 @@ function abrirOS(id) {
   document.getElementById("osDetalhes").innerHTML = `<h2>${escapar(o.titulo || "Card")}</h2><p><b>Card #:</b> ${escapar(o.id)}</p><p><b>Hotel:</b> ${escapar(o.hotel)}</p><p><b>Apartamento:</b> ${escapar(o.apartamento)}</p><p><b>Descrição:</b> ${escapar(o.descricao)}</p><p><b>Status:</b> ${escapar(o.status || "Aberta")}</p><p><b>Abertura:</b> ${escapar(o.data)}</p><p><b>Vencimento:</b> ${formatarData(o.vencimento)}</p>${vinculo}<h3>Anexos e arquivos</h3>${anexos}${fechamento}`;
   const botaoFechamento = document.getElementById("botaoFinalizarOS");
   botaoFechamento.hidden = o.status === "Finalizada";
+  if (!BookWorkspace.can('os')) botaoFechamento.hidden = true;
+  let reabrir=document.getElementById('botaoReabrirOS');
+  if(!reabrir){reabrir=document.createElement('button');reabrir.id='botaoReabrirOS';reabrir.type='button';reabrir.className='acao-principal';reabrir.textContent='Reabrir card para corrigir';reabrir.onclick=async()=>{await alterarStatusOS(document.getElementById('fechamentoIdOS').value,'Em andamento');abrirOS(document.getElementById('fechamentoIdOS').value);};botaoFechamento.after(reabrir);}
+  reabrir.hidden=o.status!=='Finalizada'||!BookWorkspace.can('os');
   botaoFechamento.textContent = o.status === "Em andamento" || o.fechamento ? "Preencher/editar informações do serviço" : "Registrar informações e finalizar o card";
   document.getElementById("osDetalhesModal").style.display = "block";
 }
@@ -327,6 +334,15 @@ async function salvarFechamentoOS(event) {
 async function alterarStatusOS(id, status) {
   const items = osList(), order = items.find(o => o.id == id);
   if (!order) return;
+  if (!BookWorkspace.can('os')) { alert('Sem permissão para alterar cards.'); mostrarOS(); return; }
+  if (order.status==='Finalizada'&&status!=='Finalizada') {
+    if(status!=='Em andamento'){alert('Reabra o card como Em andamento para corrigir o fechamento.');mostrarOS();return;}
+    const reason=prompt('Motivo da reabertura do card (3 a 1000 caracteres):');
+    if(!reason?.trim()){mostrarOS();return;}
+    try{await BookAPI.request('/api/orders/reopen',{method:'POST',body:JSON.stringify({id:String(order.id),version:order.__bookVersion,reason:reason.trim()})});await BookStore.refresh(true);atualizarPainel();}
+    catch(error){alert(error.message);}
+    mostrarOS();return;
+  }
   if (status === "Finalizada") { abrirFechamentoOS(id); mostrarOS(); return; }
   order.status = status;
   await BookStore.setItem("ordensServico", JSON.stringify(items));
@@ -520,7 +536,11 @@ function ativarNotificacoesChat() { if(!("Notification"in window)){alert("Este n
 window.addEventListener("storage",e=>{if(e.key===CHAVE_CHAT){verificarNovasMensagensChat();if(conversaSelecionada)renderizarMensagensAdmin();}});
 idsMensagensConhecidas=new Set(lerConversasChat().flatMap(c=>(c.mensagens||[]).map(m=>m.id)));
 atualizarBadgeChat();
-BookStore.activate('chamados');
+BookWorkspace.init(sessao);
+document.getElementById('masterSupportRefresh').onclick=()=>BookWorkspace.loadMaster();
+const primeiraAba=Object.keys(BookWorkspace.labels).find(tab=>BookWorkspace.can(tab))||'inicio';
+mostrarAba(primeiraAba);
+BookStore.activate(primeiraAba);
 document.getElementById("osVencimento").min = dataLocalHoje();
 atualizarPainel();
 const abaSolicitada = ({ "#chamados": "chamados", "#chat": "chat", "#cards": "os", "#vistorias": "vistorias", "#dashboard": "dashboard", "#condominios": "condominios", "#estoque": "estoque", "#usuarios": "usuarios", "#financeiro": "financeiro", "#backup": "backup" })[location.hash];

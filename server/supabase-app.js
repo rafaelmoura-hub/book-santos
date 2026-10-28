@@ -8,6 +8,9 @@ const { validateUser } = require('./users');
 const Periods = require('../assets/periods');
 const { validateBackup, attachments } = require('./backup');
 const { sessionStore } = require('./session-store');
+const { canTab, canCollection } = require('./permissions');
+const { uuid, validateWorkspace } = require('./workspace');
+const { generateAI } = require('./ai');
 const ROOT = path.resolve(__dirname, '..');
 const fail = (status, message) => Object.assign(new Error(message), { status });
 const digest = token => createHash('sha256').update(token).digest('hex');
@@ -24,7 +27,7 @@ async function readBody(req, limit = 15 * 1024 * 1024) {
   catch { throw fail(400, 'JSON inválido.'); }
 }
 
-function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Date.now, sessionKey, sessionFile } = {}) {
+function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Date.now, sessionKey, sessionFile, aiGenerate = generateAI } = {}) {
   // Tokens stay on the server; optional encrypted storage preserves a single instance's sessions.
   const sessions = sessionStore({ key: sessionKey, filename: sessionFile, clock });
   const attempts = new Map();
@@ -116,6 +119,39 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         }
       }
       if (route === '/api/session' && req.method === 'GET') return json(200, { ...user, provider: 'supabase' });
+      if(route==='/api/ai'&&req.method==='POST'){
+        if(user.funcao!=='adm')throw fail(403,'Disponível somente para administradores.');
+        const key=`ai:${user.id}`,quota=writes.get(key)||{count:0,until:now+60000};
+        if(quota.count>=5)throw fail(429,'Aguarde um minuto antes de enviar outra mensagem à IA.');
+        quota.count++;writes.set(key,quota);
+        return json(200,await aiGenerate(await readBody(req,150000)));
+      }
+      if (route === '/api/orders/reopen' || route === '/api/workspace/notes' || route === '/api/workspace/support') {
+        if (user.funcao !== 'adm') throw fail(403, 'Disponível somente para administradores.');
+        if (route === '/api/orders/reopen' && !canTab(user, 'os')) throw fail(403, 'Sem permissão para reabrir cards.');
+        const kind = route.endsWith('/notes') ? 'notes' : 'support';
+        if (req.method === 'GET' && route !== '/api/orders/reopen') {
+          const id = url.searchParams.get('id');
+          const offset = Number(url.searchParams.get('offset') || 0);
+          if (id && !uuid(id) || !Number.isSafeInteger(offset) || offset < 0 || offset > 100000) throw fail(400, 'Consulta inválida.');
+          return json(200, kind === 'notes' ? await provider.notes(session.accessToken) : await provider.support(session.accessToken, id, offset));
+        }
+        if (req.method !== 'POST') throw fail(405, 'Método não permitido.');
+        const quotaKey = `workspace:${user.id}`, quota = writes.get(quotaKey) || {count:0,until:now+60000};
+        if (quota.count >= 30) throw fail(429, 'Aguarde um minuto antes de salvar novamente.');
+        quota.count++; writes.set(quotaKey,quota);
+        const input = await readBody(req, 100000);
+        if (route === '/api/orders/reopen') {
+          if (!input || !/^[0-9]{1,16}$/.test(input.id) || !Number.isSafeInteger(input.version) || input.version < 1 || typeof input.reason !== 'string' || input.reason.trim().length < 3 || input.reason.length > 1000) throw fail(400, 'Informe card, versão e motivo válidos.');
+          await provider.reopenOrder(session.accessToken, {id:input.id,version:input.version,reason:input.reason.trim()});
+        } else {
+          const valid = validateWorkspace(kind, input);
+          if (kind === 'support' && valid.status && !user.mestre) throw fail(403, 'Somente o mestre altera o status do suporte.');
+          if (kind === 'notes') await provider.saveNote(session.accessToken, valid);
+          else await provider.sendSupport(session.accessToken, valid);
+        }
+        return json(200, {ok:true});
+      }
       if (route === '/api/backup' && req.method === 'POST') {
         if (user.funcao !== 'adm' || !user.mestre) throw fail(403, 'Somente o administrador mestre pode fazer backup.');
         const selected = validateBackup(await readBody(req, 4096));
@@ -128,6 +164,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         return json(200, { format: 'book-santos-backup', version: 1, selected, data, files: selected.includes('anexos') ? attachments(data.records) : [] });
       }
       if (route === '/api/finance' && req.method === 'GET') {
+        if (!canTab(user, 'financeiro')) throw fail(403, 'Sem acesso ao financeiro.');
         if (user.funcao !== 'adm') throw fail(403, 'Financeiro disponível somente para administradores.');
         const payer = url.searchParams.get('payer');
         const cursor = url.searchParams.get('cursor');
@@ -157,11 +194,13 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         try { pages = JSON.parse(url.searchParams.get('pages') || '{}'); }
         catch { throw fail(400, 'Paginação inválida.'); }
         if (!pages || Array.isArray(pages) || typeof pages !== 'object' || Object.values(pages).some(count => !Number.isInteger(count) || count < 1 || count > 20)) throw fail(400, 'Use entre 1 e 20 páginas por coleção.');
-        const permitted = COLLECTIONS.filter(key => user.funcao === 'adm' || ['chamados','conversasSuporte'].includes(key));
+        const permitted = COLLECTIONS.filter(key => canCollection(user, key));
         let active = permitted;
         if (url.searchParams.has('collections')) {
           try { active = JSON.parse(url.searchParams.get('collections')); } catch { throw fail(400, 'Coleções inválidas.'); }
-          if (!Array.isArray(active) || active.length > permitted.length || new Set(active).size !== active.length || active.some(key => !permitted.includes(key))) throw fail(400, 'Coleções inválidas.');
+          if (!Array.isArray(active) || active.length > COLLECTIONS.length || new Set(active).size !== active.length || active.some(key => !COLLECTIONS.includes(key))) throw fail(400, 'Coleções inválidas.');
+          if(user.funcao!=='adm'&&active.some(key=>!permitted.includes(key)))throw fail(400,'Coleções inválidas.');
+          active = active.filter(key => permitted.includes(key));
         }
         const result = await Promise.all(active.map(async key => {
           let cursor = null; const loaded = [];
@@ -180,6 +219,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         const collection = url.searchParams.get('collection');
         const cursor = url.searchParams.get('cursor');
         if (!COLLECTIONS.includes(collection) || cursor && !validId(cursor)) throw fail(400, 'Consulta inválida.');
+        if (!canCollection(user, collection)) throw fail(403, 'Sem acesso a esta aba.');
         if (user.funcao !== 'adm' && !['chamados', 'conversasSuporte'].includes(collection)) throw fail(403, 'Acesso negado.');
         return json(200, await provider.records(session.accessToken, collection, cursor));
       }

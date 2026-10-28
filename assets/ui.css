@@ -8,6 +8,38 @@
   --borda: #c4d5e9;
   --sombra: 0 2px 6px #20345304;
 }
+.workspace-actions { display: flex; gap: 6px; margin-left: auto; margin-right: 12px; }
+body[data-screen] > header > button { order: 2; }
+.workspace-dialog { width: min(900px, calc(100% - 28px)); max-height: 88vh; padding: 24px; border: 1px solid #8eabcd; border-radius: 14px; color: var(--texto); background: white; }
+.workspace-dialog::backdrop { background: #16263c66; }
+.workspace-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px; }
+.workspace-heading h2 { margin: 0; font-size: 22px; }
+.workspace-split { display: grid; grid-template-columns: 240px minmax(0,1fr); gap: 20px; }
+.workspace-list { display: grid; gap: 6px; margin-top: 12px; max-height: 48vh; overflow: auto; }
+.workspace-list button { padding: 10px; border: 1px solid var(--borda); border-radius: 7px; text-align: left; color: var(--azul); background: #f0f6fd; overflow-wrap: anywhere; cursor: pointer; }
+.workspace-dialog label { display: block; margin: 10px 0; font-size: 13px; }
+.workspace-dialog input, .workspace-dialog select, .workspace-dialog textarea { display: block; width: 100%; margin-top: 6px; padding: 10px; border: 1px solid var(--borda); border-radius: 8px; color: var(--texto); font: inherit; }
+.workspace-dialog textarea { resize: vertical; }
+.workspace-status,.workspace-hint { font-size: 12px; color: var(--suave); }
+.workspace-thread { height: 280px; overflow: auto; margin: 12px 0; padding: 12px; background: #f4f7fb; border: 1px solid var(--borda); border-radius: 8px; }
+.workspace-ai { display: grid; gap: 10px; }
+.ai-settings { display: grid; grid-template-columns: 140px 1fr 1.4fr; gap: 12px; }
+.workspace-heading { position: sticky; top: -24px; z-index: 1; background: white; padding: 10px 0; }
+.support-card { display: block; width: 100%; margin-bottom: 10px; text-align: left; cursor: pointer; color: var(--azul); }
+@media (min-width: 761px) {
+ .sync-toolbar { top: 82px !important; right: 32px !important; }
+ body[data-screen="admin.js"] > main { margin-top: 138px !important; }
+}
+@media (max-width: 760px) {
+ body[data-screen] > header { flex-wrap: wrap; height: auto !important; min-height: 100px !important; padding-top: 10px; padding-bottom: 10px; gap: 8px; }
+ .workspace-actions { order: 3; width: 100%; margin: 0; }
+ .workspace-actions button { flex: 1; }
+ .workspace-split { grid-template-columns: 1fr; }
+ .ai-settings { grid-template-columns: 1fr; gap: 0; }
+ .workspace-heading { top: -16px; }
+ .workspace-list { max-height: 160px; }
+ .workspace-dialog { padding: 16px; }
+}
 [hidden] { display: none !important; }
 .attachment-list { display: grid; gap: 8px; margin: 10px 0; }
 .attachment-list:empty { display: none; }

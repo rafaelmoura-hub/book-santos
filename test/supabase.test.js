@@ -41,8 +41,8 @@ test('leitura normaliza o histórico Unique e prontidão exige as migrações no
   assert.equal((await client.records('token','chamados')).rows[0].data.hotel,'Unique Residence');
   assert.equal((await client.finance('token')).records[0].hotel,'Unique Residence');
   assert.equal((await client.access('token'))[0].hotel,'Unique Residence');
-  await assert.rejects(client.ready(),/202610230009/);
-  version=9;assert.deepEqual(await client.ready(),{ok:true});
+  await assert.rejects(client.ready(),/202610280011/);
+  version=11;assert.deepEqual(await client.ready(),{ok:true});
 });
 
 test('servidor Supabase protege sessão, perfis, arquivos e saída', async t => {
