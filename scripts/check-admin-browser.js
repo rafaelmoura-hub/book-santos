@@ -15,13 +15,26 @@ async function main() {
   const client = { id:'22222222-2222-4222-8222-222222222222',nome:'Cliente teste',login:'cliente@example.com',funcao:'cliente',mestre:false };
   const records = new Map();
   const uploaded = new Map();
-  const noteRows=new Map(),supportRows=new Map();
+  const noteRows=new Map(),supportRows=new Map(),reminderRows=new Map(),feedbackRows=new Map(),evaluationRows=[];
+  let notificationState={chat:{count:0},support:{count:0}},dueReminderQueue=[];
   const identity = token => token === 'client-token' ? client : token==='limited-token'?users[1]:master;
   records.set('chamados/101', { id:'101',version:1,owner_id:client.id,data:{id:101,hotel:'Be Urban',apartamento:'214',assunto:'Torneira',descricao:'Vazamento',categoria:'Hidráulica',status:'Aberto',criadaPor:client.nome,criadaPorLogin:client.login,data:'23/10/2026'} });
   const provider = {
+    async notifications(){return notificationState;},
+    async supportRead(){},
+    async supportSummary(){const rows=[...supportRows.values()];return {total:rows.length,open:rows.filter(r=>r.status==='Aberto').length,closed:rows.filter(r=>r.status==='Fechado').length};},
+    async reminders(token){return [...reminderRows.values()].filter(r=>r.owner_id===identity(token).id);},
+    async saveReminder(token,input){const previous=reminderRows.get(input.id);if((previous?.version||0)!==input.version)throw Error('Conflito de lembrete');reminderRows.set(input.id,{note_id:input.id,owner_id:identity(token).id,due_at:input.due,repeat:input.repeat,enabled:input.enabled,version:input.version+1});},
+    async dueReminders(){const rows=dueReminderQueue;dueReminderQueue=[];return rows;},
+    async ackReminder(){},
+    async feedbacks(token,offset=0,grade){return [...feedbackRows.values()].filter(f=>!grade||f.data.grau===grade).slice(offset,offset+51);},
+    async saveFeedback(token,input){const previous=feedbackRows.get(input.id);if((previous?.version||0)!==input.version)throw Error('Conflito de feedback');feedbackRows.set(input.id,{...input,hotel:input.data.hotel,version:input.version+1,service_id:previous?.service_id});},
+    async feedbackService(token,input){const f=feedbackRows.get(input.id);if(f.service_id)return f.service_id;if(f.version!==input.version)throw Error('Conflito');f.service_id=input.recordId;f.version++;records.set('ordensServico/'+input.recordId,{id:input.recordId,owner_id:identity(token).id,version:1,data:{id:input.recordId,hotel:f.hotel,apartamento:f.data.apartamento,titulo:f.data.assunto,descricao:f.data.observacoes,status:'Aberta',prioridade:'Normal',anexos:f.data.anexos,feedbackId:f.id}});return input.recordId;},
+    async evaluations(){return [...evaluationRows].reverse();},
+    async sendEvaluation(token,input){if(!evaluationRows.some(m=>m.id===input.id))evaluationRows.push({id:input.id,author_id:identity(token).id,author_name:identity(token).nome,target_name:users.find(u=>u.id===input.target)?.nome,body:input.body,created_at:new Date().toISOString()});},
     async notes(token){return [...noteRows.values()].filter(row=>row.owner_id===identity(token).id);},
     async saveNote(token,input){const old=noteRows.get(input.id);if((old?.version||0)!==input.version)throw Error('Conflito de nota');if(input.remove)noteRows.delete(input.id);else noteRows.set(input.id,{...input,owner_id:identity(token).id,version:input.version+1});},
-    async support(token,id,offset=0){const rows=[...supportRows.values()].filter(row=>(identity(token).mestre||row.owner_id===identity(token).id)&&(!id||row.id===id));return rows.slice(offset,offset+51);},
+    async support(token,id,offset=0,status){const rows=[...supportRows.values()].filter(row=>(identity(token).mestre||row.owner_id===identity(token).id)&&(!id||row.id===id)&&(!status||row.status===status));return rows.slice(offset,offset+51);},
     async sendSupport(token,input){let row=supportRows.get(input.id);if((row?.version||0)!==input.version)throw Error('Conflito de suporte');if(!row){row={id:input.id,subject:input.subject,status:'Aberto',owner_id:identity(token).id,owner_name:identity(token).nome,version:0,book_support_messages:[]};supportRows.set(input.id,row);}row.version++;if(input.status)row.status=input.status;if(input.body)row.book_support_messages.push({id:crypto.randomUUID(),author_id:identity(token).id,author_name:identity(token).nome,master:identity(token).mestre,body:input.body,created_at:new Date().toISOString()});},
     async reopenOrder(token,input){const row=records.get('ordensServico/'+input.id);if(row.version!==input.version)throw Error('Conflito');row.data={...row.data,status:'Em andamento',motivoReabertura:input.reason};row.version++;},
     canCreateUsers: true,
@@ -93,7 +106,7 @@ async function main() {
     await wait("typeof mostrarAba === 'function' && !document.body.hidden");
     await evaluate(`(async()=>{const row=document.getElementById('listaChamados').firstElementChild;await BookStore.refresh();if(row!==document.getElementById('listaChamados').firstElementChild)throw Error('Uma resposta idêntica reconstruiu a lista');})()`);
     await capture('painel-desktop');
-    const tabs=await evaluate(`(() => {const result=[];for(const tab of ['chamados','chat','os','vistorias','condominios','estoque','financeiro','dashboard','usuarios','backup','suporte']){document.getElementById('aba'+(tab==='os'?'OS':tab[0].toUpperCase()+tab.slice(1))).click();const id=tab==='os'?'OS':tab[0].toUpperCase()+tab.slice(1);if(document.getElementById('visao'+id).hidden)throw Error(tab);if(document.querySelector('nav').getBoundingClientRect().height===0)throw Error('nav');result.push(tab);}return result;})()`);
+    const tabs=await evaluate(`(() => {const result=[];for(const tab of ['chamados','chat','os','vistorias','condominios','estoque','financeiro','dashboard','usuarios','backup','suporte','feedbacks','avaliacoes']){document.getElementById('aba'+(tab==='os'?'OS':tab[0].toUpperCase()+tab.slice(1))).click();const id=tab==='os'?'OS':tab[0].toUpperCase()+tab.slice(1);if(document.getElementById('visao'+id).hidden)throw Error(tab);if(document.querySelector('nav').getBoundingClientRect().height===0)throw Error('nav');result.push(tab);}return result;})()`);
     await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
     for(const tab of tabs){
       await evaluate(`mostrarAba(${JSON.stringify(tab)})`);
@@ -107,6 +120,10 @@ async function main() {
     await evaluate("BookWorkspace.openNotes()");
     await evaluate("document.getElementById('noteTitle').value='Primeira nota';document.getElementById('noteBody').value='Assunto separado';document.getElementById('notesForm').requestSubmit()");
     await wait("document.querySelector('#notesDialog .workspace-status').textContent==='Salvo.'");
+    await wait("!document.getElementById('noteReminder').hidden");
+    await evaluate("document.getElementById('reminderEnabled').checked=true;document.getElementById('reminderRepeat').value='daily';document.getElementById('reminderSave').click()");
+    await wait("document.getElementById('reminderStatus').textContent==='Lembrete salvo.'");
+    if(reminderRows.size!==1||[...reminderRows.values()][0].repeat!=='daily')throw Error('Lembrete diário não foi salvo');
     await evaluate("document.getElementById('noteNew').click();document.getElementById('noteTitle').value='Outra nota';document.getElementById('noteBody').value='Outro assunto';document.getElementById('notesForm').requestSubmit()");
     await wait("document.querySelectorAll('#notesList button').length===2");
     await evaluate(`(() => {
@@ -134,6 +151,12 @@ async function main() {
     await evaluate("document.getElementById('supportBody').value='Resposta do mestre';document.getElementById('supportForm').requestSubmit()");
     await wait("document.querySelectorAll('#supportThread .mensagem-chat').length===2");
     await capture('suporte-desktop');
+    await evaluate("mostrarAba('suporte')");
+    await wait("document.getElementById('supportOpen').textContent==='1'");
+    await evaluate("const supportStatus=document.querySelector('#masterSupportList select');supportStatus.value='Fechado';supportStatus.dispatchEvent(new Event('change'))");
+    await wait("document.getElementById('supportClosed').textContent==='1' && document.getElementById('supportOpen').textContent==='0'");
+    await evaluate("const reopenedStatus=document.querySelector('#masterSupportList select');reopenedStatus.value='Aberto';reopenedStatus.dispatchEvent(new Event('change'))");
+    await wait("document.getElementById('supportOpen').textContent==='1' && document.getElementById('supportClosed').textContent==='0'");
     await evaluate("document.getElementById('supportDialog').querySelector('.workspace-heading button').click();document.querySelector('.workspace-actions button').click();document.getElementById('aiKey').value='chave-de-teste-nao-real';document.getElementById('aiPrompt').value='Ajuda para organizar uma vistoria';document.getElementById('aiForm').requestSubmit()");
     await wait("document.getElementById('aiThread').textContent.includes('Resposta de IA simulada')");
     await capture('ia-desktop');
@@ -143,6 +166,22 @@ async function main() {
     await send('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
     await evaluate("document.getElementById('aiDialog').querySelector('.workspace-heading button').click();if(document.getElementById('aiKey').value)throw Error('Chave de IA permaneceu na tela após fechar');");
     await capture('condominios-desktop');
+    await evaluate("mostrarAba('feedbacks');document.getElementById('feedbackNew').click();document.getElementById('feedbackHotel').value='Be Urban';document.getElementById('feedbackHotel').dispatchEvent(new Event('change'));if(document.getElementById('feedbackApartment').options.length!==7)throw Error('Apartamentos do feedback');document.getElementById('feedbackApartment').value='214';document.getElementById('feedbackSubject').value='Feedback do hóspede';document.getElementById('feedbackGrade').value='Crítico';document.getElementById('feedbackNotes').value='Verificar manutenção';document.getElementById('feedbackCreateService').checked=true");
+    await evaluate(`(async()=>{const canvas=document.createElement('canvas');canvas.width=2;canvas.height=2;const blob=await new Promise(r=>canvas.toBlob(r,'image/png'));const files=new DataTransfer();files.items.add(new File([blob],'feedback.png',{type:'image/png'}));document.getElementById('feedbackFiles').files=files.files;document.getElementById('feedbackFiles').dispatchEvent(new Event('change'));document.getElementById('feedbackForm').requestSubmit();})()`);
+    await wait("!document.getElementById('feedbackDialog').open && document.getElementById('feedbackList').textContent.includes('Feedback do hóspede')");
+    const feedbackRow=[...feedbackRows.values()][0];if(!feedbackRow?.service_id||!feedbackRow.data.anexos[0].dados.startsWith('/api/files/'))throw Error('Feedback não vinculou foto e card');
+    await capture('feedbacks-desktop');
+    await evaluate("mostrarAba('avaliacoes');document.getElementById('evaluationBody').value='Parabéns pela vistoria <img src=x onerror=alert(1)>';document.getElementById('evaluationForm').requestSubmit()");
+    await wait("document.getElementById('evaluationThread').textContent.includes('Parabéns pela vistoria')");
+    await evaluate("if(document.querySelector('#evaluationThread img'))throw Error('Comentário executou HTML')");
+    await capture('avaliacoes-desktop');
+    notificationState={chat:{count:2,latest:{id:'mock-chat-1',body:'Nova mensagem do cliente',ticket:'101'}},support:{count:1,latest:{id:'mock-support-1',body:'Novo chamado de suporte'}}};
+    const reminder=[...reminderRows.values()][0];dueReminderQueue=[{id:reminder.note_id,due:reminder.due_at,title:'Lembrete de teste'}];
+    await evaluate("BookNotifications.refresh()");
+    await wait("document.getElementById('notificationsList').textContent.includes('Lembrete de teste')");
+    await evaluate("if(document.querySelector('.workspace-actions [data-workspace-target=\"supportDialog\"] .workspace-badge').textContent!=='1')throw Error('Badge do suporte');if(document.getElementById('chatBadge').textContent!=='2')throw Error('Badge do chat');document.getElementById('notificationsToggle').click()");
+    await capture('notificacoes-desktop');
+    await evaluate("document.getElementById('notificationsClose').click()");notificationState={chat:{count:0},support:{count:0}};
     const catalogCheck=await evaluate(`(() => {
       mostrarAba('os');abrirFormularioOS();
       const hotel=document.getElementById('osHotel'),ap=document.getElementById('osApartamento');
@@ -296,7 +335,7 @@ async function main() {
     await wait("location.pathname === '/login.html'");
     if(errors.length)throw new Error(errors.join('; '));
     if(dialogs.length)throw new Error('Alertas inesperados: '+dialogs.join('; '));
-    console.log(JSON.stringify({browser:'Chrome headless',tabs,catalogCheck,created:1,permissionsUpdated:1,tabPermissions:true,privateNotes:true,masterSupport:true,aiChat:'simulated',aiCardWithConfirmation:true,cardReopening:true,cardLifecycle:true,inspectionWithPhoto:true,inventorySaved:true,clientTicketWithPhoto:true,chatBothDirections:true,clientPermissions:true,backupAndVerification:true,responsiveWidths:[390,1440],externalDisk:'simulated',logout:true,uncaughtErrors:0}));
+    console.log(JSON.stringify({browser:'Chrome headless',tabs,catalogCheck,created:1,permissionsUpdated:1,tabPermissions:true,privateNotes:true,masterSupport:true,supportStatusCounters:true,dailyReminder:true,chatSupportNotifications:true,feedbackWithPhotoAndService:true,teamEvaluations:true,aiChat:'simulated',aiCardWithConfirmation:true,cardReopening:true,cardLifecycle:true,inspectionWithPhoto:true,inventorySaved:true,clientTicketWithPhoto:true,chatBothDirections:true,clientPermissions:true,backupAndVerification:true,responsiveWidths:[390,1440],externalDisk:'simulated',logout:true,uncaughtErrors:0}));
   } finally {
     socket?.close();child.kill();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));
     await delay(500);

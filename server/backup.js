@@ -1,6 +1,6 @@
 const { COLLECTIONS } = require('./operations');
 const { filePath } = require('../assets/catalog');
-const OPTIONS = [...COLLECTIONS, 'cadastros', 'auditoria', 'anexos'];
+const OPTIONS = [...COLLECTIONS, 'cadastros', 'auditoria', 'anexos', 'colaboracao'];
 function validateBackup(input) {
   const selected = input?.selected;
   if (!Array.isArray(selected) || !selected.length || selected.length > OPTIONS.length || new Set(selected).size !== selected.length || selected.some(key => !OPTIONS.includes(key)) || selected.every(key => key === 'anexos')) {

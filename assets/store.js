@@ -10,6 +10,7 @@ window.BookStore = (() => {
     const attachmentFields = new Map();
     function setupAttachments() {
         document.querySelectorAll('input[type="file"]').forEach(input => {
+            if(attachmentFields.has(input))return;
             const list = document.createElement('div');
             list.className = 'attachment-list'; list.setAttribute('aria-live', 'polite');
             input.closest('label')?.insertAdjacentElement('afterend', list) || input.insertAdjacentElement('afterend', list);
@@ -57,7 +58,7 @@ window.BookStore = (() => {
         }
     }
     function activate(tab) {
-        const groups = { chamados: ['chamados'], chat: ['chamados','conversasSuporte'], os: ['ordensServico','chamados','estoqueBookSantos'], vistorias: ['vistorias','ordensServico'], condominios: ['chamados','ordensServico'], estoque: ['estoqueBookSantos','ordensServico'], dashboard: ['chamados','ordensServico'], financeiro: [], usuarios: [], backup: [] };
+        const groups = { chamados: ['chamados'], chat: ['chamados','conversasSuporte'], os: ['ordensServico','chamados','estoqueBookSantos'], vistorias: ['vistorias','ordensServico'], condominios: ['chamados','ordensServico'], estoque: ['estoqueBookSantos','ordensServico'], dashboard: ['chamados','ordensServico'], financeiro: [], usuarios: [], backup: [], feedbacks:[],avaliacoes:[],suporte:[],inicio:[] };
         activeCollections = groups[tab] || keys;
     }
     const apartments = hotel => apartmentCatalog.filter(row => row.hotel === hotel).map(row => row.apartment).sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
@@ -224,5 +225,5 @@ window.BookStore = (() => {
             };
         }
     }
-    return { init, getItem, setItem, refresh, validateFiles, protectActions, apartments, activate, totals: () => totals, id: () => Date.now() * 1000 + crypto.getRandomValues(new Uint16Array(1))[0] % 1000 };
+    return { init, getItem, setItem, refresh, validateFiles, protectActions, apartments, activate, setupAttachments, totals: () => totals, id: () => Date.now() * 1000 + crypto.getRandomValues(new Uint16Array(1))[0] % 1000 };
 })();

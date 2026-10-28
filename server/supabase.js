@@ -69,10 +69,23 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
       return request(`/rest/v1/book_records?${query}`,{token});
     },
     notes(token) { return request('/rest/v1/book_notes?select=id,title,body,version,updated_at&order=updated_at.desc&limit=200', { token }); },
+    notifications(token){return request('/rest/v1/rpc/book_notifications',{token,method:'POST',body:{}});},
+    supportRead(token,id,seen){return request('/rest/v1/rpc/book_support_read',{token,method:'POST',body:{target_ticket:id,seen_at:seen}});},
+    supportSummary(token){return request('/rest/v1/rpc/book_support_summary',{token,method:'POST',body:{}});},
+    reminders(token){return request('/rest/v1/book_reminders?select=*&order=due_at&limit=200',{token});},
+    dueReminders(token){return request('/rest/v1/rpc/book_due_reminders',{token,method:'POST',body:{}});},
+    ackReminder(token,id,due){return request('/rest/v1/rpc/book_ack_reminder',{token,method:'POST',body:{target_note:id,delivered_due:due}});},
+    saveReminder(token,input){return request('/rest/v1/rpc/book_save_reminder',{token,method:'POST',body:{target_note:input.id,expected_version:input.version,next_due:input.due,repeat_mode:input.repeat,is_enabled:input.enabled}});},
+    feedbacks(token,offset=0,grade){const query=new URLSearchParams({select:'*',order:'created_at.desc,id.desc',limit:'51',offset:String(offset)});if(grade)query.set('data->>grau','eq.'+grade);return request('/rest/v1/book_feedbacks?'+query,{token});},
+    saveFeedback(token,input){return request('/rest/v1/rpc/book_save_feedback',{token,method:'POST',body:{feedback_id:input.id,expected_version:input.version,document:input.data}});},
+    feedbackService(token,input){return request('/rest/v1/rpc/book_feedback_service',{token,method:'POST',body:{feedback_id:input.id,expected_version:input.version,record_id:input.recordId}});},
+    evaluations(token,before,beforeId){const q=new URLSearchParams({select:'*',order:'created_at.desc,id.desc',limit:'51'});if(before&&beforeId)q.set('or',`(created_at.lt.${before},and(created_at.eq.${before},id.lt.${beforeId}))`);return request('/rest/v1/book_team_messages?'+q,{token});},
+    sendEvaluation(token,input){return request('/rest/v1/rpc/book_team_send',{token,method:'POST',body:{message_id:input.id,message_body:input.body,target_user:input.target}});},
     saveNote(token, input) { return request('/rest/v1/rpc/book_save_note', { token, method: 'POST', body: {note_id:input.id,note_title:input.title,note_body:input.body,expected_version:input.version,remove_note:input.remove === true} }); },
-    support(token, id, offset = 0) {
+    support(token, id, offset = 0, status) {
       const query = new URLSearchParams({select: id ? '*,book_support_messages(*)' : '*', order:'updated_at.desc,id.desc',limit:id?'1':'51',offset:String(offset)});
       if (id) query.set('id', `eq.${id}`);
+      if(status)query.set('status','eq.'+status);
       return request(`/rest/v1/book_support_tickets?${query}`, { token });
     },
     sendSupport(token, input) { return request('/rest/v1/rpc/book_support_send', { token, method:'POST',body:{ticket_id:input.id,subject:input.subject || '',body:input.body || '',expected_version:input.version,new_status:input.status || null} }); },
@@ -119,7 +132,7 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
     apartments(token) { return request('/rest/v1/book_apartments?select=hotel,apartment&order=apartment&limit=10000', { token }); },
     async ready() {
       await request('/auth/v1/settings');
-      if (await request('/rest/v1/rpc/book_schema_version', { method: 'POST', body: {} }) !== 12) throw failure(503, 'Aplique as migrações até 202610280012_security.sql antes de publicar esta versão.');
+      if (await request('/rest/v1/rpc/book_schema_version', { method: 'POST', body: {} }) !== 13) throw failure(503, 'Aplique as migrações até 202610280013_collaboration.sql antes de publicar esta versão.');
       return { ok: true };
     },
     commit(token, changes) { return request('/rest/v1/rpc/book_commit', { token, method: 'POST', body: { changes } }); },

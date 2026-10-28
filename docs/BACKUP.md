@@ -31,6 +31,8 @@ As cópias contêm informações privadas e não são cifradas pelo aplicativo. 
 
 ## Recuperação
 
+A migração 13 acrescenta a opção **Feedbacks, avaliações, suporte e minhas notas/lembretes**. Ela inclui feedbacks e vínculos a cards, comentários da equipe, chamados e mensagens de suporte, além das notas e lembretes do próprio mestre. Notas privadas de outros usuários continuam fora dessa exportação. Ao selecionar também Anexos, os arquivos dos feedbacks são incluídos. Para preservar todas as notas privadas, mantenha também o backup completo do banco, com acesso restrito aos responsáveis pela infraestrutura.
+
 Esta é uma exportação dos dados e dos arquivos do aplicativo, não um dump SQL completo do Supabase. Não contém senhas, tokens, sessões, políticas de infraestrutura, contas completas de Auth ou chaves do ambiente. As definições das tabelas e regras ficam nas migrações deste repositório.
 
 Não há botão de restauração que sobrescreva o ambiente online. Para recuperar, primeiro confira a integridade, preserve a cópia original, prepare um ambiente separado com as migrações, reconstitua as contas de Auth e seus vínculos de UUID e importe os registros respeitando as chaves e referências. Os anexos devem voltar às referências registradas no manifesto. Em seguida, valide login, permissões, chamados, vistorias e financeiro antes de mudar o ambiente em uso. Esse procedimento exige uma ferramenta de importação e teste supervisionado; a conferência de hashes não é um teste de restauração do aplicativo.

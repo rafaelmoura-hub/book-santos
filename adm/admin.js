@@ -43,7 +43,7 @@ function mostrarAba(aba) {
   if (aba==='suporte'&&!ehAdministradorMestre) return;
   if (["usuarios", "backup"].includes(aba) && !ehAdministradorMestre) return;
   BookStore.activate(aba);
-  ["chamados", "chat", "os", "vistorias", "condominios", "estoque", "financeiro", "usuarios", "dashboard", "backup", "suporte", "inicio"].forEach(nome => {
+  ["chamados", "chat", "os", "vistorias", "condominios", "estoque", "financeiro", "usuarios", "dashboard", "backup", "suporte", "inicio", "feedbacks", "avaliacoes"].forEach(nome => {
     const sufixo = nome === "os" ? "OS" : nome[0].toUpperCase() + nome.slice(1);
     document.getElementById(`visao${sufixo}`).hidden = nome !== aba;
     if (document.getElementById(`aba${sufixo}`)) document.getElementById(`aba${sufixo}`).classList.toggle("ativa", nome === aba);
@@ -54,6 +54,8 @@ function mostrarAba(aba) {
   if (aba === "vistorias") atualizarTotaisVistorias();
   if (aba === "usuarios") mostrarUsuarios();
   if (aba === 'suporte') BookWorkspace.loadMaster();
+  if(aba==='feedbacks')BookCollaboration.loadFeedbacks();
+  if(aba==='avaliacoes')BookCollaboration.loadEvaluations();
   if (aba === "condominios") BookCondominios.atualizarTotais();
   if (aba === "dashboard") atualizarDashboard();
   if (aba === "estoque") mostrarEstoque();
@@ -531,12 +533,14 @@ function renderizarMensagensAdmin() { const area=document.getElementById("mensag
 async function enviarMensagemAdmin(event) { event.preventDefault();const campo=document.getElementById("textoAdmin"),texto=campo.value.trim();if(!conversaSelecionada||!texto)return;const items=lerConversasChat(),c=items.find(x=>chaveConversaChat(x)===conversaSelecionada);if(!c)return;c.mensagens.push({id:String(Date.now()),autorTipo:"admin",autorNome:sessao.nome||"Suporte",texto,criadaEm:new Date().toISOString(),lidoAdmin:true,lidoCliente:false});try{await salvarConversasChat(items);campo.value="";mostrarConversasChat();renderizarMensagensAdmin();}catch(error){return;} }
 let avisoChatTimer=null;
 function exibirAvisoChat(texto) { const aviso=document.getElementById("avisoChat");aviso.textContent=texto;aviso.hidden=false;clearTimeout(avisoChatTimer);avisoChatTimer=setTimeout(()=>aviso.hidden=true,6500); }
-function verificarNovasMensagensChat() { const conversas=lerConversasChat();let novas=[];conversas.forEach(c=>(c.mensagens||[]).forEach(m=>{if(!idsMensagensConhecidas.has(m.id)){idsMensagensConhecidas.add(m.id);if(m.autorTipo==="cliente")novas.push({c,m});}}));if(novas.length){const {c,m}=novas.at(-1);exibirAvisoChat(`Nova mensagem de ${c.clienteNome||c.clienteLogin} · Chamado #${c.chamadoId}`);if("Notification"in window&&Notification.permission==="granted")new Notification("Nova mensagem de cliente",{body:`${c.clienteNome||c.clienteLogin} · Chamado #${c.chamadoId}: ${m.texto}`});}atualizarBadgeChat();if(document.getElementById("visaoChat")&&!document.getElementById("visaoChat").hidden)mostrarConversasChat(); }
+function verificarNovasMensagensChat() { const conversas=lerConversasChat();let novas=[];conversas.forEach(c=>(c.mensagens||[]).forEach(m=>{if(!idsMensagensConhecidas.has(m.id)){idsMensagensConhecidas.add(m.id);if(m.autorTipo==="cliente")novas.push({c,m});}}));if(novas.length){const {c,m}=novas.at(-1);exibirAvisoChat(`Nova mensagem de ${c.clienteNome||c.clienteLogin} · Chamado #${c.chamadoId}`);}atualizarBadgeChat();if(document.getElementById("visaoChat")&&!document.getElementById("visaoChat").hidden)mostrarConversasChat(); }
 function ativarNotificacoesChat() { if(!("Notification"in window)){alert("Este navegador não oferece notificações do sistema.");return;}Notification.requestPermission().then(p=>alert(p==="granted"?"Notificações ativadas.":"Permissão de notificações não concedida.")); }
 window.addEventListener("storage",e=>{if(e.key===CHAVE_CHAT){verificarNovasMensagensChat();if(conversaSelecionada)renderizarMensagensAdmin();}});
 idsMensagensConhecidas=new Set(lerConversasChat().flatMap(c=>(c.mensagens||[]).map(m=>m.id)));
 atualizarBadgeChat();
 BookWorkspace.init(sessao);
+BookCollaboration.init(sessao);
+BookNotifications.init(sessao);
 document.getElementById('masterSupportRefresh').onclick=()=>BookWorkspace.loadMaster();
 const primeiraAba=Object.keys(BookWorkspace.labels).find(tab=>BookWorkspace.can(tab))||'inicio';
 mostrarAba(primeiraAba);

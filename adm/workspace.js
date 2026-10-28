@@ -1,5 +1,5 @@
 window.BookWorkspace = (() => {
-  const labels = {chamados:'Chamados',chat:'Chat',os:'Cards',vistorias:'Vistorias',condominios:'Condomínios',estoque:'Estoque',financeiro:'Financeiro',dashboard:'Visão geral'};
+  const labels = {chamados:'Chamados',chat:'Chat',os:'Cards',vistorias:'Vistorias',condominios:'Condomínios',estoque:'Estoque',financeiro:'Financeiro',dashboard:'Visão geral',feedbacks:'Feedbacks',avaliacoes:'Avaliações'};
   let user, notes=[], note=null, tickets=[], ticket=null, offset=0, dirty=false, saving=false;
   let aiMessages=[],aiBusy=false;
   let supportRequest=0,supportRefreshing=false;
@@ -56,11 +56,12 @@ window.BookWorkspace = (() => {
     note=selected||{id:crypto.randomUUID(),title:'',body:'',version:0};dirty=false;
     el('noteTitle').value=note.title;el('noteBody').value=note.body;
     el('noteDelete').hidden=!note.version;
+    window.BookCollaboration?.noteSelected(note);
   }
   async function loadNotes() {
     notes=await request('/api/workspace/notes');
     el('notesList').replaceChildren(...notes.map(item=>{
-      const button=document.createElement('button');button.type='button';button.textContent=item.title;button.onclick=()=>editNote(item);return button;
+      const button=document.createElement('button');button.type='button';button.textContent=item.title;button.dataset.noteId=item.id;button.onclick=()=>editNote(item);return button;
     }));
     if(!notes.length)el('notesList').textContent='Nenhuma nota salva.';
   }
@@ -106,6 +107,7 @@ window.BookWorkspace = (() => {
       el('supportToggle').hidden=!user.mestre;el('supportToggle').textContent=ticket.status==='Fechado'?'Reabrir chamado':'Fechar chamado';
       el('supportBody').disabled=ticket.status==='Fechado'&&!user.mestre;el('supportSend').disabled=el('supportBody').disabled;
       el('supportDialog').querySelector('.workspace-status').textContent=`${ticket.status} · ${ticket.owner_name}`;
+      if(messages.length&&!document.hidden&&el('supportDialog').open){await request('/api/workspace/support-read',{id:ticket.id,seen:messages.at(-1).created_at});window.BookNotifications?.refresh();}
     }catch(error){el('supportDialog').querySelector('.workspace-status').textContent=error.message;throw error;}
   }
   async function openSupport() {
@@ -117,17 +119,26 @@ window.BookWorkspace = (() => {
     if(!status&&!el('supportForm').reportValidity())return;
     const data={id:ticket?.id||crypto.randomUUID(),version:ticket?.version||0,subject:el('supportSubject').value.trim(),body:status?'':el('supportBody').value.trim(),...(status?{status}:{})};
     if(status&&el('supportBody').value.trim()){alert('Envie ou apague a mensagem antes de alterar o status.');return;}
-    await run(el('supportDialog'),async()=>{await request('/api/workspace/support',data);el('supportBody').value='';await loadTickets();await selectTicket(data.id);});
+    await run(el('supportDialog'),async()=>{await request('/api/workspace/support',data);el('supportBody').value='';await loadTickets();await selectTicket(data.id);if(user.mestre)await loadMaster();window.BookNotifications?.refresh();});
   }
   async function loadMaster() {
     if(!user?.mestre)return;
     const node=el('masterSupportList');node.textContent='Carregando…';
-    try{const rows=await request('/api/workspace/support');node.replaceChildren(...rows.slice(0,50).map(item=>{
-      const button=document.createElement('button');button.className='chamado support-card';button.textContent=`${item.subject} · ${item.owner_name} · ${item.status}`;
-      button.onclick=async()=>{await openSupport();await selectTicket(item.id);};return button;
-    }));if(!rows.length)node.textContent='Nenhum chamado de suporte. Todos os chamados podem ser consultados no botão Suporte do topo.';}
+    try{
+      const [summary,rows]=await Promise.all([request('/api/workspace/support-summary'),request('/api/workspace/support?offset='+masterOffset+'&status='+encodeURIComponent(el('masterSupportFilter').value))]);
+      el('supportTotal').textContent=summary.total;el('supportOpen').textContent=summary.open;el('supportClosed').textContent=summary.closed;
+      el('masterSupportPrevious').disabled=masterOffset===0;el('masterSupportNext').disabled=rows.length<=50;
+      node.replaceChildren(...rows.slice(0,50).map(item=>{
+        const card=document.createElement('article');card.className='chamado support-card';
+        const button=document.createElement('button');button.type='button';button.className='support-open-thread';button.textContent=`${item.subject} · ${item.owner_name}`;button.onclick=async()=>{try{await openSupport();await selectTicket(item.id);}catch{}};
+        const select=document.createElement('select');select.setAttribute('aria-label','Status de '+item.subject);for(const status of ['Aberto','Fechado']){const option=new Option(status,status);select.append(option);}select.value=item.status;
+        select.onchange=async()=>{select.disabled=true;try{await request('/api/workspace/support',{id:item.id,version:item.version,subject:'',body:'',status:select.value});await loadMaster();window.BookNotifications?.refresh();}catch(error){select.value=item.status;node.prepend(Object.assign(document.createElement('p'),{textContent:error.message}));}finally{select.disabled=false;}};
+        card.append(button,select);return card;
+      }));if(!node.children.length)node.textContent='Nenhum chamado nesta página com esse status.';
+    }
     catch(error){node.textContent=error.message;}
   }
+  let masterOffset=0;
   function renderAIThread(){
     el('aiThread').innerHTML=aiMessages.map(m=>`<article class="mensagem-chat ${m.role==='user'?'minha-mensagem':''}"><strong>${m.role==='user'?'Você':'Assistente'}</strong><p>${esc(m.content)}</p></article>`).join('');el('aiThread').scrollTop=el('aiThread').scrollHeight;
   }
@@ -191,6 +202,10 @@ window.BookWorkspace = (() => {
       const button=document.createElement('button');button.type='button';button.className='botao-secundario';button.textContent=label;button.onclick=fn;button.dataset.workspaceTarget=target;button.setAttribute('aria-controls',target);button.setAttribute('aria-pressed','false');actions.append(button);
     }
     document.querySelector('header').append(actions);
+    if(user.mestre){
+      const controls=document.createElement('div');controls.className='support-controls';controls.innerHTML='<div class="cards support-totals"><article class="card"><h3>Total</h3><p id="supportTotal">—</p></article><article class="card"><h3>Abertos</h3><p id="supportOpen">—</p></article><article class="card"><h3>Fechados</h3><p id="supportClosed">—</p></article></div><label>Status nesta página<select id="masterSupportFilter"><option value="">Todos</option><option>Aberto</option><option>Fechado</option></select></label><div class="collaboration-pagination"><button id="masterSupportPrevious" type="button" class="botao-secundario">Anterior</button><button id="masterSupportNext" type="button" class="botao-secundario">Próxima</button></div>';
+      el('masterSupportList').before(controls);el('masterSupportFilter').onchange=()=>{masterOffset=0;loadMaster();};el('masterSupportPrevious').onclick=()=>{masterOffset=Math.max(0,masterOffset-50);loadMaster();};el('masterSupportNext').onclick=()=>{masterOffset+=50;loadMaster();};
+    }
     document.addEventListener('keydown',event=>{
       if(event.key!=='Escape'||event.defaultPrevented||document.querySelector('dialog:modal'))return;
       const active=Object.keys(panels).map(el).find(node=>node?.open);
@@ -237,5 +252,6 @@ window.BookWorkspace = (() => {
       const nav=document.createElement('button');nav.id='abaSuporte';nav.className='aba';nav.textContent='Suporte';nav.onclick=()=>mostrarAba('suporte');document.querySelector('nav').append(nav);
     }
   }
-  return {labels,can,init,openNotes,openSupport,loadMaster};
+  async function openTicket(id){await openSupport();if(id)await selectTicket(id);}
+  return {labels,can,init,openNotes,openSupport,openTicket,loadMaster};
 })();

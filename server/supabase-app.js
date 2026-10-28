@@ -13,6 +13,7 @@ const { uuid, validateWorkspace } = require('./workspace');
 const { generateAI } = require('./ai');
 const { createAgent } = require('./ai-agent');
 const { boundedBytes,requireJSON,validateProfile } = require('./security');
+const {validateCollaboration}=require('./collaboration');
 const ROOT = path.resolve(__dirname, '..');
 const fail = (status, message) => Object.assign(new Error(message), { status });
 const digest = token => createHash('sha256').update(token).digest('hex');
@@ -144,6 +145,49 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         }
       }
       if (route === '/api/session' && req.method === 'GET') return json(200, { ...user, provider: 'supabase' });
+      if(route==='/api/notifications'&&req.method==='GET')return json(200,await provider.notifications(session.accessToken));
+      if(['/api/workspace/support-summary','/api/workspace/support-read','/api/workspace/reminders','/api/workspace/reminders-due','/api/workspace/reminders-ack','/api/feedbacks','/api/feedbacks/service','/api/evaluations'].includes(route)){
+        if(user.funcao!=='adm')throw fail(403,'Somente administradores.');
+        if(route.startsWith('/api/feedbacks')&&!canTab(user,'feedbacks')||route==='/api/evaluations'&&!canTab(user,'avaliacoes'))throw fail(403,'Sem acesso a esta aba.');
+        if(route==='/api/workspace/support-summary'){if(!user.mestre)throw fail(403,'Somente o mestre.');if(req.method!=='GET')throw fail(405,'Método inválido.');return json(200,await provider.supportSummary(session.accessToken));}
+        if(req.method==='GET'){
+          const offset=Number(url.searchParams.get('offset')||0),before=url.searchParams.get('before');
+          if(!Number.isSafeInteger(offset)||offset<0||offset>100000||before&&!Number.isFinite(Date.parse(before)))throw fail(400,'Consulta inválida.');
+          if(route==='/api/workspace/reminders')return json(200,await provider.reminders(session.accessToken));
+          if(route==='/api/feedbacks'){const grade=url.searchParams.get('grade');if(grade&&!['Crítico','Razoável','Irrelevante'].includes(grade))throw fail(400,'Grau inválido.');return json(200,await provider.feedbacks(session.accessToken,offset,grade));}
+          if(route==='/api/evaluations'){const beforeId=url.searchParams.get('beforeId');if(!!before!==!!beforeId||beforeId&&!uuid(beforeId)||before&&!/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,6})?(?:Z|[+-]\d\d:\d\d)$/.test(before))throw fail(400,'Página inválida.');return json(200,await provider.evaluations(session.accessToken,before,beforeId));}
+          throw fail(405,'Método inválido.');
+        }
+        if(req.method!=='POST')throw fail(405,'Método inválido.');
+        const quotaKey='collaboration:'+user.id,quota=writes.get(quotaKey)||{count:0,until:now+60000};
+        if(quota.count>=60)throw fail(429,'Aguarde antes de enviar novamente.');quota.count++;writes.set(quotaKey,quota);
+        const input=await readBody(req);
+        if(route==='/api/workspace/reminders-due')return json(200,await provider.dueReminders(session.accessToken));
+        if(route==='/api/workspace/reminders-ack'){
+          if(!uuid(input?.id)||typeof input.due!=='string'||!Number.isFinite(Date.parse(input.due)))throw fail(400,'Lembrete inválido.');
+          await provider.ackReminder(session.accessToken,input.id,input.due);return json(200,{ok:true});
+        }
+        if(route==='/api/workspace/support-read'){
+          if(!uuid(input?.id)||typeof input.seen!=='string'||!Number.isFinite(Date.parse(input.seen)))throw fail(400,'Leitura inválida.');
+          await provider.supportRead(session.accessToken,input.id,input.seen);
+        }else if(route==='/api/workspace/reminders')await provider.saveReminder(session.accessToken,validateCollaboration('reminders',input));
+        else if(route==='/api/evaluations')await provider.sendEvaluation(session.accessToken,validateCollaboration('evaluations',input));
+        else if(route==='/api/feedbacks/service'){
+          if(!canTab(user,'os'))throw fail(403,'Sem permissão para criar cards de serviço.');
+          if(!uuid(input?.id)||!Number.isSafeInteger(input.version)||input.version<1||typeof input.recordId!=='string'||!/^\d{1,16}$/.test(input.recordId))throw fail(400,'Card inválido.');
+          return json(200,{id:await provider.feedbackService(session.accessToken,input)});
+        }else{
+          const valid=validateCollaboration('feedbacks',input),allowed=user.mestre?hotels:(await provider.access(session.accessToken)).map(r=>r.hotel);
+          if(!allowed.includes(valid.data.hotel))throw fail(403,'Sem acesso ao condomínio.');
+          if(Buffer.byteLength(JSON.stringify(valid.data,(k,v)=>typeof v==='string'&&v.startsWith('data:')?'[anexo]':v))>128*1024)throw fail(413,'Feedback acima do limite.');
+          const uploaded=[];let committed=false;
+          try{
+            const prepared=await storeAttachments([{data:valid.data}],user,(p,b,t)=>provider.upload(session.accessToken,p,b,t),uploaded);
+            await provider.saveFeedback(session.accessToken,{...valid,data:prepared[0].data});committed=true;
+          }finally{if(!committed&&uploaded.length)await provider.removeFiles(session.accessToken,uploaded).catch(()=>{});}
+        }
+        return json(200,{ok:true});
+      }
       if((route==='/api/ai'||route==='/api/ai/actions')&&req.method==='POST'){
         if(user.funcao!=='adm')throw fail(403,'Disponível somente para administradores.');
         const context={provider,token:session.accessToken,user,session:sessionId,invalidateUser:id=>{for(const [key,value]of sessions)if(value.userId===id)sessions.delete(key);}};
@@ -165,7 +209,8 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
           const id = url.searchParams.get('id');
           const offset = Number(url.searchParams.get('offset') || 0);
           if (id && !uuid(id) || !Number.isSafeInteger(offset) || offset < 0 || offset > 100000) throw fail(400, 'Consulta inválida.');
-          return json(200, kind === 'notes' ? await provider.notes(session.accessToken) : await provider.support(session.accessToken, id, offset));
+          const filter=url.searchParams.get('status');if(filter&&!['Aberto','Fechado'].includes(filter))throw fail(400,'Status inválido.');
+          return json(200, kind === 'notes' ? await provider.notes(session.accessToken) : await provider.support(session.accessToken, id, offset,filter));
         }
         if (req.method !== 'POST') throw fail(405, 'Método não permitido.');
         const quotaKey = `workspace:${user.id}`, quota = writes.get(quotaKey) || {count:0,until:now+60000};
@@ -192,7 +237,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         quota.count++; writes.set(quotaKey, quota);
         const data = await provider.backup(session.accessToken, selected);
         if (!data || !Array.isArray(data.records)) throw fail(502, 'O servidor não confirmou os dados do backup. Nenhuma cópia completa foi gerada.');
-        return json(200, { format: 'book-santos-backup', version: 1, selected, data, files: selected.includes('anexos') ? attachments(data.records) : [] });
+        return json(200, { format: 'book-santos-backup', version: 1, selected, data, files: selected.includes('anexos') ? attachments(data) : [] });
       }
       if (route === '/api/finance' && req.method === 'GET') {
         if (!canTab(user, 'financeiro')) throw fail(403, 'Sem acesso ao financeiro.');
@@ -296,7 +341,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
       if (!['GET', 'HEAD'].includes(req.method)) throw fail(405, 'Método não permitido.');
       if (/^\/hotel\/(hotel\.html)?$/.test(route)) { res.writeHead(302, { Location: '/adm/admin.html#condominios' }); return res.end(); }
       const file = route === '/' ? '/login.html' : route;
-      if (!/^\/(login\.(html|css|js)|assets\/(api|session|store|money|periods|catalog|events)\.js|assets\/ui\.css|(adm|cliente|hotel)\/[a-z]+\.(html|css|js))$/.test(file)) throw fail(404, 'Arquivo não encontrado.');
+      if (!/^\/(login\.(html|css|js)|assets\/(api|session|store|money|periods|catalog|events|notifications)\.js|assets\/ui\.css|(adm|cliente|hotel)\/[a-z]+\.(html|css|js))$/.test(file)) throw fail(404, 'Arquivo não encontrado.');
       if (/^\/(adm|hotel)\//.test(file) && user?.funcao !== 'adm' || /^\/cliente\//.test(file) && user?.funcao !== 'cliente') {
         res.writeHead(302, { Location: '/login.html' }); return res.end();
       }
