@@ -38,14 +38,35 @@ As tabelas novas precisam fazer parte da rotina de backup completo do banco. O e
 
 O botão IA abre um chat com OpenAI, Gemini ou Claude. Informe a sua **chave de API** e um modelo disponível na conta do provedor. Não é login do ChatGPT/Gemini/Claude e não aproveita automaticamente a assinatura de seus aplicativos. A cobrança é feita pelo provedor na conta da chave informada.
 
-A chave passa pelo servidor somente para a chamada e não é gravada em banco, armazenamento local, logs ou sessão. Ao fechar o painel, o campo da chave é apagado. Somente o texto digitado e as mensagens recentes desse chat são enviados ao provedor: nenhum cadastro, condomínio, nota ou registro é anexado automaticamente. Sem ferramentas de alteração do sistema. A resposta aparece como texto, sem executar HTML. As regras de retenção do próprio provedor continuam aplicáveis.
+A chave passa pelo servidor somente para a chamada e não é gravada em banco, armazenamento local, logs ou sessão. Ao fechar o painel, o campo da chave é apagado. O provedor recebe o texto digitado, as mensagens recentes, as instruções das ferramentas e os dados consultados conforme o pedido e as permissões da pessoa. Dados de registros e notas são tratados como conteúdo não confiável, não como instruções. A resposta aparece como texto, sem executar HTML. As regras de retenção do próprio provedor continuam aplicáveis.
 
-O chat mantém o histórico apenas enquanto esta página estiver aberta. Use Nova conversa para limpar. São enviados no máximo 19 turnos recentes, com limites de tamanho, até 1.500 tokens de saída e 5 chamadas/minuto por usuário. Não há repetição automática de chamadas cobradas. Se houver falha após o envio, confira o uso no provedor antes de repetir. O campo Modelo pode ser ajustado se um modelo sair de linha ou não estiver liberado na conta.
+O chat mantém o histórico apenas enquanto esta página estiver aberta. Use Nova conversa para limpar. São enviados no máximo 19 turnos recentes, com limites de tamanho e até 1.500 tokens de saída por chamada. São permitidos 5 pedidos/minuto por usuário; cada pedido usa até 3 chamadas ao modelo e 10 ferramentas. Os resultados de leitura são limitados e identificam paginação ou conteúdo parcial. Não há repetição automática de chamadas cobradas. Se houver falha após o envio, confira o uso no provedor antes de repetir. O campo Modelo pode ser ajustado se um modelo sair de linha ou não estiver liberado na conta.
+
+### Ações no site
+
+O assistente consulta dados autorizados e prepara operações reais: abrir/editar/finalizar/reabrir cards; abrir e atualizar chamados; enviar mensagens ao cliente; registrar e corrigir vistorias; alterar materiais e colunas do estoque; criar/editar/excluir notas; abrir/responder chamados de suporte; e, exclusivamente para o mestre, criar contas ou alterar permissões de usuários. Também abre as telas do sistema.
+
+Exemplos de pedidos:
+
+- “Abra um card no Be Urban, apartamento 214, para trocar a torneira que está vazando.”
+- “Liste os cards em andamento do Unlimited.”
+- “Reabra o card 123 para corrigir o responsável pelo pagamento.”
+- “Acrescente à minha nota de compras: verificar duas lâmpadas.”
+- “Atualize a quantidade do material Parafuso para 30 unidades.”
+- “Abra um chamado ao mestre sobre este erro de acesso.”
+
+Toda gravação exige **Confirmar ação** no painel, após revisão dos dados. A IA não executa alterações apenas por escrever que fez algo. A proposta fica vinculada ao usuário e à sessão por 10 minutos; enviar novo pedido invalida propostas anteriores ainda não confirmadas. O servidor guarda os dados preparados e ignora alterações enviadas junto com o botão de confirmação. Permissões são verificadas novamente e o banco aplica as mesmas regras, auditoria, versões e consumo de estoque usados nas telas normais.
+
+Cliques repetidos na mesma proposta não repetem a gravação durante sua validade. Se a execução falhar sem confirmação, o mesmo token não é executado novamente: confira o registro antes de gerar outra proposta. Reiniciar o servidor descarta propostas em memória. A criação de conta gera uma senha inicial no servidor, exibida somente ao mestre após a confirmação; essa senha não vai para o modelo nem para o histórico de IA. Alterações de conta continuam protegendo o mestre.
+
+As alterações de estoque são parciais: materiais não mencionados são preservados. Exclusão de material ou coluna exige ID explícito e confirmação. Valores de fechamento são normalizados pelo sistema, e custos dos materiais são calculados a partir do estoque. Uma mudança detectada no estoque após preparar a proposta exige uma nova revisão; o banco continua sendo a fonte final de validação dos valores e saldos.
+
+O assistente não fabrica fotos, resultados de checklist, dados financeiros nem contas. Se faltar informação real, deve perguntar. Arquivos locais, escolha da pasta no HD e outras interações do navegador continuam dependendo da pessoa. Backup abre a tela existente para escolher conteúdo e destino. Não há execução de JavaScript, comandos de servidor ou SQL livre, nem operações fora das permissões do usuário. As ações implementadas não exigem migração adicional: continuam necessárias as migrações 10 e 11 descritas acima.
 
 Documentação dos adaptadores:
 
-- OpenAI Responses: https://developers.openai.com/api/docs/guides/text
-- Gemini generateContent: https://ai.google.dev/api/generate-content
-- Claude Messages: https://platform.claude.com/docs/en/build-with-claude/working-with-messages
+- OpenAI Responses e funções: https://developers.openai.com/api/docs/guides/function-calling
+- Gemini generateContent e funções: https://ai.google.dev/gemini-api/docs/function-calling
+- Claude Messages e ferramentas: https://platform.claude.com/docs/en/agents-and-tools/tool-use/handle-tool-calls
 
 Os testes usam respostas simuladas de IA e não fazem chamadas cobradas. Uma chave válida deve ser testada no painel com uma mensagem curta antes de disponibilizar a integração para a equipe.

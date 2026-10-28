@@ -54,6 +54,16 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
     if (profile.funcao !== 'adm' || !profile.mestre) throw failure(403, 'Somente o administrador mestre pode gerenciar usuários.');
   }
   const provider = {
+    async record(token,collection,id) {
+      const query=new URLSearchParams({select:'id,data,owner_id,version,hotel',collection:`eq.${collection}`,id:`eq.${id}`,limit:'1'});
+      return (await request(`/rest/v1/book_records?${query}`,{token}))[0]||null;
+    },
+    searchRecords(token,collection,filters={}) {
+      const query=new URLSearchParams({select:'id,data,owner_id,version,hotel',collection:`eq.${collection}`,order:'id.desc',limit:String(filters.limit||20)});
+      if(filters.cursor)query.set('id',`lt.${filters.cursor}`);
+      for(const key of ['hotel','apartamento','status'])if(filters[key])query.set(`data->>${key}`,`eq.${filters[key]}`);
+      return request(`/rest/v1/book_records?${query}`,{token});
+    },
     notes(token) { return request('/rest/v1/book_notes?select=id,title,body,version,updated_at&order=updated_at.desc&limit=200', { token }); },
     saveNote(token, input) { return request('/rest/v1/rpc/book_save_note', { token, method: 'POST', body: {note_id:input.id,note_title:input.title,note_body:input.body,expected_version:input.version,remove_note:input.remove === true} }); },
     support(token, id, offset = 0) {

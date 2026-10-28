@@ -1,5 +1,7 @@
 # BOOK TESK
 
+Permissões por aba, notas privadas, suporte ao mestre e assistente de IA com ações revisáveis: veja [ativação e uso](docs/ABAS-SUPORTE-NOTAS-IA.md). Esta atualização exige as migrações `202610280010_permissions.sql` e `202610280011_notes_support.sql` antes do deploy.
+
 Interface simplificada e melhorias de fluidez: veja [visual e desempenho](docs/VISUAL-DESEMPENHO.md). Esta atualização preserva as funções existentes e não exige migração nova do banco.
 
 Backup no HD externo, proteção do catálogo e melhorias de segurança: aplique as migrações `202610230008_backup.sql` e `202610230009_hardening.sql`, nessa ordem, **antes de publicar esta versão**. Veja [como usar o backup](docs/BACKUP.md) e [configuração de segurança e sessões persistidas](docs/MELHORIAS-SEGURANCA.md).
@@ -36,7 +38,7 @@ npm.cmd test
 npm.cmd start
 ```
 
-Abra <http://localhost:3000>. Não use Live Server nem abra o HTML diretamente. Para reiniciar após uma alteração no servidor, Ctrl+C e `npm.cmd start`. `npm.cmd run check:supabase` verifica a conexão com Auth, sem verificar migrações ou permissões.
+Abra <http://localhost:3000>. Não use Live Server nem abra o HTML diretamente. Para reiniciar após uma alteração no servidor, Ctrl+C e `npm.cmd start`. `npm.cmd run check:supabase` verifica a conexão com Auth e a versão esperada das migrações. Permissões e fluxos devem ser conferidos também com contas de teste.
 
 No VS Code, pressione **F5** e selecione **BOOK TESK - abrir servidor local**. A tarefa inicia o servidor quando necessário ou reutiliza o que já estiver na porta 3000. O navegador abre `http://127.0.0.1:3000`; a configuração anterior de porta 8080 foi substituída. Se mudar `PORT` no ambiente, ajuste também a URL em `.vscode/launch.json`.
 

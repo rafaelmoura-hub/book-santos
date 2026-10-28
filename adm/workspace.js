@@ -104,6 +104,62 @@ window.BookWorkspace = (() => {
     }));if(!rows.length)node.textContent='Nenhum chamado de suporte. Todos os chamados podem ser consultados no botão Suporte do topo.';}
     catch(error){node.textContent=error.message;}
   }
+  function renderAIThread(){
+    el('aiThread').innerHTML=aiMessages.map(m=>`<article class="mensagem-chat ${m.role==='user'?'minha-mensagem':''}"><strong>${m.role==='user'?'Você':'Assistente'}</strong><p>${esc(m.content)}</p></article>`).join('');el('aiThread').scrollTop=el('aiThread').scrollHeight;
+  }
+  function aiBusyState(value){
+    aiBusy=value;
+    for(const id of ['aiSend','aiNew','aiProvider','aiModel','aiKey','aiPrompt'])el(id).disabled=value;
+    el('aiDialog').setAttribute('aria-busy',String(value));
+  }
+  const fieldLabels={before:'Dados atuais',after:'Dados preparados',hotel:'Condomínio',apartamento:'Apartamento',titulo:'Título',descricao:'Descrição',assunto:'Assunto',categoria:'Categoria',prioridade:'Prioridade',responsavelLogin:'Administrador responsável',vencimento:'Vencimento',chamadoId:'Chamado vinculado',status:'Status',fechamento:'Fechamento',data:'Data',responsavel:'Responsável',responsavelPagamento:'Responsável pelo pagamento',executadoPorLogin:'Executor (login)',executadoPor:'Executor',valorServico:'Valor do serviço',valorMaterial:'Valor dos materiais',custoTotal:'Custo total',materiais:'Materiais utilizados',quantidade:'Quantidade',valor:'Valor',nome:'Nome',itens:'Itens',colunas:'Colunas',title:'Título',body:'Texto',subject:'Assunto',reason:'Motivo da reabertura',texto:'Mensagem',funcao:'Função',hotels:'Condomínios permitidos',tabs:'Abas permitidas',login:'E-mail',aba:'Tela',tipo:'Tipo',checklist:'Checklist',observacoes:'Observações',observacao:'Observação',excluir:'Excluir nota'};
+  function reviewFields(value,parent,depth=0){
+    if(depth>8)return;
+    const dl=document.createElement('dl');dl.className='ai-review-fields';
+    for(const [key,item]of Object.entries(value||{})){
+      if(['version','remove','abertaEm','criadaEm','criadaPorLogin','criadaPor','owner_id'].includes(key)||item===null||item===undefined)continue;
+      const block=document.createElement('div'),dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=fieldLabels[key]||key;
+      if(item&&typeof item==='object'){
+        const details=document.createElement('details');details.open=depth<1;
+        const summary=document.createElement('summary');summary.textContent=Array.isArray(item)?`${item.length} item(ns)`:'Ver detalhes';details.append(summary);reviewFields(item,details,depth+1);dd.append(details);
+      }else dd.textContent=typeof item==='boolean'?(item?'Sim':'Não'):String(item)||'Não informado';
+      block.append(dt,dd);dl.append(block);
+    }
+    parent.append(dl);
+  }
+  function showAIActions(actions){
+    const area=el('aiActions');area.replaceChildren();
+    for(const action of actions||[]){
+      const card=document.createElement('section');card.className='ai-action';
+      const title=document.createElement('h3');title.textContent=action.summary;
+      const notice=document.createElement('p');notice.className='workspace-hint';notice.textContent='Revise antes de confirmar. A proposta expira em 10 minutos e será descartada se você enviar um novo pedido.';
+      const button=document.createElement('button');button.type='button';button.className='acao-principal ai-action-confirm';button.textContent='Confirmar ação';
+      const cancel=document.createElement('button');cancel.type='button';cancel.className='botao-secundario';cancel.textContent='Descartar';cancel.onclick=()=>{if(!aiBusy)card.remove();};
+      const resultLabel=document.createElement('p');resultLabel.setAttribute('role','status');
+      card.append(title,notice);reviewFields(action.preview,card);card.append(button,document.createTextNode(' '),cancel,resultLabel);
+      button.onclick=async()=>{
+        if(aiBusy)return;aiBusyState(true);button.disabled=true;cancel.disabled=true;resultLabel.textContent='Executando a ação confirmada…';
+        try{
+          const result=await BookAPI.request('/api/ai/actions',{method:'POST',body:JSON.stringify({id:action.id}),timeoutMs:120000});
+          const receipt=`${result.summary}: execução confirmada${result.recordId?' · Registro #'+result.recordId:''}.`;
+          resultLabel.textContent=receipt;button.hidden=true;cancel.hidden=true;
+          if(aiMessages.at(-1)?.role==='assistant'){aiMessages.at(-1).content=(aiMessages.at(-1).content+'\n\nResultado confirmado pelo sistema: '+receipt).slice(-12000);renderAIThread();}
+          if(result.credentials){
+            const info=document.createElement('p');info.textContent='Conta criada. Guarde e compartilhe esta senha individualmente com a pessoa. Ela não será enviada à IA.';
+            const credentials=document.createElement('pre');credentials.className='ai-credentials';credentials.textContent=`E-mail: ${result.credentials.login}\nSenha inicial: ${result.credentials.senha}`;card.append(info,credentials);
+          }
+          if(result.navigate){
+            aiBusyState(false);close(el('aiDialog'));
+            if(result.navigate==='notas')await openNotes();else if(result.navigate==='suporte'&&!user.mestre)await openSupport();else mostrarAba(result.navigate);
+          }else{
+            try{await BookStore.refresh(true);}catch{resultLabel.textContent+=' A gravação foi confirmada, mas atualize a tela para conferir os dados.';}
+          }
+        }catch(error){resultLabel.textContent=error.message;button.disabled=false;button.textContent='Conferir resultado';cancel.disabled=false;}
+        finally{aiBusyState(false);}
+      };
+      area.append(card);
+    }
+  }
   function init(profile) {
     user=profile;
     const actions=document.createElement('div');actions.className='workspace-actions';
@@ -112,17 +168,20 @@ window.BookWorkspace = (() => {
     }
     document.querySelector('header').append(actions);
     const ai=dialog('aiDialog','Assistente de IA','<form id="aiForm"><div class="ai-settings"><label>Serviço<select id="aiProvider"><option value="openai">OpenAI</option><option value="gemini">Gemini</option><option value="claude">Claude</option></select></label><label>Modelo<input id="aiModel" maxlength="100" value="gpt-4.1-mini" required></label><label>Sua chave de API<input id="aiKey" type="password" minlength="16" maxlength="512" autocomplete="off" required></label></div><p class="workspace-hint">A API tem cobrança própria, separada da assinatura do aplicativo de IA. A chave não é salva e é apagada ao fechar. Apenas as mensagens desta conversa são enviadas ao provedor escolhido. O histórico fica nesta página até recarregá-la.</p><div id="aiThread" class="workspace-thread" aria-live="polite"></div><label>Mensagem<textarea id="aiPrompt" rows="3" maxlength="4000" required></textarea></label><button id="aiSend" type="submit" class="acao-principal">Enviar</button> <button id="aiNew" type="button" class="botao-secundario">Nova conversa</button></form>');
-    el('aiNew').onclick=()=>{if(aiBusy)return;aiMessages=[];el('aiThread').replaceChildren();el('aiPrompt').value='';};
-    el('aiProvider').onchange=()=>{aiMessages=[];el('aiThread').replaceChildren();el('aiKey').value='';el('aiModel').value={openai:'gpt-4.1-mini',gemini:'gemini-2.5-flash',claude:'claude-sonnet-4-5'}[el('aiProvider').value];};
+    const capabilities=document.createElement('p');capabilities.className='workspace-hint';capabilities.textContent='O assistente pode consultar dados autorizados e preparar ações no sistema. Qualquer gravação será mostrada para sua revisão e confirmação.';
+    const actionArea=document.createElement('div');actionArea.id='aiActions';el('aiThread').after(capabilities,actionArea);
+    ai.querySelector('.workspace-hint').textContent='Use a sua chave de API, com cobrança própria no provedor. A chave não é salva e é apagada ao fechar. As mensagens e os dados consultados pelas ferramentas são enviados somente ao provedor escolhido. O histórico fica nesta página até recarregá-la.';
+    el('aiNew').onclick=()=>{if(aiBusy)return;aiMessages=[];el('aiThread').replaceChildren();el('aiActions').replaceChildren();el('aiPrompt').value='';};
+    el('aiProvider').onchange=()=>{aiMessages=[];el('aiThread').replaceChildren();el('aiActions').replaceChildren();el('aiKey').value='';el('aiModel').value={openai:'gpt-4.1-mini',gemini:'gemini-2.5-flash',claude:'claude-sonnet-4-5'}[el('aiProvider').value];};
     el('aiForm').onsubmit=async event=>{
-      event.preventDefault();if(aiBusy)return;aiBusy=true;el('aiSend').disabled=true;el('aiProvider').disabled=true;el('aiNew').disabled=true;
+      event.preventDefault();if(aiBusy)return;aiBusyState(true);el('aiActions').replaceChildren();
       const text=el('aiPrompt').value.trim(),status=ai.querySelector('.workspace-status');status.textContent='A IA está respondendo…';
       const pending=[...aiMessages,{role:'user',content:text}].slice(-19);
       try{
-        const result=await BookAPI.request('/api/ai',{method:'POST',body:JSON.stringify({provider:el('aiProvider').value,model:el('aiModel').value.trim(),apiKey:el('aiKey').value.trim(),messages:pending}),timeoutMs:70000});
+        const result=await BookAPI.request('/api/ai',{method:'POST',body:JSON.stringify({provider:el('aiProvider').value,model:el('aiModel').value.trim(),apiKey:el('aiKey').value.trim(),messages:pending}),timeoutMs:150000});
         aiMessages=[...pending,{role:'assistant',content:result.answer}];el('aiPrompt').value='';
-        el('aiThread').innerHTML=aiMessages.map(m=>`<article class="mensagem-chat ${m.role==='user'?'minha-mensagem':''}"><strong>${m.role==='user'?'Você':'Assistente'}</strong><p>${esc(m.content)}</p></article>`).join('');el('aiThread').scrollTop=el('aiThread').scrollHeight;status.textContent='Resposta recebida. Confira as informações antes de usá-las.';
-      }catch(error){status.textContent=error.message;}finally{aiBusy=false;el('aiSend').disabled=false;el('aiProvider').disabled=false;el('aiNew').disabled=false;}
+        renderAIThread();showAIActions(result.actions);status.textContent=result.actions?.length?'Ações preparadas; nenhuma gravação foi feita. Revise e confirme abaixo.':'Resposta recebida. Nenhuma alteração foi executada no site.';
+      }catch(error){status.textContent=error.message;}finally{aiBusyState(false);}
     };
     dialog('notesDialog','Minhas notas','<div class="workspace-split"><aside><button type="button" id="noteNew" class="acao-principal">+ Nova nota</button><div id="notesList" class="workspace-list"></div></aside><form id="notesForm"><label>Título<input id="noteTitle" maxlength="120" required></label><label>Texto<textarea id="noteBody" maxlength="20000" rows="12"></textarea></label><button type="submit" class="acao-principal">Salvar nota</button> <button type="button" id="noteDelete" class="botao-secundario" hidden>Excluir nota</button></form></div>');
     el('noteNew').onclick=()=>editNote();el('notesForm').onsubmit=e=>{e.preventDefault();saveNote();};

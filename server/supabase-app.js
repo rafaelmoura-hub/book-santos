@@ -11,6 +11,7 @@ const { sessionStore } = require('./session-store');
 const { canTab, canCollection } = require('./permissions');
 const { uuid, validateWorkspace } = require('./workspace');
 const { generateAI } = require('./ai');
+const { createAgent } = require('./ai-agent');
 const ROOT = path.resolve(__dirname, '..');
 const fail = (status, message) => Object.assign(new Error(message), { status });
 const digest = token => createHash('sha256').update(token).digest('hex');
@@ -32,6 +33,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
   const sessions = sessionStore({ key: sessionKey, filename: sessionFile, clock });
   const attempts = new Map();
   const writes = new Map();
+  const agent = createAgent({clock});
   return http.createServer(async (req, res) => {
     const now = clock();
     const requestId = randomUUID();
@@ -119,12 +121,18 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         }
       }
       if (route === '/api/session' && req.method === 'GET') return json(200, { ...user, provider: 'supabase' });
-      if(route==='/api/ai'&&req.method==='POST'){
+      if((route==='/api/ai'||route==='/api/ai/actions')&&req.method==='POST'){
         if(user.funcao!=='adm')throw fail(403,'Disponível somente para administradores.');
-        const key=`ai:${user.id}`,quota=writes.get(key)||{count:0,until:now+60000};
-        if(quota.count>=5)throw fail(429,'Aguarde um minuto antes de enviar outra mensagem à IA.');
+        const context={provider,token:session.accessToken,user,session:sessionId,invalidateUser:id=>{for(const [key,value]of sessions)if(value.userId===id)sessions.delete(key);}};
+        const executing=route==='/api/ai/actions';
+        const key=`${executing?'ai-actions':'ai'}:${user.id}`,quota=writes.get(key)||{count:0,until:now+60000};
+        if(quota.count>=(executing?20:5))throw fail(429,'Aguarde um minuto antes de enviar outra solicitação à IA.');
         quota.count++;writes.set(key,quota);
-        return json(200,await aiGenerate(await readBody(req,150000)));
+        if(executing){
+          const input=await readBody(req,4096);if(!uuid(input?.id))throw fail(400,'Proposta inválida.');
+          return json(200,await agent.execute(input.id,context));
+        }
+        return json(200,await agent.run(await readBody(req,150000),context,aiGenerate));
       }
       if (route === '/api/orders/reopen' || route === '/api/workspace/notes' || route === '/api/workspace/support') {
         if (user.funcao !== 'adm') throw fail(403, 'Disponível somente para administradores.');

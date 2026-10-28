@@ -57,7 +57,7 @@ async function main() {
     async removeFiles(token,names) { names.forEach(name=>uploaded.delete(name)); },
     async file(token,name) { const file=uploaded.get(name); if(!file)throw Error('Arquivo inexistente');return new Response(file.bytes,{headers:{'Content-Type':file.type}}); }
   };
-  const server=createSupabaseApp(provider,{aiGenerate:async()=>({answer:'Resposta de IA simulada para teste.'})}); server.listen(0,'127.0.0.1'); await once(server,'listening');
+  const server=createSupabaseApp(provider,{aiGenerate:async raw=>raw.messages.at(-1).content.includes('Abra um card de teste pela IA')?{calls:[{id:'prepare-card',name:'preparar_acao',args:{operation:'criar_card',id:'',data_json:JSON.stringify({hotel:'Be Urban',apartamento:'214',titulo:'Card criado pela IA',descricao:'Reparo descrito pelo usuário',prioridade:'Normal'})}}],state:{}}:{answer:'Resposta de IA simulada para teste.'}}); server.listen(0,'127.0.0.1'); await once(server,'listening');
   const base=`http://127.0.0.1:${server.address().port}`;
   const profile=fs.mkdtempSync(path.join(os.tmpdir(),'book-browser-'));
   const child=spawn(chrome,['--headless=new','--disable-gpu','--no-sandbox','--no-first-run','--no-default-browser-check','--remote-debugging-port=0',`--user-data-dir=${profile}`,'about:blank'],{windowsHide:true,stdio:'ignore'});
@@ -215,6 +215,18 @@ async function main() {
     await wait("document.getElementById('backupStatus').textContent.startsWith('Backup concluído e conferido')");
     await evaluate(`(() => {const saved=[...window.testHD.folders.values()][0];if(!saved.files.has('dados.json')||!saved.folders.has('anexos'))throw Error('Cópia incompleta');window.showDirectoryPicker=async()=>saved;document.getElementById('backupVerificar').click();})()`);
     await wait("document.getElementById('backupStatus').textContent.startsWith('Backup íntegro')");
+    await evaluate("document.querySelector('.workspace-actions button').click();document.getElementById('aiKey').value='chave-nao-real-para-teste';document.getElementById('aiPrompt').value='Abra um card de teste pela IA no Be Urban 214';document.getElementById('aiForm').requestSubmit()");
+    await wait("document.querySelectorAll('#aiActions .ai-action-confirm').length===1 && document.getElementById('aiDialog').getAttribute('aria-busy')==='false'");
+    if([...records.values()].some(row=>row.data.titulo==='Card criado pela IA'))throw Error('IA gravou antes da confirmação');
+    await capture('ia-acao-desktop');
+    await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+    await evaluate("if(document.getElementById('aiDialog').scrollWidth>document.getElementById('aiDialog').clientWidth+1)throw Error('Revisão da ação excedeu a largura do celular')");
+    await capture('ia-acao-mobile');
+    await send('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
+    await evaluate("document.querySelector('#aiActions .ai-action-confirm').click()");
+    await wait("document.getElementById('aiActions').textContent.includes('execução confirmada') && document.getElementById('aiDialog').getAttribute('aria-busy')==='false'");
+    if([...records.values()].filter(row=>row.data.titulo==='Card criado pela IA').length!==1)throw Error('Confirmação não criou exatamente um card');
+    await evaluate("document.getElementById('aiDialog').querySelector('.workspace-heading button').click()");
     await evaluate("BookAPI.request('/api/logout',{method:'POST',body:'{}'})");
     await send('Page.navigate',{url:base+'/login.html'});
     await wait("typeof entrar === 'function'");
@@ -268,7 +280,7 @@ async function main() {
     await wait("location.pathname === '/login.html'");
     if(errors.length)throw new Error(errors.join('; '));
     if(dialogs.length)throw new Error('Alertas inesperados: '+dialogs.join('; '));
-    console.log(JSON.stringify({browser:'Chrome headless',tabs,catalogCheck,created:1,permissionsUpdated:1,tabPermissions:true,privateNotes:true,masterSupport:true,aiChat:'simulated',cardReopening:true,cardLifecycle:true,inspectionWithPhoto:true,inventorySaved:true,clientTicketWithPhoto:true,chatBothDirections:true,clientPermissions:true,backupAndVerification:true,responsiveWidths:[390,1440],externalDisk:'simulated',logout:true,uncaughtErrors:0}));
+    console.log(JSON.stringify({browser:'Chrome headless',tabs,catalogCheck,created:1,permissionsUpdated:1,tabPermissions:true,privateNotes:true,masterSupport:true,aiChat:'simulated',aiCardWithConfirmation:true,cardReopening:true,cardLifecycle:true,inspectionWithPhoto:true,inventorySaved:true,clientTicketWithPhoto:true,chatBothDirections:true,clientPermissions:true,backupAndVerification:true,responsiveWidths:[390,1440],externalDisk:'simulated',logout:true,uncaughtErrors:0}));
   } finally {
     socket?.close();child.kill();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));
     await delay(500);
