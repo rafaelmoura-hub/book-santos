@@ -30,13 +30,13 @@ test('datas manipuladas nunca retornam tags HTML nas duas telas', () => {
 });
 
 test('limite por conta, origem pública e prontidão do banco', async t => {
-  let healthy=true;
+  let healthy=true,now=Date.now();
   const provider={
     async ready(){if(!healthy)throw Object.assign(new Error('Migração pendente'),{status:503});},
     async login(email,password){if(password!=='correta')throw Object.assign(new Error('Inválido'),{status:401});return {access_token:'token'};},
     async profile(){return {id:'id',funcao:'cliente'};}
   };
-  const server=createSupabaseApp(provider,{secure:true,publicOrigin:'https://teste.example.com'});
+  const server=createSupabaseApp(provider,{secure:true,publicOrigin:'https://teste.example.com',clock:()=>now});
   server.listen(0,'127.0.0.1');await once(server,'listening');
   t.after(()=>new Promise(resolve=>server.close(resolve)));
   const base=`http://127.0.0.1:${server.address().port}`;
@@ -49,6 +49,6 @@ test('limite por conta, origem pública e prontidão do banco', async t => {
   assert.match(accepted.headers.get('strict-transport-security'),/31536000/);
   assert.equal((await login('outro@example.com','correta','https://intruso.example.com')).status,403);
   assert.equal((await fetch(base+'/ready')).status,200);
-  healthy=false;assert.equal((await fetch(base+'/ready')).status,503);
+  healthy=false;now+=10001;assert.equal((await fetch(base+'/ready')).status,503);
   assert.equal((await fetch(base+'/health')).status,200);
 });

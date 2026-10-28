@@ -8,14 +8,21 @@ const { validateUser } = require('./users');
 const Periods = require('../assets/periods');
 const { validateBackup, attachments } = require('./backup');
 const { sessionStore } = require('./session-store');
+const { canTab, canCollection } = require('./permissions');
+const { uuid, validateWorkspace } = require('./workspace');
+const { generateAI } = require('./ai');
+const { createAgent } = require('./ai-agent');
+const { boundedBytes,requireJSON,validateProfile } = require('./security');
 const ROOT = path.resolve(__dirname, '..');
 const fail = (status, message) => Object.assign(new Error(message), { status });
 const digest = token => createHash('sha256').update(token).digest('hex');
 
 async function readBody(req, limit = 15 * 1024 * 1024) {
+  const declared=req.headers['content-length'];
+  if(declared&&(!/^\d+$/.test(declared)||Number(declared)>limit))throw fail(413,'Requisição acima do tamanho permitido.');
   const chunks = [];
   let size = 0;
-  for await (const chunk of req) {
+  for await (const chunk of req.iterator({destroyOnReturn:false})) {
     size += chunk.length;
     if (size > limit) throw fail(413, 'Requisição acima do tamanho permitido.');
     chunks.push(chunk);
@@ -24,12 +31,16 @@ async function readBody(req, limit = 15 * 1024 * 1024) {
   catch { throw fail(400, 'JSON inválido.'); }
 }
 
-function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Date.now, sessionKey, sessionFile } = {}) {
+function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Date.now, sessionKey, sessionFile, aiGenerate = generateAI, maxSessions = 5000, sessionsPerUser = 5 } = {}) {
+  if(!Number.isSafeInteger(maxSessions)||maxSessions<1||!Number.isSafeInteger(sessionsPerUser)||sessionsPerUser<1)throw new Error('Limites de sessão inválidos.');
   // Tokens stay on the server; optional encrypted storage preserves a single instance's sessions.
   const sessions = sessionStore({ key: sessionKey, filename: sessionFile, clock });
   const attempts = new Map();
   const writes = new Map();
-  return http.createServer(async (req, res) => {
+  const agent = createAgent({clock});
+  const inFlight=new Map();let readyCheck,readyUntil=0;
+  const cookieName=secure?'__Host-book_session':'book_session';
+  const server=http.createServer({maxHeaderSize:16384,requestTimeout:60000,headersTimeout:15000,keepAliveTimeout:5000},async (req, res) => {
     const now = clock();
     const requestId = randomUUID();
     res.setHeader('X-Request-ID', requestId);
@@ -45,19 +56,26 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
     res.setHeader('Referrer-Policy', 'same-origin');
     res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
     res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    res.setHeader('Cross-Origin-Resource-Policy','same-origin');
+    res.setHeader('Cross-Origin-Opener-Policy','same-origin');
+    res.setHeader('X-Permitted-Cross-Domain-Policies','none');
     if (secure) res.setHeader('Strict-Transport-Security', 'max-age=31536000');
     const json = (status, data) => { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(data)); };
-    const cookie = (token, age) => res.setHeader('Set-Cookie', `book_session=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${age}${secure ? '; Secure' : ''}`);
+    const cookie = (token, age) => res.setHeader('Set-Cookie', `${cookieName}=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${age}${secure ? '; Secure' : ''}`);
     try {
       const url = new URL(req.url, 'http://localhost');
       const route = url.pathname;
       if (route === '/health' && req.method === 'GET') return json(200, { status: 'ok' });
       if (route === '/ready' && req.method === 'GET') {
-        await provider.ready();
+        if(clock()>=readyUntil){
+          if(!readyCheck)readyCheck=Promise.resolve().then(()=>provider.ready()).then(()=>{readyUntil=clock()+10000;}).finally(()=>{readyCheck=null;});
+          await readyCheck;
+        }
         return json(200, { status: 'ok' });
       }
       if (!['GET', 'HEAD'].includes(req.method) && (req.headers['sec-fetch-site'] === 'cross-site' || req.headers.origin && req.headers.origin !== (publicOrigin || `${secure ? 'https' : 'http'}://${req.headers.host}`))) throw fail(403, 'Origem não permitida.');
-      const token = /(?:^|;\s*)book_session=([a-f0-9]{64})(?:;|$)/.exec(req.headers.cookie || '')?.[1];
+      if(route.startsWith('/api/')&&!['GET','HEAD'].includes(req.method))requireJSON(req);
+      const token = new RegExp(`(?:^|;\\s*)${cookieName}=([a-f0-9]{64})(?:;|$)`).exec(req.headers.cookie || '')?.[1];
       const sessionId = token ? digest(token) : null;
       const session = sessions.get(sessionId);
       if (route === '/api/login' && req.method === 'POST') {
@@ -75,11 +93,14 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         attempt.count++; attempts.set(account, attempt);
         const auth = await provider.login(input.login.trim().toLowerCase(), input.senha);
         let user;
-        try { user = await provider.profile(auth.access_token); }
+        try { user = validateProfile(await provider.profile(auth.access_token)); }
         catch (error) { await provider.logout(auth.access_token).catch(() => {}); throw error; }
         const freshToken = randomBytes(32).toString('hex');
         const lifetime = 8 * 3600;
         sessions.delete(sessionId);
+        const previous=[...sessions].filter(([,value])=>value.userId===user.id).sort((a,b)=>a[1].expires-b[1].expires);
+        while(previous.length>=sessionsPerUser)sessions.delete(previous.shift()[0]);
+        if(sessions.size>=maxSessions){await provider.logout(auth.access_token).catch(()=>{});throw fail(503,'Capacidade de sessões atingida. Aguarde antes de entrar novamente.');}
         sessions.set(digest(freshToken), { userId: user.id, accessToken: auth.access_token, refreshToken: auth.refresh_token, authExpires: now + (Number(auth.expires_in) || 3600) * 1000, expires: now + lifetime * 1000 });
         attempts.delete(account);
         cookie(freshToken, lifetime);
@@ -94,6 +115,12 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
       let user;
       if (route.startsWith('/api/') || protectedFile) {
         if (session) {
+          if(route.startsWith('/api/')){
+            const count=inFlight.get(sessionId)||0;if(count>=12)throw fail(429,'Há muitas solicitações em andamento. Aguarde alguns segundos.');
+            inFlight.set(sessionId,count+1);let released=false;
+            const release=()=>{if(released)return;released=true;const next=(inFlight.get(sessionId)||1)-1;if(next)inFlight.set(sessionId,next);else inFlight.delete(sessionId);};
+            res.once('finish',release);res.once('close',release);
+          }
           try {
             if (session.refreshToken && session.authExpires < now + 30000) {
               if (!session.refreshing) session.refreshing = provider.refresh(session.refreshToken).then(auth => {
@@ -103,7 +130,8 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
               }).finally(() => { session.refreshing = null; });
               await session.refreshing;
             }
-            user = await provider.profile(session.accessToken);
+            user = validateProfile(await provider.profile(session.accessToken));
+            if(user.id!==session.userId||sessions.get(sessionId)!==session)throw fail(401,'A sessão mudou. Entre novamente para continuar.');
           }
           catch (error) {
             if ([401, 403].includes(error.status)) { sessions.delete(sessionId); cookie('', 0); }
@@ -116,6 +144,45 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         }
       }
       if (route === '/api/session' && req.method === 'GET') return json(200, { ...user, provider: 'supabase' });
+      if((route==='/api/ai'||route==='/api/ai/actions')&&req.method==='POST'){
+        if(user.funcao!=='adm')throw fail(403,'Disponível somente para administradores.');
+        const context={provider,token:session.accessToken,user,session:sessionId,invalidateUser:id=>{for(const [key,value]of sessions)if(value.userId===id)sessions.delete(key);}};
+        const executing=route==='/api/ai/actions';
+        const key=`${executing?'ai-actions':'ai'}:${user.id}`,quota=writes.get(key)||{count:0,until:now+60000};
+        if(quota.count>=(executing?20:5))throw fail(429,'Aguarde um minuto antes de enviar outra solicitação à IA.');
+        quota.count++;writes.set(key,quota);
+        if(executing){
+          const input=await readBody(req,4096);if(!uuid(input?.id))throw fail(400,'Proposta inválida.');
+          return json(200,await agent.execute(input.id,context));
+        }
+        return json(200,await agent.run(await readBody(req,150000),context,aiGenerate));
+      }
+      if (route === '/api/orders/reopen' || route === '/api/workspace/notes' || route === '/api/workspace/support') {
+        if (user.funcao !== 'adm') throw fail(403, 'Disponível somente para administradores.');
+        if (route === '/api/orders/reopen' && !canTab(user, 'os')) throw fail(403, 'Sem permissão para reabrir cards.');
+        const kind = route.endsWith('/notes') ? 'notes' : 'support';
+        if (req.method === 'GET' && route !== '/api/orders/reopen') {
+          const id = url.searchParams.get('id');
+          const offset = Number(url.searchParams.get('offset') || 0);
+          if (id && !uuid(id) || !Number.isSafeInteger(offset) || offset < 0 || offset > 100000) throw fail(400, 'Consulta inválida.');
+          return json(200, kind === 'notes' ? await provider.notes(session.accessToken) : await provider.support(session.accessToken, id, offset));
+        }
+        if (req.method !== 'POST') throw fail(405, 'Método não permitido.');
+        const quotaKey = `workspace:${user.id}`, quota = writes.get(quotaKey) || {count:0,until:now+60000};
+        if (quota.count >= 30) throw fail(429, 'Aguarde um minuto antes de salvar novamente.');
+        quota.count++; writes.set(quotaKey,quota);
+        const input = await readBody(req, 100000);
+        if (route === '/api/orders/reopen') {
+          if (!input || !/^[0-9]{1,16}$/.test(input.id) || !Number.isSafeInteger(input.version) || input.version < 1 || typeof input.reason !== 'string' || input.reason.trim().length < 3 || input.reason.length > 1000) throw fail(400, 'Informe card, versão e motivo válidos.');
+          await provider.reopenOrder(session.accessToken, {id:input.id,version:input.version,reason:input.reason.trim()});
+        } else {
+          const valid = validateWorkspace(kind, input);
+          if (kind === 'support' && valid.status && !user.mestre) throw fail(403, 'Somente o mestre altera o status do suporte.');
+          if (kind === 'notes') await provider.saveNote(session.accessToken, valid);
+          else await provider.sendSupport(session.accessToken, valid);
+        }
+        return json(200, {ok:true});
+      }
       if (route === '/api/backup' && req.method === 'POST') {
         if (user.funcao !== 'adm' || !user.mestre) throw fail(403, 'Somente o administrador mestre pode fazer backup.');
         const selected = validateBackup(await readBody(req, 4096));
@@ -128,6 +195,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         return json(200, { format: 'book-santos-backup', version: 1, selected, data, files: selected.includes('anexos') ? attachments(data.records) : [] });
       }
       if (route === '/api/finance' && req.method === 'GET') {
+        if (!canTab(user, 'financeiro')) throw fail(403, 'Sem acesso ao financeiro.');
         if (user.funcao !== 'adm') throw fail(403, 'Financeiro disponível somente para administradores.');
         const payer = url.searchParams.get('payer');
         const cursor = url.searchParams.get('cursor');
@@ -157,11 +225,13 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         try { pages = JSON.parse(url.searchParams.get('pages') || '{}'); }
         catch { throw fail(400, 'Paginação inválida.'); }
         if (!pages || Array.isArray(pages) || typeof pages !== 'object' || Object.values(pages).some(count => !Number.isInteger(count) || count < 1 || count > 20)) throw fail(400, 'Use entre 1 e 20 páginas por coleção.');
-        const permitted = COLLECTIONS.filter(key => user.funcao === 'adm' || ['chamados','conversasSuporte'].includes(key));
+        const permitted = COLLECTIONS.filter(key => canCollection(user, key));
         let active = permitted;
         if (url.searchParams.has('collections')) {
           try { active = JSON.parse(url.searchParams.get('collections')); } catch { throw fail(400, 'Coleções inválidas.'); }
-          if (!Array.isArray(active) || active.length > permitted.length || new Set(active).size !== active.length || active.some(key => !permitted.includes(key))) throw fail(400, 'Coleções inválidas.');
+          if (!Array.isArray(active) || active.length > COLLECTIONS.length || new Set(active).size !== active.length || active.some(key => !COLLECTIONS.includes(key))) throw fail(400, 'Coleções inválidas.');
+          if(user.funcao!=='adm'&&active.some(key=>!permitted.includes(key)))throw fail(400,'Coleções inválidas.');
+          active = active.filter(key => permitted.includes(key));
         }
         const result = await Promise.all(active.map(async key => {
           let cursor = null; const loaded = [];
@@ -180,6 +250,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         const collection = url.searchParams.get('collection');
         const cursor = url.searchParams.get('cursor');
         if (!COLLECTIONS.includes(collection) || cursor && !validId(cursor)) throw fail(400, 'Consulta inválida.');
+        if (!canCollection(user, collection)) throw fail(403, 'Sem acesso a esta aba.');
         if (user.funcao !== 'adm' && !['chamados', 'conversasSuporte'].includes(collection)) throw fail(403, 'Acesso negado.');
         return json(200, await provider.records(session.accessToken, collection, cursor));
       }
@@ -203,8 +274,10 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         const filename = decodeURIComponent(route.slice('/api/files/'.length));
         if (!filePath(filename)) throw fail(400, 'Caminho de anexo inválido.');
         const file = await provider.file(session.accessToken, filename);
-        const bytes = Buffer.from(await file.arrayBuffer());
-        res.writeHead(200, { 'Content-Type': file.headers.get('content-type') || 'application/octet-stream', 'Content-Length': bytes.length, 'Content-Security-Policy': "default-src 'none'; sandbox" });
+        const bytes = await boundedBytes(file);
+        const type=(file.headers.get('content-type')||'').split(';')[0].toLowerCase();
+        const safeType=['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm','application/pdf'].includes(type)?type:'application/octet-stream';
+        res.writeHead(200, { 'Content-Type': safeType, 'Content-Length': bytes.length, 'Content-Security-Policy': "default-src 'none'; sandbox",...(safeType==='application/octet-stream'?{'Content-Disposition':'attachment; filename="anexo"'}:{}) });
         return res.end(bytes);
       }
       if (route === '/api/users' && req.method === 'GET') {
@@ -237,8 +310,11 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
       res.writeHead(200, { 'Content-Type': `${{ '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript' }[path.extname(file)]}; charset=utf-8` });
       res.end(req.method === 'HEAD' ? undefined : content);
     } catch (error) {
+      if(error.status===413){res.setHeader('Connection','close');req.resume();}
       json(error.status || (error.code === 'ENOENT' ? 404 : 500), { message: error.status ? error.message : 'Não foi possível concluir a operação.' });
     }
   });
+  server.maxHeadersCount=64;server.maxRequestsPerSocket=100;server.maxConnections=256;
+  return server;
 }
 module.exports = { createSupabaseApp };

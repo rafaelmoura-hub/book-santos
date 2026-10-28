@@ -6,6 +6,7 @@ const { openDatabase } = require('./database');
 const { hashPassword } = require('./passwords');
 
 (async () => {
+  if(process.env.NODE_ENV==='production')throw new Error('Este assistente SQLite é exclusivo para testes locais. Configure o Supabase em produção.');
   const db = openDatabase(process.env.DATABASE_PATH || path.join(__dirname, '..', 'data', 'book-santos.sqlite'));
   let rl;
   try {

@@ -2,6 +2,17 @@ window.BookUsers = (() => {
   let users = [], editing = null, saving = false, canCreate = false, loaded = false, loading = null;
   const el = id => document.getElementById(id);
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  function tabFields() {
+    if (el('usuarioAbas')) return;
+    const field=document.createElement('fieldset');field.id='usuarioAbas';field.className='usuario-hoteis';
+    const legend=document.createElement('legend');legend.textContent='Abas permitidas';field.append(legend);
+    for(const [id,name] of Object.entries(BookWorkspace.labels)){
+      const label=document.createElement('label'), checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.value=id;checkbox.checked=true;
+      label.append(checkbox,document.createTextNode(' '+name));field.append(label);
+    }
+    el('usuarioFuncao').closest('label').after(field);
+    const toggle=()=>{field.hidden=el('usuarioFuncao').value!=='adm';};el('usuarioFuncao').addEventListener('change',toggle);toggle();
+  }
   function render() {
     const query = el('buscaUsuario').value.trim().toLocaleLowerCase('pt-BR');
     const selected = users.filter(user => `${user.nome} ${user.login}`.toLocaleLowerCase('pt-BR').includes(query));
@@ -48,6 +59,7 @@ window.BookUsers = (() => {
     }
   }
   async function open(id) {
+    tabFields();
     if (saving) return;
     if (!loaded && !await load()) return;
     if (!id && !canCreate) {
@@ -66,6 +78,8 @@ window.BookUsers = (() => {
     el('usuarioSenha').disabled = !!editing;
     el('usuarioSenha').required = !editing;
     el('usuarioFuncao').value = editing?.funcao || 'cliente';
+    el('usuarioAbas').hidden=el('usuarioFuncao').value!=='adm';
+    el('usuarioAbas').querySelectorAll('input').forEach(input=>{input.checked=(editing?.tabs ?? Object.keys(BookWorkspace.labels)).includes(input.value);});
     for (const hotel of BookCatalog.hotels) el(`usuario${hotel}`).checked = !!editing?.book_hotel_access?.some(row => row.hotel === hotel);
     el('usuarioModal').style.display = 'block';
     el('usuarioNome').focus();
@@ -80,6 +94,7 @@ window.BookUsers = (() => {
     event.preventDefault();
     if (saving || !el('formUsuario').reportValidity()) return;
     const input = { nome: el('usuarioNome').value.trim(), funcao: el('usuarioFuncao').value, hotels: BookCatalog.hotels.filter(hotel => el(`usuario${hotel}`).checked) };
+    input.tabs=input.funcao==='adm'?[...el('usuarioAbas').querySelectorAll('input:checked')].map(field=>field.value):[];
     if (editing) { input.id = editing.id; input.version = editing.version; }
     else { input.login = el('usuarioEmail').value.trim(); input.senha = el('usuarioSenha').value; }
     saving = true;

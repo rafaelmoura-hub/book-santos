@@ -26,6 +26,8 @@
         <button id="abaBackup" class="aba" data-on-click="mostrarAba('backup')" hidden>Backup</button>
     </nav>
     <main>
+        <section id="visaoInicio" hidden><h2>Seu acesso</h2><p>Use os atalhos de suporte e notas no topo. Peça ao mestre a liberação das abas necessárias.</p></section>
+        <section id="visaoSuporte" hidden><div class="titulo-secao"><h2>Suporte</h2><button type="button" id="masterSupportRefresh" class="botao-secundario">Atualizar chamados</button></div><div id="masterSupportList"></div></section>
         <section id="visaoBackup" hidden>
           <h2>Backup no HD externo</h2>
           <p>Escolha os dados e salve uma cópia no HD externo.</p>
@@ -245,6 +247,7 @@
     <script src="../assets/periods.js"></script>
     <script src="financeiro.js"></script>
     <script src="condominios.js"></script>
+    <script src="workspace.js"></script>
     <script src="usuarios.js"></script>
     <script src="backup.js"></script>
     <script src="../assets/catalog.js"></script>

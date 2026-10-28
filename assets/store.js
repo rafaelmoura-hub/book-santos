@@ -83,7 +83,7 @@ window.BookStore = (() => {
     }
     async function refresh(force = false) {
         if (!force && !activeCollections.length) return;
-        if (refreshing || busy || !force && (document.hidden || document.querySelector('.modal[style*="block"]') || /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName))) return;
+        if (refreshing || busy || !force && (document.hidden || document.querySelector('.modal[style*="block"],dialog[open]') || /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName))) return;
         refreshing = true;
         let changed = false;
         try {
@@ -208,7 +208,7 @@ window.BookStore = (() => {
         if (files.some(file => !types.includes(file.type))) throw new Error('Use JPG, PNG, WEBP, GIF, MP4, WEBM ou PDF.');
     }
     function protectActions() {
-        for (const name of ['abrirChamado','salvarOS','salvarRascunhoFechamentoOS','salvarFechamentoOS','salvarVistoria','enviarMensagemCliente','enviarMensagemAdmin']) {
+        for (const name of ['abrirChamado','alterarStatusOS','salvarOS','salvarRascunhoFechamentoOS','salvarFechamentoOS','salvarVistoria','enviarMensagemCliente','enviarMensagemAdmin']) {
             const original = window[name];
             if (typeof original !== 'function') continue;
             let running = false;

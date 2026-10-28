@@ -18,9 +18,9 @@ test('somente mestre gerencia contas; dados privados não retornam ao navegador'
   const provider={canCreateUsers:true,async login(){return {access_token:'token'};},async profile(){return {id:'master',funcao:'adm',mestre:master};},async managedUsers(){return [{id,nome:'Novo'}];},async saveUser(token,value){saved.push(value);}};
   const server=createSupabaseApp(provider);server.listen(0,'127.0.0.1');await once(server,'listening');t.after(()=>new Promise(r=>server.close(r)));
   const base=`http://127.0.0.1:${server.address().port}`;
-  const login=await fetch(base+'/api/login',{method:'POST',body:JSON.stringify({login:'master@example.com',senha:'senha'})});
+  const login=await fetch(base+'/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({login:'master@example.com',senha:'senha'})});
   const cookie=login.headers.get('set-cookie').split(';')[0];
-  const req=(method='GET',body)=>fetch(base+'/api/manage/users',{method,headers:{Cookie:cookie},body:body?JSON.stringify(body):undefined});
+  const req=(method='GET',body)=>fetch(base+'/api/manage/users',{method,headers:{Cookie:cookie,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
   assert.equal((await req()).status,403);assert.equal((await req('POST',input)).status,403);assert.equal(saved.length,0);
   master=true;assert.deepEqual(await (await req()).json(),{users:[{id,nome:'Novo'}],canCreate:true});
   const response=await req('POST',input);assert.equal(response.status,200);assert.deepEqual(await response.json(),{ok:true});assert.equal(saved.length,1);

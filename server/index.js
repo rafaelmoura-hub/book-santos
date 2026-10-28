@@ -120,6 +120,7 @@ function createApp(db, { secure = false } = {}) {
   });
 }
 if (require.main === module) {
+  if(process.env.NODE_ENV==='production')throw new Error('Use npm start para executar o servidor Supabase em produção.');
   const db = openDatabase(process.env.DATABASE_PATH || path.join(ROOT, 'data', 'book-santos.sqlite'));
   const port = Number(process.env.PORT || 3000);
   createApp(db, { secure: process.env.COOKIE_SECURE === 'true' }).listen(port, '127.0.0.1', () => console.log(`BOOK TESK: http://localhost:${port}`));

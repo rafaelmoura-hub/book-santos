@@ -1,6 +1,7 @@
 const { hotels, filePath } = require('../assets/catalog');
 const { randomUUID } = require('node:crypto');
 const Money = require('../assets/money');
+const { canCollection } = require('./permissions');
 const COLLECTIONS = ['chamados', 'ordensServico', 'vistorias', 'estoqueBookSantos', 'conversasSuporte'];
 const fail = (status, message) => Object.assign(new Error(message), { status });
 const validId = value => typeof value === 'string' && /^[\w@:.-]{1,200}$/.test(value);
@@ -13,6 +14,9 @@ function validateChanges(input, user) {
     const key = `${change.collection}/${change.id}`;
     if (seen.has(key)) throw fail(400, 'Registro duplicado no lote.');
     seen.add(key);
+    const metadata=JSON.stringify(change.data,(field,value)=>typeof value==='string'&&value.startsWith('data:')?'[anexo]':value);
+    if(Buffer.byteLength(metadata,'utf8')>(change.collection==='estoqueBookSantos'?512*1024:128*1024))throw fail(413,'Dados do registro acima do limite permitido. Divida o conteúdo.');
+    if (!canCollection(user, change.collection, true)) throw fail(403, 'Acesso negado a esta aba.');
     if (user.funcao !== 'adm' && !['chamados', 'conversasSuporte'].includes(change.collection)) throw fail(403, 'Acesso negado.');
     if (change.collection !== 'estoqueBookSantos' && !hotels.includes(change.data.hotel)) throw fail(400, 'Hotel inválido.');
     if (change.collection === 'estoqueBookSantos' && change.id !== 'singleton') throw fail(400, 'Estoque inválido.');
