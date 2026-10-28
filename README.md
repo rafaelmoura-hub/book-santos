@@ -1,6 +1,6 @@
 # BOOK TESK
 
-Permissões por aba, notas privadas, suporte ao mestre e assistente de IA com ações revisáveis: veja [ativação e uso](docs/ABAS-SUPORTE-NOTAS-IA.md). Esta atualização exige as migrações `202610280010_permissions.sql` e `202610280011_notes_support.sql` antes do deploy.
+Permissões por aba, notas privadas, suporte ao mestre e assistente de IA com ações revisáveis: veja [ativação e uso](docs/ABAS-SUPORTE-NOTAS-IA.md). Antes do deploy, aplique em ordem as migrações `202610280010_permissions.sql`, `202610280011_notes_support.sql` e `202610280012_security.sql`. Veja também a [revisão de segurança](docs/SEGURANCA-20261028.md).
 
 Interface simplificada e melhorias de fluidez: veja [visual e desempenho](docs/VISUAL-DESEMPENHO.md). Esta atualização preserva as funções existentes e não exige migração nova do banco.
 

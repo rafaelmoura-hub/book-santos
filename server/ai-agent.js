@@ -303,7 +303,9 @@ function createAgent({clock=Date.now,ttl=10*60000,maxProposals=500}={}){
     if(action.changes){
      if(action.stockVersion!==undefined){const stock=await getRecord(ctx,'estoqueBookSantos','singleton');if(stock.version!==action.stockVersion)throw fail(409,'O estoque mudou desde a revisão. Prepare uma nova proposta para conferir os valores.');}
      const changes=clone(action.changes);if(action.operation==='finalizar_card')changes[0].data.fechamento.finalizadaEm=new Date(clock()).toISOString();
-     validateChanges(changes,user);await provider.commit(token,changes);result.recordId=changes[0].id;
+     validateChanges(changes,user);
+     if(provider.aiCommit)await provider.aiCommit(token,changes,action.stockVersion??null);else await provider.commit(token,changes);
+     result.recordId=changes[0].id;
     }
     else if(action.operation==='reabrir_card')await provider.reopenOrder(token,action.input);
     else if(['criar_nota','editar_nota','excluir_nota'].includes(action.operation))await provider.saveNote(token,action.input);

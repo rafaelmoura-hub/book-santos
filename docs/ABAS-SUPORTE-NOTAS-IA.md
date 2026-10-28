@@ -7,8 +7,9 @@ Esta versão requer as migrações anteriores até 9. Antes de publicar o novo s
 1. Abra o projeto correto em Supabase → SQL Editor → New query.
 2. Execute todo o arquivo `supabase/migrations/202610280010_permissions.sql`.
 3. Em uma nova consulta, execute todo o arquivo `supabase/migrations/202610280011_notes_support.sql`.
-4. Execute `select public.book_schema_version();`. O resultado deve ser **11**.
-5. Publique a nova versão do servidor e entre novamente no site.
+4. Em uma nova consulta, execute todo o arquivo `supabase/migrations/202610280012_security.sql`.
+5. Execute `select public.book_schema_version();`. O resultado deve ser **12**.
+6. Publique a nova versão do servidor e entre novamente no site.
 
 As migrações são transacionais e podem ser reaplicadas. Não apagam registros anteriores. Preserve o backup habitual antes da atualização. O servidor verifica a versão em `/ready` para evitar publicar funcionalidades sem as tabelas necessárias.
 

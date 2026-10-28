@@ -1,4 +1,5 @@
 const failure = (status, message) => Object.assign(new Error(message), { status });
+const {boundedBytes}=require('./security');
 
 function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
   if (!url || !key?.startsWith('sb_publishable_')) throw new Error('Configure SUPABASE_URL e SUPABASE_PUBLISHABLE_KEY no arquivo .env.');
@@ -8,7 +9,7 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
     let response;
     try {
       response = await fetchImpl(new URL(route, origin), {
-        method, signal: AbortSignal.timeout(timeoutMs),
+        method, signal: AbortSignal.timeout(timeoutMs), redirect:'error',
         headers: { apikey: key, 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: body === undefined ? undefined : JSON.stringify(body)
       });
@@ -16,7 +17,7 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
     let data;
     if (response.status === 204) data = null;
     else {
-      try { data = await response.json(); }
+      try { data = JSON.parse((await boundedBytes(response,16*1024*1024)).toString('utf8')); }
       catch { throw failure(503, 'Resposta incompleta do Supabase. Atualize os dados antes de tentar novamente.'); }
     }
     if (!response.ok) {
@@ -36,11 +37,13 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
     let response;
     try {
       response = await fetchImpl(new URL(route, origin), {
-        method, signal: AbortSignal.timeout(15000), headers: { apikey: secretKey, 'Content-Type': 'application/json' },
+        method, signal: AbortSignal.timeout(15000), redirect:'error', headers: { apikey: secretKey, 'Content-Type': 'application/json' },
         body: body === undefined ? undefined : JSON.stringify(body)
       });
     } catch { throw failure(503, 'Falha de conexão ao cadastrar a conta. Confira no painel antes de tentar novamente.'); }
-    const data = await response.json().catch(() => null);
+    let data;
+    try{data=response.status===204?null:JSON.parse((await boundedBytes(response,1024*1024)).toString('utf8'));}
+    catch{throw failure(503,'Resposta incompleta ao cadastrar a conta. Confira no painel antes de tentar novamente.');}
     if (!response.ok) {
       if (['email_exists','email_conflict','user_already_exists'].includes(data?.code) || response.status === 409) throw failure(409, 'Já existe uma conta com esse e-mail.');
       if (response.status === 422 || response.status === 400) throw failure(400, 'O cadastro foi recusado. Confira o e-mail e os requisitos de senha.');
@@ -54,6 +57,7 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
     if (profile.funcao !== 'adm' || !profile.mestre) throw failure(403, 'Somente o administrador mestre pode gerenciar usuários.');
   }
   const provider = {
+    aiCommit(token,changes,stockVersion=null){return request('/rest/v1/rpc/book_ai_commit',{token,method:'POST',body:{changes,expected_stock_version:stockVersion}});},
     async record(token,collection,id) {
       const query=new URLSearchParams({select:'id,data,owner_id,version,hotel',collection:`eq.${collection}`,id:`eq.${id}`,limit:'1'});
       return (await request(`/rest/v1/book_records?${query}`,{token}))[0]||null;
@@ -115,7 +119,7 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
     apartments(token) { return request('/rest/v1/book_apartments?select=hotel,apartment&order=apartment&limit=10000', { token }); },
     async ready() {
       await request('/auth/v1/settings');
-      if (await request('/rest/v1/rpc/book_schema_version', { method: 'POST', body: {} }) !== 11) throw failure(503, 'Aplique as migrações até 202610280011_notes_support.sql antes de publicar esta versão.');
+      if (await request('/rest/v1/rpc/book_schema_version', { method: 'POST', body: {} }) !== 12) throw failure(503, 'Aplique as migrações até 202610280012_security.sql antes de publicar esta versão.');
       return { ok: true };
     },
     commit(token, changes) { return request('/rest/v1/rpc/book_commit', { token, method: 'POST', body: { changes } }); },
@@ -124,7 +128,7 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
       let response;
       try {
         response = await fetchImpl(new URL(`/storage/v1/object/book-attachments/${filename}`, origin), {
-          method: 'POST', signal: AbortSignal.timeout(30000), headers: { apikey: key, Authorization: `Bearer ${token}`, 'Content-Type': type }, body: bytes
+          method: 'POST', signal: AbortSignal.timeout(30000), redirect:'error', headers: { apikey: key, Authorization: `Bearer ${token}`, 'Content-Type': type }, body: bytes
         });
       } catch { throw failure(503, 'Falha ao enviar anexo. Tente novamente.'); }
       if (!response.ok) throw failure(502, 'O anexo não foi salvo. Confira o acesso ao hotel e a migração do Storage.');
@@ -133,7 +137,7 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
       let response;
       try {
         response = await fetchImpl(new URL(`/storage/v1/object/authenticated/book-attachments/${filename}`, origin), {
-          signal: AbortSignal.timeout(30000), headers: { apikey: key, Authorization: `Bearer ${token}` }
+          signal: AbortSignal.timeout(30000), redirect:'error', headers: { apikey: key, Authorization: `Bearer ${token}` }
         });
       } catch { throw failure(503, 'Não foi possível carregar o anexo.'); }
       if (!response.ok) throw failure(404, 'Anexo indisponível ou sem permissão de acesso.');
