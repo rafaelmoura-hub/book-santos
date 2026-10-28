@@ -2,7 +2,7 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "BOOK TESC: iniciar servidor",
+            "label": "BOOK TESK: iniciar servidor",
             "type": "process",
             "command": "node",
             "args": ["scripts/dev-server.js"],
@@ -13,8 +13,8 @@
                 "pattern": { "regexp": "^(.+):(\\d+):(\\d+): (error|warning): (.*)$", "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5 },
                 "background": {
                     "activeOnStart": true,
-                    "beginsPattern": "BOOK TESC: verificando servidor",
-                    "endsPattern": "BOOK TESC: pronto em"
+                    "beginsPattern": "BOOK TESK: verificando servidor",
+                    "endsPattern": "BOOK TESK: pronto em"
                 }
             },
             "presentation": { "reveal": "always", "panel": "dedicated" },

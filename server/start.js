@@ -10,7 +10,7 @@ try {
   const { port, host, ...options } = loadConfig();
   const server = createSupabaseApp(provider, options);
   server.on('error', error => { console.error(error.code === 'EADDRINUSE' ? `A porta ${port} já está em uso.` : 'Não foi possível iniciar o servidor.'); process.exitCode = 1; });
-  server.listen(port, host, () => console.log(`BOOK TESC iniciado na porta ${port}.`));
+  server.listen(port, host, () => console.log(`BOOK TESK iniciado na porta ${port}.`));
   for (const signal of ['SIGTERM', 'SIGINT']) process.on(signal, () => {
     server.close(() => process.exit(0));
     setTimeout(() => process.exit(1), 10000).unref();

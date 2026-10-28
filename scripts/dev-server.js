@@ -10,13 +10,13 @@ async function main() {
   const { port, host } = loadConfig();
   const address = ['0.0.0.0', '::'].includes(host) ? '127.0.0.1' : host;
   const origin = `http://${address.includes(':') ? `[${address}]` : address}:${port}`;
-  console.log('BOOK TESC: verificando servidor');
+  console.log('BOOK TESK: verificando servidor');
   try {
     const response = await fetch(`${origin}/health`, { signal: AbortSignal.timeout(1500) });
     if (response.ok && (await response.json()).status === 'ok') {
       const login = await fetch(`${origin}/login.html`, { signal: AbortSignal.timeout(1500) });
-      if (login.ok && (await login.text()).includes('BOOK TESC')) {
-        console.log(`BOOK TESC: pronto em ${origin} (servidor já iniciado)`);
+      if (login.ok && (await login.text()).includes('BOOK TESK')) {
+        console.log(`BOOK TESK: pronto em ${origin} (servidor já iniciado)`);
         return;
       }
     }
@@ -28,9 +28,9 @@ async function main() {
   let ready = false;
   child.stdout.on('data', chunk => {
     process.stdout.write(chunk);
-    if (!ready && chunk.toString().includes('BOOK TESC iniciado na porta')) {
+    if (!ready && chunk.toString().includes('BOOK TESK iniciado na porta')) {
       ready = true;
-      console.log(`BOOK TESC: pronto em ${origin}`);
+      console.log(`BOOK TESK: pronto em ${origin}`);
     }
   });
   child.on('error', error => { console.error(`ERRO: ${error.message}`); process.exitCode = 1; });

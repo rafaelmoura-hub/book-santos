@@ -188,7 +188,7 @@ main[hidden], section[hidden] { display: none !important; }
 @media (max-width: 800px) { .cards { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 560px) { header { padding: 14px 4%; } header h1 { font-size: 18px; } main { width: 92%; margin-top: 20px; } .cards { gap: 10px; } .card { padding: 15px; } .card p { font-size: 25px; } .titulo-secao { align-items: flex-start; flex-direction: column; } .linha-chamado { align-items: flex-start; flex-direction: column; } .linha-chamado select { width: 100%; } nav { gap: 0; padding: 8px; flex-wrap: wrap; } nav button { padding: 10px 13px; } }
 
-/* Identidade visual BOOK TESC */
+/* Identidade visual BOOK TESK */
 :root { --azul: #174a8b; --azul-escuro: #103966; --fundo: #f4f7fb; --borda: #dce5ef; --sombra: 0 14px 38px rgba(25, 48, 80, .08); }
 body { color: #1d2939; background: linear-gradient(180deg, #edf3f9 0, var(--fundo) 340px); }
 header { background: linear-gradient(110deg, #12365d, #1f5b9c); box-shadow: 0 5px 22px rgba(16, 57, 102, .16); }
