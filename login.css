@@ -27,3 +27,6 @@ input { border-color:#73869d; }
 .legal-footer nav { display:flex; justify-content:center; flex-wrap:wrap; gap:12px; }
 .legal-footer a { color:#174a8b; padding:6px 2px; text-underline-offset:3px; }
 @media(forced-colors:active) { :focus-visible { outline:3px solid Highlight; } }
+.brand-logo.login-loading { animation:login-logo-spin 1.2s linear infinite; }
+@keyframes login-logo-spin { to { transform:rotate(360deg); } }
+@media(prefers-reduced-motion:reduce) { .brand-logo.login-loading { animation:none; } }
