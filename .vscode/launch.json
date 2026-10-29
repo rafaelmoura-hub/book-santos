@@ -4,10 +4,10 @@
         {
             "type": "pwa-chrome",
             "request": "launch",
-            "name": "BOOK TESK - abrir servidor local",
+            "name": "BOOK TASK - abrir servidor local",
             "url": "http://127.0.0.1:3000",
             "webRoot": "${workspaceFolder}",
-            "preLaunchTask": "BOOK TESK: iniciar servidor"
+            "preLaunchTask": "BOOK TASK: iniciar servidor"
         }
     ]
 }

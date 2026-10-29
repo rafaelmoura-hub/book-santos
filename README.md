@@ -1,4 +1,4 @@
-# BOOK TESK
+# BOOK TASK
 
 Visão geral com apoio à decisão, preventivas trimestrais e mínimos de estoque: [comparação e uso](docs/SAD-REFERENCIAS.md). Os novos indicadores precisam de `supabase/migrations/202610290015_decision.sql` após a 14. O restante da aplicação continua compatível com banco na versão 14. CNPJ informado: **08.941.697/0001-07**; demais dados legais aguardam confirmação.
 
@@ -48,7 +48,7 @@ npm.cmd start
 
 Abra <http://localhost:3000>. Não use Live Server nem abra o HTML diretamente. Para reiniciar após uma alteração no servidor, Ctrl+C e `npm.cmd start`. `npm.cmd run check:supabase` verifica a conexão com Auth e a versão esperada das migrações. Permissões e fluxos devem ser conferidos também com contas de teste.
 
-No VS Code, pressione **F5** e selecione **BOOK TESK - abrir servidor local**. A tarefa inicia o servidor quando necessário ou reutiliza o que já estiver na porta 3000. O navegador abre `http://127.0.0.1:3000`; a configuração anterior de porta 8080 foi substituída. Se mudar `PORT` no ambiente, ajuste também a URL em `.vscode/launch.json`.
+No VS Code, pressione **F5** e selecione **BOOK TASK - abrir servidor local**. A tarefa inicia o servidor quando necessário ou reutiliza o que já estiver na porta 3000. O navegador abre `http://127.0.0.1:3000`; a configuração anterior de porta 8080 foi substituída. Se mudar `PORT` no ambiente, ajuste também a URL em `.vscode/launch.json`.
 
 O único pacote de desenvolvimento é PostgreSQL embutido para testes; o servidor não depende dele para iniciar. Os testes usam dados locais e respostas simuladas, sem escrever no projeto Supabase real.
 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cliente | BOOK TESK</title>
+    <title>Cliente | BOOK TASK</title>
     <link rel="stylesheet" href="cliente.css">
     <link rel="stylesheet" href="../assets/ui.css">
     <script src="../assets/accessibility.js" defer></script>
@@ -12,7 +12,7 @@
 </head>
 <body hidden data-screen="cliente.js">
     <noscript>O sistema precisa de JavaScript. Consulte <a href="/legal/privacidade">privacidade</a> ou o responsável pelo seu acesso.</noscript>
-    <header><h1>BOOK TESK</h1><button data-on-click="sair()">Sair</button></header>
+    <header><h1>BOOK TASK</h1><button data-on-click="sair()">Sair</button></header>
     <main>
         <section class="client-panel"><h2>Novo chamado</h2>
         <form id="formChamado" data-on-submit="abrirChamado(event)">
@@ -53,7 +53,7 @@
     </main>
     <button id="botaoSuporte" class="botao-suporte" type="button" data-on-click="alternarChatCliente()" aria-label="Abrir chat de suporte">🎧 <span>Suporte</span></button>
     <aside id="chatCliente" class="chat-cliente" hidden aria-label="Chat de suporte">
-      <div class="chat-topo"><div><strong>Suporte BOOK TESK</strong><small>Converse sobre um chamado</small></div><button type="button" data-on-click="alternarChatCliente()" aria-label="Fechar chat">×</button></div>
+      <div class="chat-topo"><div><strong>Suporte BOOK TASK</strong><small>Converse sobre um chamado</small></div><button type="button" data-on-click="alternarChatCliente()" aria-label="Fechar chat">×</button></div>
       <label for="chamadoChat">Chamado</label><select id="chamadoChat" data-on-change="selecionarConversaCliente()"><option value="">Selecione um chamado</option></select>
       <div id="mensagensCliente" class="chat-mensagens"><p class="chat-vazio">Selecione um chamado para ver a conversa.</p></div>
       <form class="chat-enviar" data-on-submit="enviarMensagemCliente(event)"><input id="textoCliente" maxlength="2000" placeholder="Escreva sua mensagem..." autocomplete="off" required><button type="submit" aria-label="Enviar mensagem">Enviar</button></form>

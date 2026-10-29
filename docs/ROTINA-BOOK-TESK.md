@@ -1,4 +1,4 @@
-# Adaptação da rotina ao BOOK TESK
+# Adaptação da rotina ao BOOK TASK
 
 ## Análise da demonstração
 
@@ -6,7 +6,7 @@ Foi analisada visualmente a gravação de aproximadamente nove minutos enviada p
 
 O fluxo observado é receber a demanda, identificar apartamento e origem, definir urgência/responsável/prazo, acompanhar pendências, registrar evidências e conferir a conclusão. Os relatórios mostram também a necessidade de organizar a agenda por funcionário, data e etapa.
 
-| Trecho aproximado | Observação | Aplicação no BOOK TESK |
+| Trecho aproximado | Observação | Aplicação no BOOK TASK |
 | --- | --- | --- |
 | 0:12 e 0:46–0:59 | Serviço passa por Novo, Preventivos, Aguardando proprietário, Em andamento, Fornecedor, Conferência, Resolvido e Recusa; há conferências de comunicação | Aprimoramento de Cards com quadro, agenda, responsável, prazo, origem, prestador, conferências e histórico. O fechamento financeiro continua no card existente. |
 | 1:31–1:53 | Vistoria tem apartamento, administrador, tipo, checklist e vínculos com serviços/compras | Mantido o formulário existente; acrescentados acompanhamento e serviço vinculado com pendências e fotos. Próxima vistoria trimestral aparece no resumo. |
@@ -18,11 +18,11 @@ O fluxo observado é receber a demanda, identificar apartamento e origem, defini
 | 6:18 | RH usa avaliação, conversa com gestão, feedback e plano de ação | Planos de desenvolvimento dentro de Avaliações, mantendo a conversa compartilhada existente. Não foi criada outra aba concorrente de comentários. |
 | 7:31–8:50 | Relatórios filtram responsável, vencimento e etapa | Quadros/Lista/Agenda com filtros no servidor, Minhas demandas, hoje, semana, vencidas e exportação da página. |
 
-Solicitações de compras aparecem nos atalhos e vínculos da gravação, mas seu formulário não foi detalhado. As etapas Solicitada, Cotação, Aprovação, Comprada, Recebida e Cancelada e seus campos são uma proposta de adaptação para o BOOK TESK, sujeita aos testes da equipe.
+Solicitações de compras aparecem nos atalhos e vínculos da gravação, mas seu formulário não foi detalhado. As etapas Solicitada, Cotação, Aprovação, Comprada, Recebida e Cancelada e seus campos são uma proposta de adaptação para o BOOK TASK, sujeita aos testes da equipe.
 
 ## O que foi preservado e reaproveitado
 
-- Nome BOOK TESK, cores azul/branco, navegação e painel lateral de IA, suporte e notas.
+- Nome BOOK TASK, cores azul/branco, navegação e painel lateral de IA, suporte e notas.
 - Catálogo único dos 17 condomínios e 126 apartamentos. Não foram criados novos imóveis a partir do vídeo.
 - Cards, chamados e vistorias continuam nas tabelas e funções existentes. Novas etapas são acompanhamento; não substituem as regras de fechamento, dinheiro ou consumo de materiais.
 - Feedbacks mantém seus registros e vínculo de serviço; Avaliações mantém o chat. Planos da equipe são uma seção dentro da mesma aba.

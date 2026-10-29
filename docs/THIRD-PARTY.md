@@ -6,4 +6,4 @@ O servidor utiliza módulos nativos do Node.js; sua distribuição mantém as li
 
 Supabase, hospedagem e provedores de IA têm contratos e condições próprios, que devem ser verificados na contratação. O uso de um serviço não transfere direitos sobre sua marca.
 
-Não atribuímos à empresa direitos exclusivos sobre dependências, materiais enviados por terceiros ou a marca BOOK TESK sem comprovação. Não foi criada declaração de marca registrada ou realizada pesquisa de disponibilidade no INPI.
+Não atribuímos à empresa direitos exclusivos sobre dependências, materiais enviados por terceiros ou a marca BOOK TASK sem comprovação. Não foi criada declaração de marca registrada ou realizada pesquisa de disponibilidade no INPI.

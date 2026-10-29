@@ -52,7 +52,7 @@ window.BookDecision=(()=>{
  }
  function exportSummary(){
   if(!snapshot)return;const d=snapshot;
-  const rows=[['BOOK TESK · apoio à decisão',d.referenceDate],['Condomínio',d.hotel||'Todos autorizados'],['Atualizado em',d.generatedAt],['Indicador','Quantidade']];
+  const rows=[['BOOK TASK · apoio à decisão',d.referenceDate],['Condomínio',d.hotel||'Todos autorizados'],['Atualizado em',d.generatedAt],['Indicador','Quantidade']];
   for(const [key,label]of [['open','Serviços em aberto'],['overdue','Vencidos'],['today','Vencem hoje'],['urgent','Urgentes'],['unassigned','Sem responsável'],['withoutDeadline','Sem prazo válido']])rows.push([label,d.services[key]]);
   rows.push([],['Condomínio','Em aberto','Vencidos','Urgentes']);d.byHotel.forEach(r=>rows.push([r.hotel,r.open,r.overdue,r.urgent]));
   rows.push([],['Responsável','Em aberto','Vencidos']);d.byAssignee.forEach(r=>rows.push([r.name,r.open,r.overdue]));
@@ -60,7 +60,7 @@ window.BookDecision=(()=>{
   if(d.permissions.inspections){rows.push([],['Vistorias · ciclo trimestral','Quantidade'],['Apartamentos',d.inspections.units],['Prazo vencido',d.inspections.overdue],['Próximos 30 dias',d.inspections.next30],['Sem data registrada',d.inspections.missing]);}
   if(d.permissions.stock){rows.push([],['Estoque global','Quantidade'],['Alertas',d.stock.alerts],['Mínimos não configurados',d.stock.unconfigured]);}
   rows.push([],['Totais globais autorizados; fila limitada a 12 serviços; detalhes de vistorias e estoque limitados a 20. Não é certificação ou previsão de desempenho.']);
-  const url=URL.createObjectURL(new Blob([BookProcesses.csv(rows)],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='book-tesk-indicadores-'+d.referenceDate+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  const url=URL.createObjectURL(new Blob([BookProcesses.csv(rows)],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='book-task-indicadores-'+d.referenceDate+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
  }
  function activate(){if(el('decisionLegacyCharts')?.open)BookStore.activate('dashboardCharts');load();}
  function stockControls(table,data){

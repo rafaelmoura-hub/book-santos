@@ -58,11 +58,11 @@ window.BookRoutine=(()=>{
    for(const row of rows){const item=card(kind,row);const stage=document.createElement('p');stage.className='routine-stage';stage.textContent=kind==='services'?canonicalPhase(row):row.phase;item.prepend(stage);area.append(item);}
   }
  }
- function exportPage(kind){const state=states.get(kind),rows=[['Título','Condomínio','Apartamento','Etapa','Responsável','Prazo'],...state.rows.map(r=>[r.data.titulo,kind==='services'?r.data.hotel:r.hotel,kind==='services'?r.data.apartamento:r.apartment,r.phase,kind==='services'?r.data.responsavelLogin:name(r.data.responsavel),kind==='services'?r.data.vencimento:r.data.prazo])];const url=URL.createObjectURL(new Blob([BookProcesses.csv(rows)],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='BOOK-TESK-'+kind+'-pagina.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+ function exportPage(kind){const state=states.get(kind),rows=[['Título','Condomínio','Apartamento','Etapa','Responsável','Prazo'],...state.rows.map(r=>[r.data.titulo,kind==='services'?r.data.hotel:r.hotel,kind==='services'?r.data.apartamento:r.apartment,r.phase,kind==='services'?r.data.responsavelLogin:name(r.data.responsavel),kind==='services'?r.data.vencimento:r.data.prazo])];const url=URL.createObjectURL(new Blob([BookProcesses.csv(rows)],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='BOOK-TASK-'+kind+'-pagina.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
  function field(def,value=''){
   const label=document.createElement('label');label.textContent=def.label;
   const input=document.createElement(def.type==='textarea'?'textarea':['select','user'].includes(def.type)?'select':'input');input.name=def.key;input.id='process-field-'+def.key;input.required=!!def.required;
-  if(def.type==='select')for(const choice of def.options)input.append(new Option(choice,choice));
+  if(def.type==='select')for(const choice of def.options)input.append(new Option(choice==='BOOK TESK'?'BOOK TASK':choice,choice));
   else if(def.type==='user')staffOptions(input,value);
   else if(def.type==='textarea'){input.rows=3;input.maxLength=4000;}
   else{input.type=['date','email','number'].includes(def.type)?def.type:'text';input.maxLength=200;if(def.type==='number'){input.min='0.01';input.max='10000';input.step='0.01';}if(def.type==='money'){input.inputMode='decimal';input.placeholder='0,00';}}

@@ -1,4 +1,4 @@
-# Apoio à decisão no BOOK TESK — 29/10/2026
+# Apoio à decisão no BOOK TASK — 29/10/2026
 
 ## Referências e alcance da avaliação
 
@@ -8,7 +8,7 @@ O [pipe informado](https://app.pipefy.com/pipes/302508165) exige autenticação 
 
 SAD foi interpretado como **Sistema de Apoio à Decisão**: reunir informação confiável, explicar prioridades e levar ao registro em que a pessoa decide e age. Não é um sistema que toma decisões, compra materiais ou declara vistorias feitas sem confirmação humana.
 
-| Necessidade | Situação no BOOK TESK | Aplicação desta revisão |
+| Necessidade | Situação no BOOK TASK | Aplicação desta revisão |
 | --- | --- | --- |
 | Acompanhar fluxo de trabalho | Cards e processos já possuem etapas, responsáveis, prazos e histórico | Reaproveitados; painel abre a agenda, os filtros e o acompanhamento existentes. |
 | Evidências e rastreabilidade | Fotos, checklists, versões e auditorias já existem | Preservados, sem outro cadastro concorrente de manutenção. |
