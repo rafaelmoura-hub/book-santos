@@ -1,5 +1,7 @@
 # BOOK TASK
 
+Menu organizado por rotinas, com grupos expansíveis e permissões preservadas: [mapa da navegação](docs/NAVEGACAO.md). Não requer migração do banco.
+
 Visão geral com apoio à decisão, preventivas trimestrais e mínimos de estoque: [comparação e uso](docs/SAD-REFERENCIAS.md). Os novos indicadores precisam de `supabase/migrations/202610290015_decision.sql` após a 14. O restante da aplicação continua compatível com banco na versão 14. CNPJ informado: **08.941.697/0001-07**; demais dados legais aguardam confirmação.
 
 Revisão de abertura, privacidade, acessibilidade e desempenho: [orientações e pendências](docs/PRIVACIDADE-ACESSIBILIDADE.md). Documentos públicos em `/legal/privacidade`, `/legal/termos`, `/legal/cookies`, `/legal/reembolso`, `/legal/lgpd` e `/legal/empresa`. Sem migração nova. Dados legais da empresa aguardam confirmação; configure `BOOK_COMPANY_NAME`, `BOOK_COMPANY_CNPJ`, `BOOK_COMPANY_ADDRESS` e `BOOK_PRIVACY_EMAIL` no servidor.

@@ -43,6 +43,7 @@ function mostrarAba(aba) {
   if (aba==='suporte'&&!ehAdministradorMestre) return;
   if (["usuarios", "backup"].includes(aba) && !ehAdministradorMestre) return;
   BookStore.activate(aba);
+  window.BookNavigation?.activate(aba);
   ["chamados", "chat", "os", "vistorias", "condominios", "estoque", "financeiro", "usuarios", "dashboard", "backup", "suporte", "inicio", "feedbacks", "avaliacoes", "reservas", "onboarding", "projetos", "compras", "danos"].forEach(nome => {
     const sufixo = nome === "os" ? "OS" : nome[0].toUpperCase() + nome.slice(1);
     document.getElementById(`visao${sufixo}`).hidden = nome !== aba;
@@ -554,6 +555,7 @@ BookWorkspace.init(sessao);
 BookCollaboration.init(sessao);
 BookRoutine.init(sessao);
 BookDecision.init();
+BookNavigation.init();
 BookNotifications.init(sessao);
 document.getElementById('masterSupportRefresh').onclick=()=>BookWorkspace.loadMaster();
 const primeiraAba=Object.keys(BookWorkspace.labels).find(tab=>BookWorkspace.can(tab))||'inicio';

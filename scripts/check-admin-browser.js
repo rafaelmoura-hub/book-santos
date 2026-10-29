@@ -127,6 +127,7 @@ async function main() {
     await wait("!!document.querySelector('.linha-chamado .card-open') && document.querySelectorAll('.legal-footer a').length===6");
     await evaluate(`(async()=>{const row=document.getElementById('listaChamados').firstElementChild;await BookStore.refresh();if(row!==document.getElementById('listaChamados').firstElementChild)throw Error('Uma resposta idêntica reconstruiu a lista');})()`);
     await capture('painel-desktop');
+    await evaluate("if(document.querySelectorAll('body > nav .nav-group').length!==5)throw Error('Agrupamentos do menu');if(document.getElementById('abaOS').closest('details').id!=='menu-operacao'||document.getElementById('abaEstoque').closest('details').id!=='menu-gestao'||document.getElementById('abaReservas').closest('details').id!=='menu-imoveis')throw Error('Abas em grupos incorretos');if(!document.getElementById('menu-atendimento').open)throw Error('Grupo ativo fechado');");
     const tabs=await evaluate(`(() => {const result=[];for(const tab of ['chamados','chat','os','vistorias','condominios','estoque','financeiro','dashboard','usuarios','backup','suporte','feedbacks','avaliacoes','reservas','onboarding','projetos','compras','danos']){document.getElementById('aba'+(tab==='os'?'OS':tab[0].toUpperCase()+tab.slice(1))).click();const id=tab==='os'?'OS':tab[0].toUpperCase()+tab.slice(1);if(document.getElementById('visao'+id).hidden)throw Error(tab);if(document.querySelector('nav').getBoundingClientRect().height===0)throw Error('nav');result.push(tab);}return result;})()`);
     await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
     for(const tab of tabs){
@@ -410,7 +411,7 @@ async function main() {
     await send('Page.navigate',{url:base+'/adm/admin.html'});
     await wait("typeof mostrarAba === 'function' && !document.body.hidden");
     await evaluate("if(!document.getElementById('abaFinanceiro').hidden||!document.getElementById('abaOS').hidden||document.getElementById('abaVistorias').hidden||document.getElementById('visaoVistorias').hidden)throw Error('Permissões por aba na interface');mostrarAba('financeiro');if(!document.getElementById('visaoFinanceiro').hidden)throw Error('Aba negada abriu');");
-    await evaluate("BookWorkspace.openNotes()");
+    await evaluate("if(document.querySelectorAll('body > nav .nav-group').length!==1||!document.getElementById('menu-operacao').open)throw Error('Grupo vazio ou não autorizado no menu');BookWorkspace.openNotes()");
     await wait("document.getElementById('notesList').textContent.includes('Nenhuma nota')");
     await evaluate("document.getElementById('notesDialog').querySelector('.workspace-heading button').click();BookWorkspace.openSupport()");
     await wait("document.getElementById('supportList').textContent.includes('Nenhum chamado')");
