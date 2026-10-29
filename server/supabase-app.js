@@ -169,6 +169,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
           if(route==='/api/processes/flow'){const source=url.searchParams.get('source'),id=url.searchParams.get('id'),before=url.searchParams.get('before');if(!validSource(source,id)||before&&!/^\d{1,16}$/.test(before))throw fail(400,'Registro inválido.');if(!flowAllowed(source))throw fail(403,'Sem acesso ao acompanhamento.');return json(200,await provider.flowDetails(session.accessToken,source,id,before));}
           if(!['/api/processes','/api/processes/services'].includes(route))throw fail(405,'Método inválido.');
           const kind=url.searchParams.get('kind'),offset=Number(url.searchParams.get('offset')||0);let filters;
+          if(route==='/api/processes'&&['reservas','projetos','compras','onboarding'].includes(kind))throw fail(410,'Este processo foi removido. Onboarding está disponível apenas para cadastro de imóveis.');
           try{filters=JSON.parse(url.searchParams.get('filters')||'{}');}catch{throw fail(400,'Filtros inválidos.');}
           if(!Number.isSafeInteger(offset)||offset<0||offset>100000||!filters||typeof filters!=='object'||Array.isArray(filters)||Object.keys(filters).some(k=>!['search','phase','assignee','hotel','period'].includes(k))||Object.values(filters).some(v=>typeof v!=='string'||v.length>200)||filters.assignee&&!uuid(filters.assignee)||filters.period&&!['all','today','week','late'].includes(filters.period))throw fail(400,'Filtros inválidos.');
           const tab=route.endsWith('/services')?'os':processDefinitions[kind]?.tab||kind;
@@ -180,6 +181,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         const key='routine:'+user.id,quota=writes.get(key)||{count:0,until:now+60000};if(quota.count>=40)throw fail(429,'Aguarde antes de salvar novamente.');quota.count++;writes.set(key,quota);
         const input=await readBody(req);
         if(route==='/api/processes'){
+          if(['reservas','projetos','compras','onboarding'].includes(input?.kind))throw fail(410,'Este processo foi removido. Use o cadastro de imóveis no Onboarding.');
           const valid=validateProcess(input),definition=processDefinitions[valid.kind];
           if(!canTab(user,definition.tab||valid.kind))throw fail(403,'Sem acesso a esta aba.');
           if(valid.hotel){const allowed=await visibleHotels(provider,session.accessToken,user);if(!allowed.includes(valid.hotel))throw fail(403,'Sem acesso ao condomínio.');}

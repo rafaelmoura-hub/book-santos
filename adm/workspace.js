@@ -1,5 +1,5 @@
 window.BookWorkspace = (() => {
-  const labels = {chamados:'Chamados',chat:'Chat',os:'Cards',vistorias:'Vistorias',condominios:'Condomínios',estoque:'Estoque',financeiro:'Financeiro',dashboard:'Visão geral',feedbacks:'Feedbacks',avaliacoes:'Avaliações',reservas:'Reservas',onboarding:'Onboarding',projetos:'Projetos',compras:'Compras',danos:'Danos e reposições'};
+  const labels = {chamados:'Chamados',chat:'Chat',os:'Cards',vistorias:'Vistorias',condominios:'Condomínios',estoque:'Estoque',financeiro:'Financeiro',dashboard:'Visão geral',feedbacks:'Feedbacks',avaliacoes:'Avaliações',onboarding:'Onboarding',danos:'Danos e reposições'};
   let user, notes=[], note=null, tickets=[], ticket=null, offset=0, dirty=false, saving=false;
   let aiMessages=[],aiBusy=false;
   let supportRequest=0,supportRefreshing=false;

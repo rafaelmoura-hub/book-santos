@@ -18,11 +18,11 @@ window.BookDecision=(()=>{
   const actions=node('div',null,'routine-actions');if(can('os')){actions.append(button('Ver serviços vencidos',()=>services({period:'late'})),button('Agenda de serviços',()=>services({},'agenda')));}if(can('financeiro'))actions.append(button('Consultar financeiro',()=>mostrarAba('financeiro')));area.append(actions);
   const queue=section('O que precisa de atenção');queue.append(node('p','Até 12 serviços. Ordem: urgentes, vencidos, de hoje, sem responsável e demais prazos. A sugestão apoia sua decisão; não altera cards.','workspace-hint'));
   if(!data.queue.length)queue.append(node('p','Nenhum serviço em aberto neste filtro.'));
-  for(const row of data.queue){const card=node('article',null,'decision-priority');const h=node('h4',row.title||'Serviço #'+row.id);card.append(h,node('p',`${row.hotel} · Apto ${row.apartment||'—'} · ${row.phase}`),node('p',`${row.reason} · Prazo: ${date(row.due)} · ${row.assignee}`));if(can('os'))card.append(button('Acompanhar serviço',()=>BookRoutine.openFlow('ordensServico',row.id)));queue.append(card);}area.append(queue);
+  for(const row of data.queue){const card=node('article',null,'decision-priority');const h=node('h4',row.title||'Serviço #'+row.id);card.append(h,node('p',`${row.hotel} · Apto ${row.apartment||'—'} · ${BookProcesses.phaseLabel(row.phase)}`),node('p',`${row.reason} · Prazo: ${date(row.due)} · ${row.assignee}`));if(can('os'))card.append(button('Acompanhar serviço',()=>BookRoutine.openFlow('ordensServico',row.id)));queue.append(card);}area.append(queue);
   const grid=node('div',null,'decision-grid');
   const sites=section('Pendências por condomínio');sites.append(data.byHotel.length?table(['Condomínio','Em aberto','Vencidos','Urgentes'],data.byHotel.map(r=>[can('os')?button(r.hotel,()=>BookRoutine.openServices({hotel:r.hotel},'list')):r.hotel,number(r.open),number(r.overdue),number(r.urgent)])):node('p','Nenhuma pendência.'));grid.append(sites);
   const staff=section('Carga por responsável');staff.append(data.byAssignee.length?table(['Responsável','Em aberto','Vencidos'],data.byAssignee.map(r=>[r.id&&can('os')?button(r.name,()=>services({assignee:r.id})):r.name,number(r.open),number(r.overdue)])):node('p','Nenhuma pendência.'));grid.append(staff);
-  const phases=section('Etapas dos serviços');phases.append(table(['Etapa','Quantidade'],data.byPhase.map(r=>[can('os')?button(r.phase,()=>services({phase:r.phase})):r.phase,number(r.count)])));grid.append(phases);area.append(grid);
+  const phases=section('Etapas dos serviços');phases.append(table(['Etapa','Quantidade'],data.byPhase.map(r=>[can('os')?button(BookProcesses.phaseLabel(r.phase),()=>services({phase:r.phase})):BookProcesses.phaseLabel(r.phase),number(r.count)])));grid.append(phases);area.append(grid);
   if(data.permissions.inspections){
    const v=section('Vistorias preventivas · ciclo de 3 meses');
    v.append(node('p',`${number(data.inspections.units)} apartamentos · ${number(data.inspections.overdue)} com prazo vencido · ${number(data.inspections.next30)} nos próximos 30 dias · ${number(data.inspections.missing)} sem data válida registrada.`));
@@ -56,7 +56,7 @@ window.BookDecision=(()=>{
   for(const [key,label]of [['open','Serviços em aberto'],['overdue','Vencidos'],['today','Vencem hoje'],['urgent','Urgentes'],['unassigned','Sem responsável'],['withoutDeadline','Sem prazo válido']])rows.push([label,d.services[key]]);
   rows.push([],['Condomínio','Em aberto','Vencidos','Urgentes']);d.byHotel.forEach(r=>rows.push([r.hotel,r.open,r.overdue,r.urgent]));
   rows.push([],['Responsável','Em aberto','Vencidos']);d.byAssignee.forEach(r=>rows.push([r.name,r.open,r.overdue]));
-  rows.push([],['Etapa','Quantidade']);d.byPhase.forEach(r=>rows.push([r.phase,r.count]));
+  rows.push([],['Etapa','Quantidade']);d.byPhase.forEach(r=>rows.push([BookProcesses.phaseLabel(r.phase),r.count]));
   if(d.permissions.inspections){rows.push([],['Vistorias · ciclo trimestral','Quantidade'],['Apartamentos',d.inspections.units],['Prazo vencido',d.inspections.overdue],['Próximos 30 dias',d.inspections.next30],['Sem data registrada',d.inspections.missing]);}
   if(d.permissions.stock){rows.push([],['Estoque global','Quantidade'],['Alertas',d.stock.alerts],['Mínimos não configurados',d.stock.unconfigured]);}
   rows.push([],['Totais globais autorizados; fila limitada a 12 serviços; detalhes de vistorias e estoque limitados a 20. Não é certificação ou previsão de desempenho.']);

@@ -24,7 +24,6 @@ body[data-screen="admin.js"] > main { overflow-x:clip; }
 .onboarding-catalog label { display:grid; gap:8px; }
 .onboarding-catalog [hidden] { display:none; }
 .onboarding-catalog p { margin:0; }
-#onboardingHistory > summary { cursor:pointer; padding:16px 0; font-weight:600; }
 ::view-transition-old(root),::view-transition-new(root) { animation:none; }
 html:active-view-transition-type(login)::view-transition-old(root) { animation:book-login-exit 380ms cubic-bezier(.4,0,.2,1) both; z-index:2; }
 html:active-view-transition-type(login)::view-transition-new(root) { animation:book-panel-enter 380ms cubic-bezier(.2,.7,.2,1) both; z-index:1; }

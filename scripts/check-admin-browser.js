@@ -6,6 +6,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { createSupabaseApp } = require('../server/supabase-app');
 const Catalog = require('../assets/catalog');
+const Processes = require('../assets/processes');
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 const chrome = process.env.CHROME_BIN || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 async function main() {
@@ -26,7 +27,7 @@ async function main() {
       return {generatedAt:new Date().toISOString(),referenceDate:'2026-10-29',hotel:hotel||null,permissions:{stock:true,inspections:true},services:{total:150,open:150,overdue:12,today:4,urgent:2,unassigned:3,withoutDeadline:1},byHotel:[{hotel:hotel||'Be Urban',open:150,overdue:12,urgent:2}],byAssignee:[{id:master.id,name:master.nome,assignee:master.login,open:150,overdue:12}],byPhase:[{phase:'Novo',count:150}],queue:[],inspections:{units:126,missing:125,overdue:1,next30:0,items:[{hotel:'Be Urban',apartment:'214',last_date:null,next_due:null}]},stock:{global:true,alerts:alerts.length,unconfigured:stock.filter(i=>i.minimo==null).length,items:alerts.map(i=>({id:i.id,name:i.nome,quantity:i.quantidade,minimum:i.minimo??null}))}};
     },
     async processes(token,kind,offset,filters={}){let rows=[...processRows.values()].filter(p=>p.kind===kind&&(!filters.phase||p.phase===filters.phase)&&(!filters.assignee||p.data.responsavel===filters.assignee)&&(!filters.hotel||p.hotel===filters.hotel)&&(!filters.search||p.data.titulo.includes(filters.search)));const counts={};rows.forEach(r=>counts[r.phase]=(counts[r.phase]||0)+1);return {rows:rows.slice(offset,offset+50),total:rows.length,counts};},
-    async servicePage(token,offset,filters={}){let rows=[...records.entries()].filter(([k])=>k.startsWith('ordensServico/')).map(([,r])=>({...r,phase:r.data.status==='Finalizada'?'Resolvido':flowMetas.get('ordensServico:'+r.id)?.phase||(r.data.status==='Em andamento'?'Em andamento':'Novo')}));rows=rows.filter(r=>!filters.phase||r.phase===filters.phase);const counts={};rows.forEach(r=>counts[r.phase]=(counts[r.phase]||0)+1);return {rows:rows.slice(offset,offset+50),total:rows.length,counts};},
+    async servicePage(token,offset,filters={}){let rows=[...records.entries()].filter(([k])=>k.startsWith('ordensServico/')).map(([,r])=>({...r,phase:Processes.servicePhase({...r,phase:flowMetas.get('ordensServico:'+r.id)?.phase})}));rows=rows.filter(r=>!filters.phase||r.phase===filters.phase);const counts={};rows.forEach(r=>counts[r.phase]=(counts[r.phase]||0)+1);return {rows:rows.slice(offset,offset+50),total:rows.length,counts};},
     async saveProcess(token,input){const previous=processRows.get(input.id);if((previous?.version||0)!==input.version)throw Error('Conflito de processo');const row={...input,owner_id:identity(token).id,version:input.version+1,created_at:previous?.created_at||new Date().toISOString(),service_id:previous?.service_id,stock_receipt:previous?.stock_receipt};processRows.set(input.id,row);flowRows.push({id:String(flowRows.length+1),source:'process',record_id:row.id,actor_id:identity(token).id,actor_name:identity(token).nome,action:'Atualizado',body:'',current:{phase:row.phase},created_at:new Date().toISOString()});},
     async flowDetails(token,source,id,before){const row=source==='process'?processRows.get(id):source==='feedbacks'?feedbackRows.get(id):records.get(source+'/'+id);if(!row)throw Error('Registro não encontrado');return {record:row,recordVersion:row.version,meta:flowMetas.get(source+':'+id)||null,events:flowRows.filter(e=>e.source===source&&e.record_id===id&&(!before||Number(e.id)<Number(before))).reverse().slice(0,51)};},
     async saveFlow(token,input){const key=input.source+':'+input.id,previous=flowMetas.get(key),row=input.source==='feedbacks'?feedbackRows.get(input.id):records.get(input.source+'/'+input.id);if((previous?.version||0)!==input.version||row.version!==input.recordVersion)throw Error('Conflito de acompanhamento');flowMetas.set(key,{source:input.source,record_id:input.id,version:input.version+1,phase:input.phase,data:input.data});if(input.source==='ordensServico'&&row.data.status==='Aberta'&&input.phase==='Em andamento'){row.data.status='Em andamento';row.version++;}flowRows.push({id:String(flowRows.length+1),source:input.source,record_id:input.id,actor_name:identity(token).nome,action:'Acompanhamento atualizado',current:{phase:input.phase},created_at:new Date().toISOString()});},
@@ -161,8 +162,9 @@ async function main() {
     await wait("!!document.querySelector('.linha-chamado .card-open') && document.querySelectorAll('.legal-footer a').length===6");
     await evaluate(`(async()=>{const row=document.getElementById('listaChamados').firstElementChild;await BookStore.refresh();if(row!==document.getElementById('listaChamados').firstElementChild)throw Error('Uma resposta idêntica reconstruiu a lista');})()`);
     await capture('painel-desktop');
-    await evaluate("if(document.querySelectorAll('body > nav .nav-group').length!==5)throw Error('Agrupamentos do menu');if(document.getElementById('abaOS').closest('details').id!=='menu-operacao'||document.getElementById('abaEstoque').closest('details').id!=='menu-gestao'||document.getElementById('abaReservas').closest('details').id!=='menu-imoveis')throw Error('Abas em grupos incorretos');if(!document.getElementById('menu-atendimento').open)throw Error('Grupo ativo fechado');");
-    const tabs=await evaluate(`(() => {const result=[];for(const tab of ['chamados','chat','os','vistorias','condominios','estoque','financeiro','dashboard','usuarios','backup','suporte','feedbacks','avaliacoes','reservas','onboarding','projetos','compras','danos']){document.getElementById('aba'+(tab==='os'?'OS':tab[0].toUpperCase()+tab.slice(1))).click();const id=tab==='os'?'OS':tab[0].toUpperCase()+tab.slice(1);if(document.getElementById('visao'+id).hidden)throw Error(tab);if(document.querySelector('nav').getBoundingClientRect().height===0)throw Error('nav');result.push(tab);}return result;})()`);
+    await evaluate("if(document.querySelectorAll('body > nav .nav-group').length!==5)throw Error('Agrupamentos do menu');if(document.getElementById('abaOS').closest('details').id!=='menu-operacao'||document.getElementById('abaEstoque').closest('details').id!=='menu-gestao'||document.getElementById('abaOnboarding').closest('details').id!=='menu-imoveis')throw Error('Abas em grupos incorretos');if(!document.getElementById('menu-atendimento').open)throw Error('Grupo ativo fechado');");
+    await evaluate("if(['Reservas','Projetos','Compras'].some(name=>document.getElementById('aba'+name))||document.getElementById('onboardingHistory')||document.getElementById('routine-onboarding')||document.getElementById('flowPurchase'))throw Error('Abas ou ações removidas continuam presentes')");
+    const tabs=await evaluate(`(() => {const result=[];for(const tab of ['chamados','chat','os','vistorias','condominios','estoque','financeiro','dashboard','usuarios','backup','suporte','feedbacks','avaliacoes','onboarding','danos']){document.getElementById('aba'+(tab==='os'?'OS':tab[0].toUpperCase()+tab.slice(1))).click();const id=tab==='os'?'OS':tab[0].toUpperCase()+tab.slice(1);if(document.getElementById('visao'+id).hidden)throw Error(tab);if(document.querySelector('nav').getBoundingClientRect().height===0)throw Error('nav');result.push(tab);}return result;})()`);
     await evaluate("document.getElementById('themeToggle').click()");
     const darkContrast=[];
     for(const tab of tabs){await evaluate(`mostrarAba(${JSON.stringify(tab)});if(document.documentElement.dataset.theme!=='dark'||getComputedStyle(document.body).backgroundColor!=='rgb(8, 24, 36)')throw Error('Tema noturno ausente')`);const issues=await contrastAudit();if(issues.length)darkContrast.push({tab,issues});}
@@ -262,10 +264,6 @@ async function main() {
     await capture('notificacoes-desktop');
     await evaluate("document.getElementById('notificationsClose').click()");notificationState={chat:{count:0},support:{count:0}};
     const routineCases=[
-      ['reservas',{cliente:'Hóspede fictício',canal:'Direta',codigo:'TEST-BROWSER',checkin:'2026-11-10',checkout:'2026-11-12',hospedes:'2'}],
-      ['onboarding',{cliente:'Proprietário fictício'}],
-      ['projetos',{categoria:'Operação',custoPrevisto:'120.50'}],
-      ['compras',{itens:'Material de manutenção',quantidade:'2'}],
       ['danos',{item:'Taça',quantidade:'1',origem:'Vistoria'}],
       ['desempenho',{funcionario:master.id,inicio:'2026-10-01',fim:'2026-10-28'}]
     ];
@@ -273,11 +271,7 @@ async function main() {
       await evaluate(`(() => {mostrarAba(${JSON.stringify(kind==='desempenho'?'avaliacoes':kind)});${kind==='desempenho'?"document.querySelector('.routine-team-plans').open=true;":''}document.querySelector('#routine-${kind} .routine-actions .acao-principal').click();document.getElementById('processName').value=${JSON.stringify('Rotina '+kind)};document.getElementById('processHotel').value='Be Urban';document.getElementById('processHotel').dispatchEvent(new Event('change'));document.getElementById('processApartment').value='214';document.getElementById('processDue').value='2026-11-10';document.getElementById('processAssignee').value=${JSON.stringify(master.id)};for(const [key,value]of Object.entries(${JSON.stringify(fields)}))document.getElementById('process-field-'+key).value=value;document.getElementById('processForm').requestSubmit();})()`);
       await wait(`!document.getElementById('processDialog').open && document.getElementById('processDialog').getAttribute('aria-busy')==='false' && document.getElementById('routine-${kind}-area').textContent.includes('Rotina ${kind}')`);
     }
-    if(processRows.size!==6)throw Error('Novos processos não foram persistidos');
-    await evaluate("mostrarAba('reservas')");await capture('reservas-quadro-desktop');
-    await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
-    await evaluate("if(document.documentElement.scrollWidth>innerWidth+1)throw Error('Quadro de reservas excedeu largura do celular')");await capture('reservas-quadro-mobile');
-    await send('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
+    if(processRows.size!==2)throw Error('Novos processos não foram persistidos');
     const damage=[...processRows.values()].find(r=>r.kind==='danos');
     await evaluate(`BookRoutine.openFlow('process',${JSON.stringify(damage.id)})`);
     await wait("document.getElementById('flowDialog').open");
@@ -285,15 +279,14 @@ async function main() {
     await wait("document.getElementById('flowHistory').textContent.includes('Comentário da rotina')");
     await evaluate("if(document.querySelector('#flowHistory img'))throw Error('Comentário de rotina executou HTML');document.getElementById('flowClose').click();mostrarAba('os');document.querySelector('#visaoOS > .botao-secundario').click()");
     await wait("!document.getElementById('routine-services').hidden && document.getElementById('routine-services-area').textContent.includes('Feedback do hóspede')");
+    await evaluate("const columns=[...document.querySelectorAll('#routine-services-area .routine-column > h3')].map(h=>h.textContent.split(' · ')[0]);if(JSON.stringify(columns)!==JSON.stringify(['Novo','Em andamento','Recusa','Finalizado']))throw Error('Colunas incorretas: '+columns)");
     await capture('servicos-quadro-desktop');
     const linkedService=feedbackRow.service_id;
     await evaluate(`BookRoutine.openFlow('ordensServico',${JSON.stringify(linkedService)})`);
     await wait("document.getElementById('flowDialog').open");
-    await evaluate("document.getElementById('flowPhase').value='Aguardando proprietário';document.getElementById('flow-proprietarioAvisado').checked=true;document.getElementById('flow-prazo').value='2026-11-10';document.getElementById('flowSettings').requestSubmit()");
-    await wait("document.getElementById('flowHistory').textContent.includes('Aguardando proprietário') && document.getElementById('flowDialog').getAttribute('aria-busy')==='false'");
-    await evaluate("document.getElementById('flowPurchase').click();document.getElementById('process-field-quantidade').value='2';document.getElementById('processForm').requestSubmit()");
-    await wait("!document.getElementById('processDialog').open");
-    if(![...processRows.values()].some(p=>p.kind==='compras'&&p.data.servicoId===linkedService))throw Error('Compra não vinculou o serviço existente');
+    await evaluate("document.getElementById('flowPhase').value='Em andamento';document.getElementById('flow-proprietarioAvisado').checked=true;document.getElementById('flow-prazo').value='2026-11-10';document.getElementById('flowSettings').requestSubmit()");
+    await wait("document.getElementById('flowHistory').textContent.includes('Em andamento') && document.getElementById('flowDialog').getAttribute('aria-busy')==='false'");
+    await evaluate("document.getElementById('flowClose').click()");
     const catalogCheck=await evaluate(`(() => {
       mostrarAba('os');abrirFormularioOS();
       const hotel=document.getElementById('osHotel'),ap=document.getElementById('osApartamento');
@@ -365,16 +358,6 @@ async function main() {
     await evaluate("mostrarAba('estoque');const minimum=document.querySelector('#tabelaEstoque input[aria-label^=\"Estoque mínimo\"]');minimum.value='3';minimum.dispatchEvent(new Event('change'))");
     await wait("JSON.parse(BookStore.getItem('estoqueBookSantos')).itens[0].minimo===3 && !BookStore.pending");
     await evaluate("BookFinance.load()");
-    await evaluate("mostrarAba('compras')");
-    await wait("document.getElementById('routine-compras-area').textContent.includes('Rotina compras')");
-    await evaluate("[...document.querySelectorAll('#routine-compras-area .routine-card')].find(c=>c.textContent.includes('Rotina compras')).querySelector('button').click();document.getElementById('processPhase').value='Comprada';document.getElementById('processForm').requestSubmit()");
-    await wait("!document.getElementById('processDialog').open");
-    await wait("document.getElementById('processDialog').getAttribute('aria-busy')==='false'");
-    await evaluate("[...document.querySelectorAll('#routine-compras-area .routine-card')].find(c=>c.textContent.includes('Rotina compras')).querySelector('button').click();document.getElementById('processStock').click()");
-    await wait("document.getElementById('receiveDialog').open");
-    await evaluate("document.getElementById('receiveForm').requestSubmit()");
-    await wait("!document.getElementById('receiveDialog').open && !document.getElementById('processDialog').open && document.getElementById('receiveDialog').getAttribute('aria-busy')==='false'");
-    if(![...processRows.values()].some(p=>p.kind==='compras'&&p.stock_receipt?.quantity===2))throw Error('Compra não recebeu material no estoque');
     const inspected=[...records.entries()].find(([k])=>k.startsWith('vistorias/'))[1];
     await evaluate(`BookRoutine.openFlow('vistorias',${JSON.stringify(inspected.id)})`);
     await wait("document.getElementById('flowDialog').open");

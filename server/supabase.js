@@ -60,7 +60,10 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
   const provider = {
     decision(token,hotel){return request('/rest/v1/rpc/book_decision_snapshot',{token,method:'POST',body:{site:hotel||null},timeoutMs:30000});},
     processes(token,kind,offset,filters){return request('/rest/v1/rpc/book_process_page',{token,method:'POST',body:{process_kind:kind,page_offset:offset,filters}});},
-    servicePage(token,offset,filters){return request('/rest/v1/rpc/book_service_page',{token,method:'POST',body:{page_offset:offset,filters}});},
+    async servicePage(token,offset,filters){
+      if(await request('/rest/v1/rpc/book_schema_version',{token,method:'POST',body:{}})<17)throw failure(503,'Aplique a migração 202610290017_simplify.sql para usar as quatro etapas do quadro.');
+      return request('/rest/v1/rpc/book_service_page',{token,method:'POST',body:{page_offset:offset,filters}});
+    },
     saveProcess(token,input){return request('/rest/v1/rpc/book_process_save',{token,method:'POST',body:{process_id:input.id,process_kind:input.kind,expected_version:input.version,site:input.hotel,unit:input.apartment,new_phase:input.phase,document:input.data}});},
     flowDetails(token,source,id,before){return request('/rest/v1/rpc/book_flow_details',{token,method:'POST',body:{source_name:source,target_id:id,before_id:before||null}});},
     saveFlow(token,input){return request('/rest/v1/rpc/book_flow_save',{token,method:'POST',body:{source_name:input.source,target_id:input.id,expected_version:input.version,expected_record_version:input.recordVersion,new_phase:input.phase,document:input.data}});},
@@ -152,7 +155,7 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
     },
     async ready() {
       await request('/auth/v1/settings');
-      if (![14,15,16].includes(await request('/rest/v1/rpc/book_schema_version', { method: 'POST', body: {} }))) throw failure(503, 'Aplique as migrações até 202610280014_routine.sql antes de publicar esta versão. O painel SAD utiliza também a migração 15.');
+      if (![14,15,16,17].includes(await request('/rest/v1/rpc/book_schema_version', { method: 'POST', body: {} }))) throw failure(503, 'Aplique as migrações até 202610280014_routine.sql antes de publicar esta versão. O painel SAD utiliza também a migração 15.');
       return { ok: true };
     },
     commit(token, changes) { return request('/rest/v1/rpc/book_commit', { token, method: 'POST', body: { changes } }); },

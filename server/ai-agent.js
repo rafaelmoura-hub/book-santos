@@ -121,7 +121,7 @@ async function prepareAction(call,ctx){
    if(!uuid(call.id))throw fail(400,'Usuário inválido.');previous=(await provider.managedUsers(token)).find(u=>u.id===call.id);
    if(!previous||previous.mestre)throw fail(403,'Usuário indisponível ou protegido.');
   }
-  const input=op==='editar_usuario'?{id:call.id,version:previous.version,nome:previous.nome,funcao:previous.funcao,hotels:(previous.book_hotel_access||[]).map(r=>canonical(r.hotel)),tabs:previous.tabs,...data}:{...data,tabs:data.tabs??(data.funcao==='adm'?TABS:[]),senha:'Senha-provisoria-de-validacao!'};
+  const input=op==='editar_usuario'?{id:call.id,version:previous.version,nome:previous.nome,funcao:previous.funcao,hotels:(previous.book_hotel_access||[]).map(r=>canonical(r.hotel)),tabs:previous.tabs?.filter(tab=>TABS.includes(tab)),...data}:{...data,tabs:data.tabs??(data.funcao==='adm'?TABS:[]),senha:'Senha-provisoria-de-validacao!'};
   const valid=validateUser(input,await visibleHotels(provider,token,user));delete valid.senha;action.input=valid;
   before=previous?{nome:previous.nome,funcao:previous.funcao,hotels:(previous.book_hotel_access||[]).map(r=>r.hotel),tabs:previous.tabs}:null;after=valid;
  }else if(['criar_nota','editar_nota','excluir_nota'].includes(op)){

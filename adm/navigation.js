@@ -2,8 +2,8 @@ window.BookNavigation=(()=>{
  const groups=[
   ['atendimento','Atendimento',['chamados','chat','feedbacks']],
   ['operacao','Operação',['os','vistorias','danos']],
-  ['imoveis','Imóveis e reservas',['condominios','reservas','onboarding']],
-  ['gestao','Gestão e recursos',['compras','estoque','financeiro','projetos']],
+  ['imoveis','Imóveis',['condominios','onboarding']],
+  ['gestao','Gestão e recursos',['estoque','financeiro']],
   ['equipe','Equipe e sistema',['avaliacoes','usuarios','suporte','backup']]
  ];
  const items=new Map();let nav;

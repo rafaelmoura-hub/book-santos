@@ -58,7 +58,7 @@ window.BookStore = (() => {
         }
     }
     function activate(tab) {
-        if(['reservas','onboarding','projetos','compras','danos'].includes(tab)){activeCollections=[];return;}
+        if(['onboarding','danos'].includes(tab)){activeCollections=[];return;}
         const groups = { chamados: ['chamados'], chat: ['chamados','conversasSuporte'], os: ['ordensServico','chamados','estoqueBookSantos'], vistorias: ['vistorias','ordensServico'], condominios: ['chamados','ordensServico'], estoque: ['estoqueBookSantos','ordensServico'], dashboard: [], dashboardCharts:['chamados','ordensServico'], financeiro: [], usuarios: [], backup: [], feedbacks:[],avaliacoes:[],suporte:[],inicio:[] };
         activeCollections = groups[tab] || keys;
     }

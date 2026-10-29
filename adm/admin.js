@@ -39,13 +39,14 @@ function atualizarPainel() {
   if (!document.getElementById('visaoOS').hidden) mostrarOS();
 }
 function mostrarAba(aba) {
+  if(['reservas','projetos','compras'].includes(aba))return;
   if (window.BookWorkspace && aba in BookWorkspace.labels && !BookWorkspace.can(aba)) return;
   if (aba==='suporte'&&!ehAdministradorMestre) return;
   if (["usuarios", "backup"].includes(aba) && !ehAdministradorMestre) return;
   BookStore.activate(aba);
   window.BookNavigation?.activate(aba);
   let enteredSection=null;
-  ["chamados", "chat", "os", "vistorias", "condominios", "estoque", "financeiro", "usuarios", "dashboard", "backup", "suporte", "inicio", "feedbacks", "avaliacoes", "reservas", "onboarding", "projetos", "compras", "danos"].forEach(nome => {
+  ["chamados", "chat", "os", "vistorias", "condominios", "estoque", "financeiro", "usuarios", "dashboard", "backup", "suporte", "inicio", "feedbacks", "avaliacoes", "onboarding", "danos"].forEach(nome => {
     const sufixo = nome === "os" ? "OS" : nome[0].toUpperCase() + nome.slice(1);
     const section=document.getElementById(`visao${sufixo}`);
     if(nome===aba&&section.hidden)enteredSection=section;
