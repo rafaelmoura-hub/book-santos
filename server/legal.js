@@ -2,7 +2,8 @@ const escape = value => String(value || '').replace(/[&<>"']/g, c => ({'&':'&amp
 function legalConfig(env = process.env) {
   const text = key => String(env[key] || '').trim().slice(0, 400);
   const email = text('BOOK_PRIVACY_EMAIL');
-  return { company:text('BOOK_COMPANY_NAME'), cnpj:text('BOOK_COMPANY_CNPJ'), address:text('BOOK_COMPANY_ADDRESS'), email:/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email) ? email : '' };
+  // CNPJ informado pelo responsável em 29/10/2026; demais dados aguardam confirmação.
+  return { company:text('BOOK_COMPANY_NAME'), cnpj:text('BOOK_COMPANY_CNPJ') || '08.941.697/0001-07', address:text('BOOK_COMPANY_ADDRESS'), email:/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email) ? email : '' };
 }
 const titles = {privacidade:'Política de privacidade',termos:'Termos de uso',cookies:'Aviso de cookies',reembolso:'Cancelamento e reembolso',lgpd:'Seus direitos e formulário LGPD',empresa:'Dados da empresa'};
 function renderLegal(section = 'privacidade', config = legalConfig()) {

@@ -20,6 +20,10 @@ async function main() {
   const identity = token => token === 'client-token' ? client : token==='limited-token'?users[1]:master;
   records.set('chamados/101', { id:'101',version:1,owner_id:client.id,data:{id:101,hotel:'Be Urban',apartamento:'214',assunto:'Torneira',descricao:'Vazamento',categoria:'Hidráulica',status:'Aberto',criadaPor:client.nome,criadaPorLogin:client.login,data:'23/10/2026'} });
   const provider = {
+    async decision(token,hotel){
+      const stock=records.get('estoqueBookSantos/singleton')?.data.itens||[],alerts=stock.filter(i=>Number(i.quantidade)<=Number(i.minimo??0));
+      return {generatedAt:new Date().toISOString(),referenceDate:'2026-10-29',hotel:hotel||null,permissions:{stock:true,inspections:true},services:{total:150,open:150,overdue:12,today:4,urgent:2,unassigned:3,withoutDeadline:1},byHotel:[{hotel:hotel||'Be Urban',open:150,overdue:12,urgent:2}],byAssignee:[{id:master.id,name:master.nome,assignee:master.login,open:150,overdue:12}],byPhase:[{phase:'Novo',count:150}],queue:[],inspections:{units:126,missing:125,overdue:1,next30:0,items:[{hotel:'Be Urban',apartment:'214',last_date:null,next_due:null}]},stock:{global:true,alerts:alerts.length,unconfigured:stock.filter(i=>i.minimo==null).length,items:alerts.map(i=>({id:i.id,name:i.nome,quantity:i.quantidade,minimum:i.minimo??null}))}};
+    },
     async processes(token,kind,offset,filters={}){let rows=[...processRows.values()].filter(p=>p.kind===kind&&(!filters.phase||p.phase===filters.phase)&&(!filters.assignee||p.data.responsavel===filters.assignee)&&(!filters.hotel||p.hotel===filters.hotel)&&(!filters.search||p.data.titulo.includes(filters.search)));const counts={};rows.forEach(r=>counts[r.phase]=(counts[r.phase]||0)+1);return {rows:rows.slice(offset,offset+50),total:rows.length,counts};},
     async servicePage(token,offset,filters={}){let rows=[...records.entries()].filter(([k])=>k.startsWith('ordensServico/')).map(([,r])=>({...r,phase:r.data.status==='Finalizada'?'Resolvido':flowMetas.get('ordensServico:'+r.id)?.phase||(r.data.status==='Em andamento'?'Em andamento':'Novo')}));rows=rows.filter(r=>!filters.phase||r.phase===filters.phase);const counts={};rows.forEach(r=>counts[r.phase]=(counts[r.phase]||0)+1);return {rows:rows.slice(offset,offset+50),total:rows.length,counts};},
     async saveProcess(token,input){const previous=processRows.get(input.id);if((previous?.version||0)!==input.version)throw Error('Conflito de processo');const row={...input,owner_id:identity(token).id,version:input.version+1,created_at:previous?.created_at||new Date().toISOString(),service_id:previous?.service_id,stock_receipt:previous?.stock_receipt};processRows.set(input.id,row);flowRows.push({id:String(flowRows.length+1),source:'process',record_id:row.id,actor_id:identity(token).id,actor_name:identity(token).nome,action:'Atualizado',body:'',current:{phase:row.phase},created_at:new Date().toISOString()});},
@@ -133,6 +137,18 @@ async function main() {
     await evaluate(`(() => {const search=document.querySelector('.busca-condominio');search.value='embare';search.dispatchEvent(new Event('input',{bubbles:true}));})()`);
     await wait("document.querySelectorAll('#visaoCondominios [data-hotel]:not([hidden])').length === 1");
     await evaluate("if(document.querySelector('#visaoCondominios [data-hotel]:not([hidden])').dataset.hotel!=='Embaré')throw Error('Busca por condomínio sem acento');BookCondominios.filtrarLista('visaoCondominios','impossivel');if(document.getElementById('visaoCondominiosVazio').hidden)throw Error('Aviso de busca vazia');document.querySelector('.busca-condominio').value='';BookCondominios.filtrarLista('visaoCondominios','');");
+    await send('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
+    await evaluate("mostrarAba('dashboard')");
+    await wait("document.getElementById('decisionStatus').textContent.includes('Totais de todos') && document.querySelector('#decisionContent .card p').textContent==='150'");
+    await evaluate("if(document.getElementById('decisionLegacyCharts').open)throw Error('Gráficos antigos devem ficar complementares');document.getElementById('decisionHotel').value='Be Urban';document.getElementById('decisionHotel').dispatchEvent(new Event('change'))");
+    await wait("document.getElementById('decisionContent').getAttribute('aria-busy')==='false'");
+    await capture('sad-desktop');
+    await evaluate("[...document.querySelectorAll('#decisionContent button')].find(b=>b.textContent==='Ver serviços vencidos').click()");
+    await wait("!document.getElementById('visaoOS').hidden && !document.getElementById('routine-services').hidden && document.getElementById('routine-services-period').value==='late' && document.getElementById('routine-services-hotel').value==='Be Urban'");
+    await evaluate("BookRoutine.openServices({},'board');document.querySelector('#visaoOS > .botao-secundario').click()");
+    await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+    await evaluate("mostrarAba('dashboard');if(document.documentElement.scrollWidth>document.documentElement.clientWidth+1)throw Error('SAD excede largura do celular')");
+    await capture('sad-mobile');
     await send('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
     await evaluate("BookWorkspace.openNotes()");
     await evaluate("document.getElementById('noteTitle').value='Primeira nota';document.getElementById('noteBody').value='Assunto separado';document.getElementById('notesForm').requestSubmit()");
@@ -295,6 +311,8 @@ async function main() {
       mostrarAba('estoque');await adicionarLinhaEstoque();if(JSON.parse(BookStore.getItem('estoqueBookSantos')).itens.length!==1)throw Error('Adicionar estoque');
       mostrarAba('dashboard');atualizarDashboard();
     })()`);
+    await evaluate("mostrarAba('estoque');const minimum=document.querySelector('#tabelaEstoque input[aria-label^=\"Estoque mínimo\"]');minimum.value='3';minimum.dispatchEvent(new Event('change'))");
+    await wait("JSON.parse(BookStore.getItem('estoqueBookSantos')).itens[0].minimo===3 && !BookStore.pending");
     await evaluate("BookFinance.load()");
     await evaluate("mostrarAba('compras')");
     await wait("document.getElementById('routine-compras-area').textContent.includes('Rotina compras')");

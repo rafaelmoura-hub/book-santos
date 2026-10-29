@@ -420,4 +420,44 @@ test('PostgreSQL: RLS, concorrência, auditoria e consumo atômico', async t => 
   assert.equal((await db.query('select * from storage.objects where name=$1',[filename])).rows.length,0,'Administrador de outro condomínio não recebe o arquivo');
   await actor(client);
   await assert.rejects(routineSave(crypto.randomUUID(),'danos','Comunicação',{...routineBase,item:'Taça',quantidade:'1',origem:'Vistoria'}),e=>e.code==='42501');
+  await db.exec('reset role');
+  await db.exec(migration('202610290015_decision.sql'));
+  await db.exec(migration('202610290015_decision.sql'));
+  await actor(master);
+  const decision=async site=>(await db.query('select public.book_decision_snapshot($1) value',[site])).rows[0].value;
+  const decisionBefore=await decision('Be Urban');
+  await db.exec('reset role');
+  await db.query(`insert into public.book_records(collection,id,owner_id,hotel,data)
+   select 'ordensServico',n::text,$1::uuid,'Be Urban',jsonb_build_object('id',n::text,'hotel','Be Urban','apartamento','214','titulo','Fila SAD de teste','status','Aberta','prioridade',case when n=990000 then 'Urgente' else 'Normal' end,'vencimento',((now() at time zone 'America/Sao_Paulo')::date-1)::text)
+   from generate_series(990000,990129) n`,[master]);
+  await db.query(`insert into public.book_records(collection,id,owner_id,hotel,data)
+   select 'vistorias',(991001+n)::text,$1::uuid,'Be Urban',$2::jsonb||jsonb_build_object('id',(991001+n)::text,'hotel','Be Urban','apartamento','1410','data',((now() at time zone 'America/Sao_Paulo')::date+case when n=0 then -100 else 100 end)::text)
+   from generate_series(0,1) n`,[master,JSON.stringify(inspection)]);
+  assert.equal((await db.query("select public.book_routine_date('2026-02-31') value")).rows[0].value,null);
+  await actor(master);
+  const ds=await decision('Be Urban');
+  assert.equal(ds.services.open,decisionBefore.services.open+130,'SAD agrega além da primeira página');
+  assert.equal(ds.services.overdue,decisionBefore.services.overdue+130);
+  assert.equal(ds.byHotel.reduce((n,r)=>n+r.open,0),ds.services.open);
+  assert.equal(ds.byAssignee.reduce((n,r)=>n+r.open,0),ds.services.open);
+  assert.ok(ds.queue.length<=12&&ds.queue.every(r=>r.hotel==='Be Urban'));
+  assert.ok(ds.queue.every((r,i)=>!i||r.rank>=ds.queue[i-1].rank));
+  assert.equal(ds.inspections.units,6);assert.ok(ds.inspections.overdue>=1);
+  assert.ok(ds.inspections.items.some(r=>r.apartment==='1410'&&r.next_due<ds.referenceDate),'Ignora vistoria futura e data inválida');
+  const dsStock=(await db.query("select data,version from public.book_records where collection='estoqueBookSantos' and id='singleton'")).rows[0];
+  const dsMaterial=dsStock.data.itens[0];dsMaterial.minimo=Number(dsMaterial.quantidade)+1;
+  await commit([change('estoqueBookSantos','singleton',dsStock.data,Number(dsStock.version))]);
+  assert.ok((await decision(null)).stock.items.some(r=>r.id===dsMaterial.id&&Number(r.minimum)===dsMaterial.minimo));
+  const dsVersion=(await db.query("select version from public.book_records where collection='estoqueBookSantos' and id='singleton'")).rows[0].version;
+  dsMaterial.minimo=-1;await assert.rejects(commit([change('estoqueBookSantos','singleton',dsStock.data,Number(dsVersion))]),e=>e.code==='22023');
+  dsMaterial.minimo='2';await assert.rejects(commit([change('estoqueBookSantos','singleton',dsStock.data,Number(dsVersion))]),e=>e.code==='22023');
+  await db.exec('reset role');
+  await db.query("update public.book_profiles set tabs=array['dashboard'] where id=$1",[admin]);
+  await db.query('delete from public.book_hotel_access where user_id=$1',[admin]);
+  await db.query("insert into public.book_hotel_access(user_id,hotel) values($1,'Unlimited')",[admin]);
+  await actor(admin);
+  const scoped=await decision(null);assert.ok(scoped.byHotel.every(r=>r.hotel==='Unlimited'));assert.equal(scoped.permissions.stock,false);assert.equal(scoped.permissions.inspections,false);assert.equal(scoped.stock.items.length,0);assert.equal(scoped.inspections.units,0);
+  await assert.rejects(decision('Be Urban'),e=>e.code==='42501');
+  await actor(managed);await assert.rejects(decision(null),e=>e.code==='42501');
+  await actor(client);await assert.rejects(decision(null),e=>e.code==='42501');
 });

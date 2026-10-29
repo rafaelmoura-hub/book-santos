@@ -24,7 +24,10 @@ function validateChanges(input, user) {
       // Numeric JSON also works before the finance migration. This conversion
       // only serializes canonical cents; arithmetic stays in Money/PostgreSQL.
       if (change.collection === 'estoqueBookSantos' && Array.isArray(change.data.itens)) {
-        for (const item of change.data.itens) item.valor = Number(Money.parse(item.valor));
+        for (const item of change.data.itens) {
+          item.valor = Number(Money.parse(item.valor));
+          if(item.minimo!=null && (typeof item.minimo!=='number'||!Number.isFinite(item.minimo)||!/^\d{1,9}(\.\d{1,2})?$/.test(String(item.minimo))))throw new Error('Mínimo do estoque deve ser não negativo, com até duas casas decimais.');
+        }
       }
       if (change.collection === 'ordensServico' && change.data.fechamento) {
         for (const field of ['valorServico','valorMaterial','custoTotal']) change.data.fechamento[field] = Number(Money.parse(change.data.fechamento[field]));

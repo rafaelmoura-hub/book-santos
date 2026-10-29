@@ -19,7 +19,7 @@ Rotas públicas, sem necessidade de conta:
 - `/legal/lgpd`: formulário mínimo que prepara texto localmente; não envia ao servidor nem gera protocolo.
 - `/legal/empresa`: identificação do responsável, sem dados inventados.
 
-O usuário pediu deixar a identificação jurídica para depois. Permanecem pendentes razão social, CNPJ, endereço e contato de privacidade. Preencher somente no ambiente do servidor:
+O usuário informou o CNPJ **08.941.697/0001-07**, incluído como padrão público. Permanecem pendentes razão social, endereço e contato de privacidade. O campo CNPJ do ambiente é opcional para substituir esse padrão. Veja [SAD e identificação](SAD-REFERENCIAS.md). Preencher os dados confirmados somente no ambiente do servidor:
 
 ```dotenv
 BOOK_COMPANY_NAME=

@@ -144,5 +144,17 @@ window.BookRoutine=(()=>{
   BookStore.setupAttachments();
   req('/api/users').then(rows=>{people=rows.filter(p=>p.funcao==='adm');for(const kind of states.keys()){const select=el('routine-'+kind+'-assignee');staffOptions(select,select.value);select.options[0].text='Todos';}}).catch(()=>{});
  }
- return {init,activate,openFlow,orderOpened,load};
+ function openServices(query={},view='list'){
+  if(!BookWorkspace.can('os'))return;
+  for(const key of ['search','phase','hotel','assignee','period']){
+   const input=el('routine-services-'+key),value=query[key]||(key==='period'?'all':'');
+   if(key==='assignee'&&value&&![...input.options].some(o=>o.value===value))input.append(new Option('Responsável selecionado',value));
+   input.value=value;
+  }
+  const state=states.get('services');state.offset=0;state.view=view;
+  el('routine-services').hidden=false;el('listaOS').hidden=true;el('resumoListaOS').hidden=true;el('visaoOS').querySelector('.filtros-card').hidden=true;
+  el('visaoOS').querySelector('.titulo-secao').nextElementSibling.textContent='Voltar à lista de cards';
+  mostrarAba('os');
+ }
+ return {init,activate,openFlow,orderOpened,load,openServices};
 })();

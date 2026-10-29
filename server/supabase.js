@@ -58,6 +58,7 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
     if (profile.funcao !== 'adm' || !profile.mestre) throw failure(403, 'Somente o administrador mestre pode gerenciar usuários.');
   }
   const provider = {
+    decision(token,hotel){return request('/rest/v1/rpc/book_decision_snapshot',{token,method:'POST',body:{site:hotel||null},timeoutMs:30000});},
     processes(token,kind,offset,filters){return request('/rest/v1/rpc/book_process_page',{token,method:'POST',body:{process_kind:kind,page_offset:offset,filters}});},
     servicePage(token,offset,filters){return request('/rest/v1/rpc/book_service_page',{token,method:'POST',body:{page_offset:offset,filters}});},
     saveProcess(token,input){return request('/rest/v1/rpc/book_process_save',{token,method:'POST',body:{process_id:input.id,process_kind:input.kind,expected_version:input.version,site:input.hotel,unit:input.apartment,new_phase:input.phase,document:input.data}});},
@@ -141,7 +142,7 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
     apartments(token) { return request('/rest/v1/book_apartments?select=hotel,apartment&order=apartment&limit=10000', { token }); },
     async ready() {
       await request('/auth/v1/settings');
-      if (await request('/rest/v1/rpc/book_schema_version', { method: 'POST', body: {} }) !== 14) throw failure(503, 'Aplique as migrações até 202610280014_routine.sql antes de publicar esta versão.');
+      if (![14,15].includes(await request('/rest/v1/rpc/book_schema_version', { method: 'POST', body: {} }))) throw failure(503, 'Aplique as migrações até 202610280014_routine.sql antes de publicar esta versão. O painel SAD utiliza também a migração 15.');
       return { ok: true };
     },
     commit(token, changes) { return request('/rest/v1/rpc/book_commit', { token, method: 'POST', body: { changes } }); },

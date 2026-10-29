@@ -7,6 +7,6 @@ if (existsSync(envPath)) process.loadEnvFile(envPath);
   try {
     const client = createSupabase({ url: process.env.SUPABASE_URL, key: process.env.SUPABASE_PUBLISHABLE_KEY });
     await client.ready();
-    console.log('Auth e versão 14 das migrações confirmados. Confira também as permissões com contas de teste.');
+    console.log('Auth e migrações compatíveis confirmados (versão 14 ou 15). O painel SAD requer a migração 15; confira também as permissões com contas de teste.');
   } catch (error) { console.error(error.message); process.exitCode = 1; }
 })();

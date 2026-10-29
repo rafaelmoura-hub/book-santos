@@ -151,7 +151,7 @@
           <div id="listaUsuarios"></div>
         </section>
         <section id="visaoDashboard" hidden>
-          <div class="titulo-secao"><div><h2>Painel</h2><p>Visão geral de chamados e cards.</p></div></div>
+          <div class="titulo-secao"><div><h2>Visão geral</h2><p>Prioridades, vistorias e materiais por condomínio.</p></div></div>
           <div class="dashboard-painel">
             <div class="dashboard-cabecalho"><div><h3>Cards</h3><p id="resumoDashboardOS"></p></div><div class="controles-grafico"><label>Per&iacute;odo<select id="periodoOS" data-on-change="atualizarDashboard()"><option value="diario">Di&aacute;rio</option><option value="semanal">Semanal</option><option value="mensal" selected>Mensal</option><option value="anual">Anual</option></select></label><label>Usu&aacute;rio<select id="usuarioOS" data-on-change="atualizarDashboard()"><option value="todos">Todos</option></select></label><label>Gr&aacute;fico<select id="tipoGraficoOS" data-on-change="atualizarDashboard()"><option value="linha" selected>Linha</option><option value="coluna">Coluna</option><option value="pizza">Pizza</option></select></label></div></div>
             <div id="graficoOS" class="grafico-dashboard" role="img" aria-label="Gr&aacute;fico de Cards"></div>
@@ -254,6 +254,7 @@
     <script src="../assets/notifications.js"></script>
     <script src="../assets/processes.js"></script>
     <script src="routine.js"></script>
+    <script src="decision.js"></script>
     <script src="collaboration.js"></script>
     <script src="workspace.js"></script>
     <script src="usuarios.js"></script>

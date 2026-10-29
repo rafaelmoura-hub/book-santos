@@ -153,6 +153,13 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         }
       }
       if (route === '/api/session' && req.method === 'GET') return json(200, { ...user, provider: 'supabase' });
+      if(route==='/api/decision' && req.method==='GET'){
+        if(!canTab(user,'dashboard'))throw fail(403,'Sem acesso à visão geral.');
+        const hotel=url.searchParams.get('hotel');
+        if(hotel && (!hotels.includes(hotel)||!(await provider.access(session.accessToken)).some(row=>row.hotel===hotel)&&!user.mestre))throw fail(403,'Sem acesso a este condomínio.');
+        try{return json(200,await provider.decision(session.accessToken,hotel));}
+        catch(error){if(error.status===503)throw fail(503,'Painel SAD indisponível. Se ainda não aplicada, execute a migração 202610290015_decision.sql. As outras abas continuam disponíveis.');throw error;}
+      }
       if(['/api/processes','/api/processes/services','/api/processes/flow','/api/processes/comment','/api/processes/service','/api/processes/receive'].includes(route)){
         if(user.funcao!=='adm')throw fail(403,'Somente administradores.');
         const validSource=(source,id)=>['process',...Object.keys(flowPhases)].includes(source)&&typeof id==='string'&&(['process','feedbacks'].includes(source)?uuid(id):/^\d{1,16}$/.test(id));
