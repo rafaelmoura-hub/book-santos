@@ -497,7 +497,8 @@ function filtrarPorUsuario(items, tipo, selecao) {
   });
 }
 function desenharGrafico(dados, rotulos, tipo) {
-  const cores = ["#0803b8", "#18a874"], nomes = window.__dashboardTipo === "chamados" ? ["Abertos", "Fechados"] : ["Abertas", "Finalizadas"], totais = dados.map(s => s.reduce((a, b) => a + b, 0));
+  const palette=getComputedStyle(document.documentElement);
+  const cores = [palette.getPropertyValue('--chart-blue').trim()||'#0b5978',palette.getPropertyValue('--chart-green').trim()||'#198668'], nomes = window.__dashboardTipo === "chamados" ? ["Abertos", "Fechados"] : ["Abertas", "Finalizadas"], totais = dados.map(s => s.reduce((a, b) => a + b, 0));
   if (tipo === "pizza") {
     const soma = totais[0] + totais[1], a = soma ? totais[0] / soma * 100 : 50;
     return `<div class="pizza-wrap"><div class="pizza" style="background:${soma ? `conic-gradient(${cores[0]} 0 ${a}%,${cores[1]} ${a}% 100%)` : "#e5e9f0"}"></div><ul><li><i style="background:${cores[0]}"></i>${nomes[0]}: ${totais[0]}</li><li><i style="background:${cores[1]}"></i>${nomes[1]}: ${totais[1]}</li></ul></div>`;
@@ -556,6 +557,7 @@ BookCollaboration.init(sessao);
 BookRoutine.init(sessao);
 BookDecision.init();
 BookNavigation.init();
+window.addEventListener('book:theme',()=>{if(!document.getElementById('visaoDashboard').hidden)atualizarDashboard();});
 BookNotifications.init(sessao);
 document.getElementById('masterSupportRefresh').onclick=()=>BookWorkspace.loadMaster();
 const primeiraAba=Object.keys(BookWorkspace.labels).find(tab=>BookWorkspace.can(tab))||'inicio';

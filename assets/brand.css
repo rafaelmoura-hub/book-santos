@@ -1,0 +1,128 @@
+/* BOOK TASK — palette taken from the supplied logo, with accessible night colors. */
+:root {
+ color-scheme:light;
+ --brand-deep:#042d46; --brand-action:#064460; --brand-link:#0b506f;
+ --surface:#ffffff; --surface-soft:#eaf2f6; --control:#ffffff; --control-border:#738c9c;
+ --azul:#0b506f; --azul-escuro:#042d46; --fundo:#f3f7fa; --texto:#183344; --suave:#4f6776; --borda:#c1d3de;
+ --brand-focus:#0b668a; --danger:#a32d29; --danger-soft:#fff0ee; --chart-blue:#0b5978; --chart-green:#198668;
+}
+html[data-theme="dark"] {
+ color-scheme:dark;
+ --brand-action:#17627f; --brand-link:#8dd3f1;
+ --surface:#102b3c; --surface-soft:#17394c; --control:#0c2231; --control-border:#7395a9;
+ --azul:#8dd3f1; --azul-escuro:#a4ddf4; --fundo:#081824; --texto:#e8f2f7; --suave:#afc4d1; --borda:#416174;
+ --brand-focus:#8dd3f1; --danger:#ffb4ab; --danger-soft:#46282e; --chart-blue:#75c8ed; --chart-green:#5ed3aa;
+}
+html { background:var(--fundo); }
+body,body[data-screen] { background:var(--fundo); color:var(--texto); }
+body[data-screen] > header,body[data-screen] > nav { background:var(--surface); color:var(--texto); border-color:var(--borda); }
+body[data-screen] > header { border-bottom-color:var(--brand-deep); }
+.brand-heading::before,header h1.brand-heading::before { display:none; content:none; }
+.login-box h1.brand-heading::before { display:none; content:none; }
+.brand-heading { display:flex; align-items:center; gap:12px; color:var(--texto); }
+.brand-logo { width:48px; height:48px; object-fit:contain; flex:none; }
+.login-box .brand-heading { flex-direction:column; gap:12px; text-align:center; }
+.login-box .brand-logo { width:128px; height:128px; }
+.login-page { padding-top:80px; }
+.brand-link { display:inline-flex; align-items:center; gap:12px; color:var(--texto); text-decoration:none; }
+.login-box,.card,.chamado,.dashboard-painel,#historico,.hotel,.hotel-vistoria,.client-panel,.planilha-wrap,.painel-chat,.conversa-chat,.mensagem-chat,.registro,.vistoria-registro,.financeiro-card,.financeiro-grupo,.routine-card,.routine-team-plans,.decision-section,.notifications-panel,.modal-conteudo,.session-error,dialog {
+ background:var(--surface); color:var(--texto); border-color:var(--borda);
+}
+.login-box { border-top-color:var(--brand-deep); }
+.modal-conteudo,.decision-section,.chamado { border-top-color:var(--brand-action); }
+.workspace-heading,.ai-credentials,.sync-tools[open] > p { background:var(--surface) !important; color:var(--texto); }
+.workspace-dialog,.collaboration-dialog { background:var(--surface); color:var(--texto); border-color:var(--borda); }
+.workspace-thread,.chat-mensagens,.lista-conversas-chat,.routine-column,.attachment-row,.ai-action,.workspace-connection,.mensagem-chat.minha-mensagem,.item-conversa-chat.selecionada,.help-panel,.grupo-checklist {
+ background:var(--surface-soft); color:var(--texto); border-color:var(--borda);
+}
+.notification-item { background:var(--surface-soft) !important; color:var(--texto) !important; }
+.notification-toast { background:var(--brand-action); color:white; }
+h1,h2,h3,h4,.titulo-secao h2,.titulo-secao h3,main > section > h2,.client-panel h2 { color:var(--texto); }
+.decision-section h3,.decision-panel > h3,.routine-column > h3 { color:var(--brand-link); }
+label,#formChamado label,.filtro-apartamento,.workspace-hint,.workspace-status,.card h3,.routine-card p,.routine-event small,.decision-table-wrap th { color:var(--suave); }
+.login-box > p { color:var(--suave); }
+a { color:var(--brand-link); }
+input:not([type="checkbox"]):not([type="radio"]),select,textarea {
+ background:var(--control) !important; color:var(--texto) !important; border-color:var(--control-border) !important;
+}
+input::placeholder,textarea::placeholder { color:var(--suave); opacity:1; }
+input[type="checkbox"],input[type="radio"] { accent-color:var(--brand-action); }
+input[type="file"]::file-selector-button { padding:8px; border:1px solid var(--control-border); border-radius:6px; background:var(--surface-soft); color:var(--texto); }
+.acao-principal,#formOS button,#formFechamentoOS button,#formVistoria button[type="submit"],#formChamado button[type="submit"],.login-box button[type="submit"],.botao-suporte,.apartamento-opcao,.opcoes-dados button,.legal-page .legal-actions button {
+ background:var(--brand-action); color:white;
+}
+.acao-principal:hover,.login-box button[type="submit"]:hover { background:var(--brand-deep); color:white; }
+.botao-secundario,body[data-screen] header > button,.workspace-actions button,.sync-toolbar button,.sync-tools summary,.attachment-remove,button.fechar,.financeiro-abas button,.workspace-list button,.workspace-panel-tabs button {
+ background:var(--surface); color:var(--brand-link); border-color:var(--control-border);
+}
+body[data-screen] nav button { color:var(--suave); background:transparent; }
+body[data-screen] nav button.ativa,.financeiro-abas button.ativa,.workspace-badge {
+ color:white; background:var(--brand-action);
+}
+body[data-screen] nav button:hover,.grouped-navigation .nav-group-active > summary,.routine-actions [aria-pressed="true"],.workspace-panel-tabs button[aria-pressed="true"] {
+ background:var(--surface-soft); color:var(--brand-link);
+}
+.grouped-navigation .nav-group > summary { color:var(--suave); }
+.grouped-navigation .nav-group-active > summary { color:var(--brand-link); }
+.grouped-navigation .nav-group-items { border-left-color:var(--control-border); }
+.cards > .card:first-child { background:var(--brand-action); border-color:var(--brand-action); }
+.cards > .card:first-child h3,.cards > .card:first-child p { color:white; }
+.cards > .card:nth-child(2) { background:var(--surface-soft); border-color:var(--borda); }
+.cards > .card:nth-child(2) h3 { color:var(--suave); }
+.card p,.cards > .card:nth-child(2) p,.routine-card h3 { color:var(--texto); }
+.selo-status,.feedback-grade { background:var(--surface-soft); color:var(--brand-link); }
+.feedback-grade[data-grade="Crítico"] { background:var(--danger-soft); color:var(--danger); }
+.feedback-grade[data-grade="Irrelevante"] { background:var(--surface-soft); color:var(--suave); }
+.vencida,.vencimento.vencida,.decision-warning,.routine-card p.routine-overdue,#mensagem { color:var(--danger); }
+.selo-finalizado,.finalizado,.vazio { background:var(--surface-soft); color:var(--suave); border-color:var(--borda); }
+.card-open,.support-open-thread { background:transparent; color:var(--brand-link); }
+.hotel h2,.hotel-vistoria strong { color:var(--texto); }
+.apartamentos-vistoria button,.apartamento-opcao { background:var(--surface); color:var(--brand-link); border-color:var(--control-border); }
+.financeiro-periodo,.workspace-panel-tabs,.workspace-dialog .workspace-status,.cabecalho-conversa-chat,.chat-cliente { background:var(--surface); color:var(--texto); }
+.help-panel summary { color:var(--suave); }
+.status-tag,.status-tag[data-state="closed"] { background:var(--surface-soft); color:var(--suave); }
+.chat-topo,.chat-enviar button { background:var(--brand-action); color:white; }
+.planilha th { background:var(--surface-soft); color:var(--texto); }
+.painel-chat .chat-mensagens,.usuario-hoteis { background:var(--surface-soft); color:var(--texto); border-color:var(--borda); }
+.chat-vazio { color:var(--suave); }
+.mensagem-chat.minha-mensagem small { color:var(--suave); }
+.chat-topo h2,.chat-topo h3 { color:white; }
+.workspace-actions button[aria-pressed="true"],.item-conversa-chat:hover,.apartamento-opcao:hover,.apartamentos-vistoria button:hover { background:var(--surface-soft); color:var(--brand-link); border-color:var(--control-border); }
+#backupOpcoes { background:var(--surface-soft); color:var(--texto); border-color:var(--borda); }
+.botao-remover,.remover-coluna,.remover-material { color:var(--danger); }
+.grafico-grade { stroke:var(--borda); }
+.grafico-dashboard svg text { fill:var(--suave); }
+.skip-link { background:var(--surface); color:var(--brand-link); border-color:var(--brand-focus); }
+:where(button,summary,a,input,select,textarea,[tabindex]):focus-visible { outline:3px solid var(--brand-focus) !important; outline-offset:3px; }
+.theme-toggle,body[data-screen] header > .theme-toggle {
+ display:inline-flex; align-items:center; justify-content:center; gap:8px; flex:none; width:auto; min-width:44px; min-height:44px;
+ margin:0; padding:9px 12px; border:1px solid var(--control-border); border-radius:9px; color:var(--brand-link); background:var(--surface); cursor:pointer; font:inherit; font-size:13px; order:1;
+}
+.theme-icon { font-size:22px; line-height:1; }
+.theme-toggle[aria-pressed="true"],body[data-screen] header > .theme-toggle[aria-pressed="true"] { background:var(--surface-soft); border-color:var(--brand-focus); }
+.theme-floating { position:fixed; top:18px; right:24px; z-index:40; }
+.legal-footer { text-align:center; color:var(--suave); }
+.legal-footer nav { justify-content:center !important; align-items:center; }
+.legal-footer a { color:var(--brand-link); }
+.legal-footer p { max-width:740px; margin:12px auto 0; }
+body[data-screen="admin.js"] > .legal-footer { max-width:none; margin:32px 32px 32px 240px; }
+.legal-page { margin:0; }
+.legal-page header,.legal-page main,.legal-page footer { max-width:1000px; }
+.legal-page header { position:relative; text-align:center; padding-top:28px; }
+.legal-page header > .theme-toggle { position:absolute; top:24px; right:24px; }
+.legal-page header > nav { justify-content:center; background:var(--surface-soft); border:1px solid var(--borda); border-radius:10px; padding:12px; }
+.legal-page main { background:var(--surface); color:var(--texto); border-color:var(--borda); }
+.legal-page footer { text-align:center; color:var(--suave); }
+.legal-page td,.legal-page th { border-color:var(--borda); }
+.legal-page .brand-link { margin:auto; }
+@media(max-width:760px) {
+ .brand-logo { width:42px; height:42px; }
+ .login-box .brand-logo { width:112px; height:112px; }
+ .theme-toggle .theme-label { position:absolute; width:1px; height:1px; padding:0; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+ .theme-toggle { width:44px; padding:8px; }
+ .theme-floating { top:12px; right:18px; }
+ body[data-screen="admin.js"] > .legal-footer { margin:24px 18px; }
+ .legal-page header > .theme-toggle { top:24px; right:18px; }
+ .legal-page .brand-link { font-size:20px; }
+}
+@media(forced-colors:active) { .theme-toggle { border:1px solid ButtonText; }:focus-visible { outline-color:Highlight !important; } }

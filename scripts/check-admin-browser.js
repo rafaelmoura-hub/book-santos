@@ -103,16 +103,38 @@ async function main() {
     const dialogs=[];
     socket.addEventListener('message',event=>{const message=JSON.parse(event.data);if(message.method==='Page.javascriptDialogOpening'){dialogs.push(message.params.message);send('Page.handleJavaScriptDialog',{accept:true}).catch(()=>{});}});
     const evaluate=async expression=>{const result=await send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(result.exceptionDetails)throw new Error(expression.slice(0,300)+'\n'+JSON.stringify(result.exceptionDetails));return result.result.value;};
-    const wait=async expression=>{for(let i=0;i<100;i++){if(await evaluate(expression))return;await delay(100);}throw new Error(`Tempo excedido: ${expression}`);};
+    const wait=async expression=>{for(let i=0;i<100;i++){if(await evaluate(expression))return;await delay(100);}const state=await evaluate("JSON.stringify({url:location.href,ready:document.readyState,text:document.body?.innerText.slice(0,1200)})");throw new Error(`Tempo excedido: ${expression}\n${state}`);};
     const capture=async name=>{
       if(!process.env.BOOK_PREVIEW_DIR)return;
       const folder=path.resolve(process.env.BOOK_PREVIEW_DIR);fs.mkdirSync(folder,{recursive:true});
       const screenshot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});
       fs.writeFileSync(path.join(folder,name+'.png'),Buffer.from(screenshot.data,'base64'));
     };
+    const contrastAudit=()=>evaluate(`(() => {
+      const rgb=s=>(s.match(/[\\d.]+/g)||[]).map(Number);
+      const luminance=c=>c.slice(0,3).map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;}).reduce((n,v,i)=>n+v*[.2126,.7152,.0722][i],0);
+      const bg=e=>{for(let n=e;n;n=n.parentElement){const c=rgb(getComputedStyle(n).backgroundColor);if(c.length===3||c[3]===1)return c;}return rgb(getComputedStyle(document.documentElement).backgroundColor);};
+      const failures=[];
+      for(const e of document.body.querySelectorAll('*')){
+        if(!e.getClientRects().length||e.closest('[hidden],svg')||e.disabled||getComputedStyle(e).visibility==='hidden'||!Array.from(e.childNodes).some(n=>n.nodeType===3&&n.textContent.trim()))continue;
+        const s=getComputedStyle(e);if(Number(s.opacity)<1)continue;
+        const c=rgb(s.color),b=bg(e);if(c.length<3||b.length<3||c[3]!=null&&c[3]!==1)continue;
+        const l=[luminance(c),luminance(b)].sort((a,b)=>a-b),ratio=(l[1]+.05)/(l[0]+.05),required=parseFloat(s.fontSize)>=24||parseFloat(s.fontSize)>=18.66&&Number(s.fontWeight)>=700?3:4.5;
+        if(ratio+.02<required)failures.push({element:e.id||e.className||e.tagName,text:e.textContent.trim().slice(0,55),ratio:Number(ratio.toFixed(2)),color:s.color,background:b});
+      }
+      return failures.slice(0,25);
+    })()`);
     await send('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
     await wait("location.origin === '"+base+"' && document.readyState === 'complete'");
     await capture('login-desktop');
+    await wait("!!document.getElementById('themeToggle') && document.querySelector('.brand-logo').naturalWidth===256");
+    await evaluate("document.getElementById('themeToggle').click()");
+    await wait("document.documentElement.dataset.theme==='dark'");
+    await capture('login-night');
+    await send('Page.reload');
+    await wait("document.readyState==='complete' && document.documentElement.dataset.theme==='dark' && !!document.getElementById('themeToggle')");
+    await evaluate("document.getElementById('themeToggle').click()");
+    await wait("document.documentElement.dataset.theme==='light'");
     await send('Page.addScriptToEvaluateOnNewDocument',{source:"Object.defineProperty(window,'localStorage',{get(){throw new DOMException('Armazenamento bloqueado','SecurityError');}});"});
     await evaluate("fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({login:'master@example.com',senha:'senha'})}).then(r=>{if(!r.ok)throw Error('login');})");
     await send('Page.navigate',{url:base+'/adm/admin.html'});
@@ -129,6 +151,13 @@ async function main() {
     await capture('painel-desktop');
     await evaluate("if(document.querySelectorAll('body > nav .nav-group').length!==5)throw Error('Agrupamentos do menu');if(document.getElementById('abaOS').closest('details').id!=='menu-operacao'||document.getElementById('abaEstoque').closest('details').id!=='menu-gestao'||document.getElementById('abaReservas').closest('details').id!=='menu-imoveis')throw Error('Abas em grupos incorretos');if(!document.getElementById('menu-atendimento').open)throw Error('Grupo ativo fechado');");
     const tabs=await evaluate(`(() => {const result=[];for(const tab of ['chamados','chat','os','vistorias','condominios','estoque','financeiro','dashboard','usuarios','backup','suporte','feedbacks','avaliacoes','reservas','onboarding','projetos','compras','danos']){document.getElementById('aba'+(tab==='os'?'OS':tab[0].toUpperCase()+tab.slice(1))).click();const id=tab==='os'?'OS':tab[0].toUpperCase()+tab.slice(1);if(document.getElementById('visao'+id).hidden)throw Error(tab);if(document.querySelector('nav').getBoundingClientRect().height===0)throw Error('nav');result.push(tab);}return result;})()`);
+    await evaluate("document.getElementById('themeToggle').click()");
+    const darkContrast=[];
+    for(const tab of tabs){await evaluate(`mostrarAba(${JSON.stringify(tab)});if(document.documentElement.dataset.theme!=='dark'||getComputedStyle(document.body).backgroundColor!=='rgb(8, 24, 36)')throw Error('Tema noturno ausente')`);const issues=await contrastAudit();if(issues.length)darkContrast.push({tab,issues});}
+    if(darkContrast.length)throw Error('Contraste noturno: '+JSON.stringify(darkContrast));
+    await evaluate("mostrarAba('dashboard');BookDecision.load(true)");
+    await capture('dashboard-night');
+    await evaluate("document.getElementById('themeToggle').click()");
     await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
     for(const tab of tabs){
       await evaluate(`mostrarAba(${JSON.stringify(tab)})`);
@@ -194,6 +223,10 @@ async function main() {
     await evaluate("document.getElementById('supportDialog').querySelector('.workspace-heading button').click();document.querySelector('.workspace-actions button').click();document.getElementById('aiKey').value='chave-de-teste-nao-real';document.getElementById('aiPrompt').value='Ajuda para organizar uma vistoria';document.getElementById('aiForm').requestSubmit()");
     await wait("document.getElementById('aiThread').textContent.includes('Resposta de IA simulada')");
     await capture('ia-desktop');
+    await evaluate("document.getElementById('themeToggle').click()");
+    const aiContrast=await contrastAudit();if(aiContrast.length)throw Error('Contraste no painel de IA: '+JSON.stringify(aiContrast));
+    await capture('ia-night');
+    await evaluate("document.getElementById('themeToggle').click()");
     await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
     await evaluate("if(document.getElementById('aiDialog').scrollWidth>document.getElementById('aiDialog').clientWidth+1)throw Error('IA excedeu largura do celular')");
     await capture('ia-mobile');
@@ -430,6 +463,9 @@ async function main() {
     })()`);
     await wait("window.requestText.includes('Pessoa de teste') && document.getElementById('privacyStatus').textContent.includes('Nenhuma solicitação foi enviada')");
     await capture('lgpd-desktop');
+    await evaluate("document.getElementById('themeToggle').click()");
+    const legalContrast=await contrastAudit();if(legalContrast.length)throw Error('Contraste nos documentos: '+JSON.stringify(legalContrast));
+    await capture('lgpd-night');
     await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
     await evaluate("if(document.documentElement.scrollWidth>document.documentElement.clientWidth+1)throw Error('Documento legal excedeu largura do celular')");
     await capture('lgpd-mobile');

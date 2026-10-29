@@ -29,6 +29,8 @@ test('documentos e assets comprimidos funcionam sem sessão sem liberar os dados
   const plain=await fetch(base+'/assets/accessibility.js',{headers:{'Accept-Encoding':'gzip;q=0'}});assert.equal(plain.headers.get('content-encoding'),null);
   const privatePage=await fetch(base+'/adm/admin.html',{redirect:'manual'});assert.equal(privatePage.status,302);
   assert.equal((await fetch(base+'/api/session')).status,401);
+  const logo=await fetch(base+'/assets/book-task-logo.png');assert.equal(logo.status,200);assert.equal(logo.headers.get('content-type'),'image/png');const png=Buffer.from(await logo.arrayBuffer());assert.deepEqual([...png.subarray(0,8)],[137,80,78,71,13,10,26,10]);assert.ok(png.length<100000);
+  assert.equal((await fetch(base+'/assets/not-public.png')).status,404);
   assert.ok(!acceptsGzip('gzip;q=0'));assert.ok(acceptsGzip('br, gzip;q=0.8'));
 });
 test('login prossegue com storage bloqueado e sem persistir identificação pessoal',async()=>{

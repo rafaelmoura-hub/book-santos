@@ -32,6 +32,8 @@ Esses campos são públicos, nunca devem conter segredos. Reinicie o servidor ap
 
 ## Minimização e tracking
 
+- A preferência de aparência `book:theme` guarda apenas `light` ou `dark` no navegador, sem identificadores pessoais. Ela é opcional para o funcionamento e está descrita no aviso de cookies; veja [identidade e tema](IDENTIDADE-TEMA.md).
+
 - Removida a cópia persistida do perfil completo em `usuarioLogado`. O cookie HttpOnly permanece necessário ao login. Permissões continuam verificadas pelo servidor e pelo banco.
 - Não encontrados scripts de analytics, pixels, anúncios, fontes ou bibliotecas carregadas de CDN nas telas revisadas. CSP limita scripts e conexões do navegador à mesma origem. IA é uma integração iniciada pelo usuário, no servidor, que pode compartilhar dados de consultas autorizadas com o provedor escolhido.
 - Não foram apagados registros operacionais, backups ou dados antigos do navegador sem análise de retenção. A exportação legada continua disponível para quem precisar recuperar dados antigos.
