@@ -4,7 +4,7 @@
   --azul-escuro: #103966;
   --fundo: #f6f8fb;
   --texto: #242b35;
-  --suave: #6c788a;
+  --suave: #526276;
   --borda: #c4d5e9;
   --sombra: 0 2px 6px #20345304;
 }
@@ -330,3 +330,19 @@ body[data-screen="cliente.js"] > main { display: grid; grid-template-columns: 1.
 @media (max-width: 760px) { .routine-filters { grid-template-columns: minmax(0,1fr) minmax(0,1fr); } .routine-column { flex-basis: min(280px,85vw); } .routine-actions button { flex: 1 1 120px; } }
 @media (max-width: 760px) { .routine-surface .routine-actions { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); } .routine-surface .routine-actions button { font-size: 11px; padding: 9px 5px; } .routine-surface .routine-actions .acao-principal { grid-column: 1 / -1; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; } }
+/* Accessible shared controls and legal links; keep brand colors. */
+.skip-link { position:fixed; top:-100px; left:12px; z-index:1000; background:white; color:#174a8b; padding:12px; border:2px solid #174a8b; }
+.skip-link:focus { top:12px; }
+:focus-visible { outline:3px solid #174a8b; outline-offset:3px; }
+input:not([type="checkbox"]):not([type="radio"]),select,textarea { border-color:#73869d !important; }
+input::placeholder,textarea::placeholder { color:#59687a; opacity:1; }
+button.fechar { width:auto; min-width:44px; min-height:44px; border:1px solid #73869d; border-radius:8px; color:#174a8b; background:white; cursor:pointer; }
+button,a,input,select,textarea { scroll-margin-block:150px 32px; }
+.legal-footer { margin:32px auto; padding:16px 24px; max-width:1050px; font-size:12px; line-height:1.6; color:#526276; }
+.legal-footer nav { position:static; display:flex; justify-content:flex-start; flex-wrap:wrap; gap:14px; padding:0; margin:0; background:transparent; border:0; box-shadow:none; width:auto; min-height:0; }
+.legal-footer a { color:#174a8b; padding:6px 2px; text-underline-offset:3px; }
+.session-error { position:relative; z-index:100; margin:24px auto; max-width:640px; padding:24px; border:2px solid #174a8b; background:white; color:#242b35; }
+.session-error a { display:inline-block; margin:16px; color:#174a8b; }
+.modal { backdrop-filter:none; }
+.card-open { display:block; text-align:left; border:0; padding:8px; width:100%; background:transparent; color:#174a8b; cursor:pointer; font:inherit; }
+@media(forced-colors:active) { :focus-visible { outline:3px solid Highlight; } }

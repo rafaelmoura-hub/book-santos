@@ -1,7 +1,7 @@
 window.BookAPI = {
     async request(url, options = {}) {
         const { timeoutMs, ...fetchOptions } = options;
-        const timeout = timeoutMs ? AbortSignal.timeout(timeoutMs) : null;
+        const timeout = AbortSignal.timeout(timeoutMs || 45000);
         const signal = timeout && options.signal ? AbortSignal.any([timeout, options.signal]) : timeout || options.signal;
         let response;
         let data;
@@ -19,7 +19,7 @@ window.BookAPI = {
     async logout() {
         try {
             await this.request('/api/logout', { method: 'POST', body: '{}' });
-            localStorage.removeItem('usuarioLogado');
+            try { localStorage.removeItem('usuarioLogado'); } catch {}
             location.href = '/login.html';
         } catch (error) { alert(error.message); }
     }

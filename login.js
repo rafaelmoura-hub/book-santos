@@ -9,9 +9,13 @@ async function entrar(event) {
             method: 'POST',
             body: JSON.stringify({ login: document.getElementById('login').value.trim(), senha: document.getElementById('senha').value })
         });
-        localStorage.removeItem('usuariosBookSantos');
-        localStorage.setItem('usuarioLogado', JSON.stringify(usuario));
+        // The server cookie is the session; browser storage is optional.
+        try { localStorage.removeItem('usuariosBookSantos'); localStorage.removeItem('usuarioLogado'); } catch {}
         location.href = usuario.funcao === 'adm' ? '/adm/admin.html' : '/cliente/cliente.html';
     } catch (error) { mensagem.textContent = error.message; }
     finally { button.disabled = false; }
+}
+if (location.protocol === 'file:') {
+    document.querySelector('button[type="submit"]').disabled = true;
+    document.getElementById('mensagem').textContent = 'Abra pelo servidor: execute npm.cmd start na pasta do projeto e acesse http://127.0.0.1:3000. O arquivo HTML sozinho não conecta ao sistema.';
 }

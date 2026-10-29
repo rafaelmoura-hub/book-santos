@@ -1,7 +1,7 @@
 const { hotels, filePath } = require('../assets/catalog');
 const http = require('node:http');
 const path = require('node:path');
-const { readFile } = require('node:fs/promises');
+const { asset, acceptsGzip } = require('./static-assets');
 const { randomBytes, randomUUID, createHash } = require('node:crypto');
 const { COLLECTIONS, validId, validateChanges, storeAttachments } = require('./operations');
 const { validateUser } = require('./users');
@@ -16,6 +16,7 @@ const { boundedBytes,requireJSON,validateProfile } = require('./security');
 const {validateCollaboration}=require('./collaboration');
 const {validateProcess,validateFlow}=require('./processes');
 const {definitions:processDefinitions,flowPhases}=require('../assets/processes');
+const { renderLegal, legalConfig } = require('./legal');
 const ROOT = path.resolve(__dirname, '..');
 const fail = (status, message) => Object.assign(new Error(message), { status });
 const digest = token => createHash('sha256').update(token).digest('hex');
@@ -68,6 +69,11 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
     try {
       const url = new URL(req.url, 'http://localhost');
       const route = url.pathname;
+      if ((route === '/legal' || route.startsWith('/legal/')) && ['GET','HEAD'].includes(req.method)) {
+        const html=renderLegal(route === '/legal' ? 'privacidade' : route.slice(7), legalConfig());
+        if(!html)throw fail(404,'Documento não encontrado.');
+        res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'}); return res.end(req.method==='HEAD'?undefined:html);
+      }
       if (route === '/health' && req.method === 'GET') return json(200, { status: 'ok' });
       if (route === '/ready' && req.method === 'GET') {
         if(clock()>=readyUntil){
@@ -378,19 +384,23 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
       if (!['GET', 'HEAD'].includes(req.method)) throw fail(405, 'Método não permitido.');
       if (/^\/hotel\/(hotel\.html)?$/.test(route)) { res.writeHead(302, { Location: '/adm/admin.html#condominios' }); return res.end(); }
       const file = route === '/' ? '/login.html' : route;
-      if (!/^\/(login\.(html|css|js)|assets\/(api|session|store|money|periods|catalog|events|notifications|processes)\.js|assets\/ui\.css|(adm|cliente|hotel)\/[a-z]+\.(html|css|js))$/.test(file)) throw fail(404, 'Arquivo não encontrado.');
+      if (!/^\/(login\.(html|css|js)|assets\/(api|session|store|money|periods|catalog|events|notifications|processes|accessibility|legal)\.js|assets\/(ui|legal)\.css|(adm|cliente|hotel)\/[a-z]+\.(html|css|js))$/.test(file)) throw fail(404, 'Arquivo não encontrado.');
       if (/^\/(adm|hotel)\//.test(file) && user?.funcao !== 'adm' || /^\/cliente\//.test(file) && user?.funcao !== 'cliente') {
         res.writeHead(302, { Location: '/login.html' }); return res.end();
       }
-      const content = await readFile(path.join(ROOT, file));
+      // Only allowlisted application files reach this cache, after access checks.
+      const content = await asset(path.join(ROOT, file));
+      res.setHeader('Vary','Accept-Encoding');
       if (/\.(css|js)$/.test(file)) {
-        const etag = `"${createHash('sha256').update(content).digest('hex')}"`;
+        const etag = content.etag;
         res.setHeader('ETag', etag);
         res.setHeader('Cache-Control', 'private, max-age=0, must-revalidate');
         if (req.headers['if-none-match'] === etag) { res.writeHead(304); return res.end(); }
       }
-      res.writeHead(200, { 'Content-Type': `${{ '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript' }[path.extname(file)]}; charset=utf-8` });
-      res.end(req.method === 'HEAD' ? undefined : content);
+      const zipped=content.gzip && acceptsGzip(req.headers['accept-encoding']);
+      const bytes=zipped?content.gzip:content.bytes;
+      res.writeHead(200, { 'Content-Type': `${{ '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript' }[path.extname(file)]}; charset=utf-8`, 'Content-Length':bytes.length, ...(zipped?{'Content-Encoding':'gzip'}:{}) });
+      res.end(req.method === 'HEAD' ? undefined : bytes);
     } catch (error) {
       if(error.status===413){res.setHeader('Connection','close');req.resume();}
       json(error.status || (error.code === 'ENOENT' ? 404 : 500), { message: error.status ? error.message : 'Não foi possível concluir a operação.' });

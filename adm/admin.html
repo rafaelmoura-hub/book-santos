@@ -6,6 +6,8 @@
     <title>Admin | BOOK TESK</title>
     <link rel="stylesheet" href="admin.css">
     <link rel="stylesheet" href="../assets/ui.css">
+    <script src="../assets/accessibility.js" defer></script>
+    <noscript><style>body[hidden]{display:block!important}body>header,body>nav,body>main,body>.modal{display:none!important}noscript{display:block;padding:24px}</style></noscript>
 <script src="../assets/events.js" defer></script>
 </head>
 <body hidden data-screen="admin.js">
@@ -25,6 +27,7 @@
         <button id="abaUsuarios" class="aba" data-on-click="mostrarAba('usuarios')" hidden>Usu&aacute;rios</button>
         <button id="abaBackup" class="aba" data-on-click="mostrarAba('backup')" hidden>Backup</button>
     </nav>
+    <noscript>O sistema precisa de JavaScript. Consulte <a href="/legal/privacidade">privacidade</a> ou o responsável pelo seu acesso.</noscript>
     <main>
         <section id="visaoInicio" hidden><h2>Seu acesso</h2><p>Use os atalhos de suporte e notas no topo. Peça ao mestre a liberação das abas necessárias.</p></section>
         <section id="visaoSuporte" hidden><div class="titulo-secao"><h2>Suporte</h2><button type="button" id="masterSupportRefresh" class="botao-secundario">Atualizar chamados</button></div><div id="masterSupportList"></div></section>

@@ -1,5 +1,7 @@
 # BOOK TESK
 
+Revisão de abertura, privacidade, acessibilidade e desempenho: [orientações e pendências](docs/PRIVACIDADE-ACESSIBILIDADE.md). Documentos públicos em `/legal/privacidade`, `/legal/termos`, `/legal/cookies`, `/legal/reembolso`, `/legal/lgpd` e `/legal/empresa`. Sem migração nova. Dados legais da empresa aguardam confirmação; configure `BOOK_COMPANY_NAME`, `BOOK_COMPANY_CNPJ`, `BOOK_COMPANY_ADDRESS` e `BOOK_PRIVACY_EMAIL` no servidor.
+
 Rotina adaptada à demonstração da equipe: Reservas, Onboarding, Projetos, Compras e Danos, com melhorias em Cards, Vistorias, Feedbacks e Avaliações. Veja [análise e uso](docs/ROTINA-BOOK-TESK.md). Esta versão requer as migrações **13 e 14**, em ordem, após a versão 12; não publique o servidor antes de confirmar a versão 14 no banco.
 
 Suporte com contadores e notificações, lembretes em notas, Feedbacks e Avaliações da equipe: veja [ativação e uso](docs/COLABORACAO.md). Esta versão exige `supabase/migrations/202610280013_collaboration.sql` após as migrações anteriores, antes de publicar o servidor.

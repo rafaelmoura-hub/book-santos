@@ -108,6 +108,7 @@ window.BookStore = (() => {
         if (changed) notify();
     }
     function getItem(key) {
+        if (key === 'usuarioLogado') return JSON.stringify(user || null);
         if (!keys.includes(key)) return localStorage.getItem(key);
         if (key === 'estoqueBookSantos') return JSON.stringify({ ...(rows(key)[0]?.data || { colunas: [], itens: [] }), __bookVersion: rows(key)[0]?.version || 0 });
         return JSON.stringify(rows(key).map(row => ({ ...row.data, __bookVersion: row.version })));

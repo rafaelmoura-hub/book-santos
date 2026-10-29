@@ -5,10 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BOOK TESK | Login</title>
     <link rel="stylesheet" href="login.css">
+    <script src="assets/accessibility.js" defer></script>
 <script src="assets/events.js" defer></script>
 </head>
 <body>
-    <div class="login-box">
+    <main class="login-box">
         <h1>BOOK TESK</h1>
         <p>Entre para continuar.</p>
         <form data-on-submit="entrar(event)">
@@ -19,7 +20,8 @@
         <button type="submit">Entrar</button>
         </form>
         <p id="mensagem" role="status" aria-live="polite"></p>
-    </div>
+    </main>
+    <noscript>Ative o JavaScript para entrar. Os documentos de <a href="/legal/privacidade">privacidade</a> estão disponíveis sem JavaScript.</noscript>
     <script src="assets/api.js"></script>
     <script src="login.js"></script>
 </body>
