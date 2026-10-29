@@ -1,5 +1,19 @@
 /* The only persisted value is a display preference: light or dark. */
 (() => {
+ // Cross-document transitions keep normal navigation and authentication intact.
+ const isLogin=url=>{try{return ['/','/login.html'].includes(new URL(url,location.href).pathname);}catch{return false;}};
+ const isPanel=url=>{try{return ['/adm/admin.html','/cliente/cliente.html'].includes(new URL(url,location.href).pathname);}catch{return false;}};
+ const allowSkippedTransition=transition=>{
+  if(transition)for(const promise of [transition.ready,transition.finished,transition.updateCallbackDone])promise?.catch(()=>{});
+ };
+ window.addEventListener('pageswap',event=>{
+  allowSkippedTransition(event.viewTransition); // Navigation still works when the browser skips the visual effect.
+  if(event.viewTransition&&isLogin(location.href)&&isPanel(event.activation?.entry?.url))event.viewTransition.types.add('login');
+ });
+ window.addEventListener('pagereveal',event=>{
+  allowSkippedTransition(event.viewTransition);
+  if(event.viewTransition&&isPanel(location.href)&&isLogin(window.navigation?.activation?.from?.url))event.viewTransition.types.add('login');
+ });
  const key='book:theme',system=window.matchMedia('(prefers-color-scheme: dark)');
  let preference=null;
  try{const saved=localStorage.getItem(key);if(saved==='light'||saved==='dark')preference=saved;}catch{}

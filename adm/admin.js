@@ -44,9 +44,13 @@ function mostrarAba(aba) {
   if (["usuarios", "backup"].includes(aba) && !ehAdministradorMestre) return;
   BookStore.activate(aba);
   window.BookNavigation?.activate(aba);
+  let enteredSection=null;
   ["chamados", "chat", "os", "vistorias", "condominios", "estoque", "financeiro", "usuarios", "dashboard", "backup", "suporte", "inicio", "feedbacks", "avaliacoes", "reservas", "onboarding", "projetos", "compras", "danos"].forEach(nome => {
     const sufixo = nome === "os" ? "OS" : nome[0].toUpperCase() + nome.slice(1);
-    document.getElementById(`visao${sufixo}`).hidden = nome !== aba;
+    const section=document.getElementById(`visao${sufixo}`);
+    if(nome===aba&&section.hidden)enteredSection=section;
+    section.getAnimations?.().forEach(animation=>{if(animation.id==='book-tab-enter')animation.cancel();});
+    section.hidden = nome !== aba;
     if (document.getElementById(`aba${sufixo}`)) document.getElementById(`aba${sufixo}`).classList.toggle("ativa", nome === aba);
     if (document.getElementById(`aba${sufixo}`)) document.getElementById(`aba${sufixo}`).setAttribute('aria-current', nome === aba ? 'page' : 'false');
   });
@@ -63,6 +67,10 @@ function mostrarAba(aba) {
   if (aba === "estoque") mostrarEstoque();
   if (aba === "financeiro") BookFinance.load();
   if (aba === "chat") mostrarConversasChat();
+  if(enteredSection&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+    const animation=enteredSection.animate?.([{opacity:0,transform:'translateX(32px)'},{opacity:1,transform:'translateX(0)'}],{duration:240,easing:'cubic-bezier(.2,.7,.2,1)'});
+    if(animation)animation.id='book-tab-enter';
+  }
   window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   if (window.matchMedia('(max-width: 760px)').matches) {
     const suffix = aba === 'os' ? 'OS' : aba[0].toUpperCase() + aba.slice(1);

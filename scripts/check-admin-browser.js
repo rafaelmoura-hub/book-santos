@@ -94,7 +94,7 @@ async function main() {
     const target=await (await fetch(`http://127.0.0.1:${port}/json/new?${encodeURIComponent(base)}`,{method:'PUT',signal:AbortSignal.timeout(10000)})).json();
     socket=new WebSocket(target.webSocketDebuggerUrl); await Promise.race([once(socket,'open'),delay(10000).then(()=>{throw new Error('Chrome não abriu a sessão de teste.');})]);
     let sequence=0;const pending=new Map();const errors=[];
-    socket.addEventListener('message',event=>{const message=JSON.parse(event.data);if(message.id){const handler=pending.get(message.id);if(handler){pending.delete(message.id);message.error?handler.reject(new Error(message.error.message)):handler.resolve(message.result);}}if(message.method==='Runtime.exceptionThrown')errors.push(message.params.exceptionDetails.text);});
+    socket.addEventListener('message',event=>{const message=JSON.parse(event.data);if(message.id){const handler=pending.get(message.id);if(handler){pending.delete(message.id);message.error?handler.reject(new Error(message.error.message)):handler.resolve(message.result);}}if(message.method==='Runtime.exceptionThrown')errors.push(message.params.exceptionDetails.exception?.description||message.params.exceptionDetails.text);});
     const send=(method,params={})=>new Promise((resolve,reject)=>{const id=++sequence;const timer=setTimeout(()=>{pending.delete(id);reject(new Error(`Chrome excedeu o prazo: ${method}`));},10000);pending.set(id,{resolve:value=>{clearTimeout(timer);resolve(value);},reject:error=>{clearTimeout(timer);reject(error);}});socket.send(JSON.stringify({id,method,params}));});
     await send('Runtime.enable');
     await send('Log.enable');
@@ -139,6 +139,10 @@ async function main() {
     await evaluate("fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({login:'master@example.com',senha:'senha'})}).then(r=>{if(!r.ok)throw Error('login');})");
     await send('Page.navigate',{url:base+'/adm/admin.html'});
     await wait("typeof mostrarAba === 'function' && !document.body.hidden");
+    await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]});
+    await evaluate("mostrarAba('chamados');mostrarAba('os');if(!document.getElementById('visaoOS').getAnimations().some(a=>a.id==='book-tab-enter'))throw Error('Transição da aba ausente')");
+    await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
+    await evaluate("mostrarAba('chamados');mostrarAba('os');if(document.getElementById('visaoOS').getAnimations().some(a=>a.id==='book-tab-enter'))throw Error('Movimento reduzido ignorado')");
     await evaluate("mostrarAba('os');document.querySelector('#visaoOS .acao-principal').focus();abrirFormularioOS()");
     await wait("document.getElementById('osModal').getAttribute('aria-modal')==='true' && document.activeElement.tagName==='BUTTON'");
     await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Tab',code:'Tab',windowsVirtualKeyCode:9,modifiers:8});
