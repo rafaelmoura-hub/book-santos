@@ -6,7 +6,7 @@ A paleta parte do azul petróleo da logo (`#042d46`), com azuis próximos para a
 
 ## Usar o tema
 
-O botão **Modo noturno** fica no canto superior do login e no cabeçalho das outras telas, incluindo os documentos legais. No celular, aparece como botão de lua, mantendo o nome acessível. Pressione para ativar/desativar; o estado pressionado indica que o modo noturno está ativo.
+O botão fica no canto superior do login e no cabeçalho das outras telas, incluindo os documentos legais. No tema claro, mostra **Modo noturno**, com lua; no escuro, mostra **Modo diurno**, com sol. O nome indica a próxima ação. No celular, aparece o ícone correspondente, mantendo o nome acessível. O login mostra apenas a logo, com texto alternativo identificando BOOK TASK para leitores de tela.
 
 Sem escolha anterior, o site acompanha a aparência do sistema operacional. Uma escolha manual fica em `localStorage`, na chave `book:theme`, contendo somente `light` ou `dark`, sem dados pessoais. A preferência é compartilhada pelas páginas do mesmo endereço e atualizada entre abas. Se o armazenamento estiver bloqueado, a troca funciona na página atual; ao navegar, o site volta a seguir a preferência do sistema. Login e funções operacionais não dependem dessa gravação.
 

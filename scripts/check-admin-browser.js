@@ -127,12 +127,12 @@ async function main() {
     await send('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
     await wait("location.origin === '"+base+"' && document.readyState === 'complete'");
     await capture('login-desktop');
-    await wait("!!document.getElementById('themeToggle') && document.querySelector('.brand-logo').naturalWidth===256");
+    await wait("!!document.getElementById('themeToggle') && document.querySelector('.brand-logo').naturalWidth===256 && document.querySelector('.brand-heading').textContent.trim()==='' ");
     await evaluate("document.getElementById('themeToggle').click()");
     await wait("document.documentElement.dataset.theme==='dark'");
     await capture('login-night');
     await send('Page.reload');
-    await wait("document.readyState==='complete' && document.documentElement.dataset.theme==='dark' && !!document.getElementById('themeToggle')");
+    await wait("document.readyState==='complete' && document.documentElement.dataset.theme==='dark' && document.querySelector('#themeToggle .theme-label')?.textContent==='Modo diurno'");
     await evaluate("document.getElementById('themeToggle').click()");
     await wait("document.documentElement.dataset.theme==='light'");
     await send('Page.addScriptToEvaluateOnNewDocument',{source:"Object.defineProperty(window,'localStorage',{get(){throw new DOMException('Armazenamento bloqueado','SecurityError');}});"});

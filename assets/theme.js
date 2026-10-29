@@ -7,7 +7,12 @@
  function apply(){
   const dark=current()==='dark';document.documentElement.dataset.theme=dark?'dark':'light';
   const button=document.getElementById('themeToggle');
-  if(button){button.setAttribute('aria-pressed',String(dark));button.title=dark?'Modo noturno ativo. Clique para usar o modo claro.':'Ativar modo noturno';}
+  if(button){
+   const label=dark?'Modo diurno':'Modo noturno';
+   button.setAttribute('data-dark',String(dark));button.title='Ativar '+label.toLowerCase();
+   button.querySelector('.theme-label').textContent=label;
+   button.querySelector('.theme-icon').textContent=dark?'☀':'☾';
+  }
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content',dark?'#081824':'#042d46');
   window.dispatchEvent(new Event('book:theme'));
  }

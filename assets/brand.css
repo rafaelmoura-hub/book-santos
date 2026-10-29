@@ -99,7 +99,7 @@ body[data-screen] nav button:hover,.grouped-navigation .nav-group-active > summa
  margin:0; padding:9px 12px; border:1px solid var(--control-border); border-radius:9px; color:var(--brand-link); background:var(--surface); cursor:pointer; font:inherit; font-size:13px; order:1;
 }
 .theme-icon { font-size:22px; line-height:1; }
-.theme-toggle[aria-pressed="true"],body[data-screen] header > .theme-toggle[aria-pressed="true"] { background:var(--surface-soft); border-color:var(--brand-focus); }
+.theme-toggle[data-dark="true"],body[data-screen] header > .theme-toggle[data-dark="true"] { background:var(--surface-soft); border-color:var(--brand-focus); }
 .theme-floating { position:fixed; top:18px; right:24px; z-index:40; }
 .legal-footer { text-align:center; color:var(--suave); }
 .legal-footer nav { justify-content:center !important; align-items:center; }
