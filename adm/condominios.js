@@ -27,6 +27,11 @@ function formatarData(data) {
   return partes ? `${partes[3]}/${partes[2]}/${partes[1]}` : esc(data);
 }
 let hotelSelecionado = "", apartamentoSelecionado = "", tipoSelecionado = "";
+window.addEventListener('book:catalog',()=>{
+  if(!hotelSelecionado)return;
+  const apartment=apartamentoSelecionado,type=tipoSelecionado;mostrarHistorico(hotelSelecionado);
+  if(BookStore.apartments(hotelSelecionado).includes(apartment)){selecionarApartamento(apartment);if(type)mostrarDadosApartamento(type);}
+});
 function mostrarHistorico(hotel) {
   hotelSelecionado = hotel; apartamentoSelecionado = ""; tipoSelecionado = "";
   document.getElementById("historico").innerHTML = `<h2>${esc(hotel)} - Apartamentos</h2><div class="apartamentos">${BookStore.apartments(hotel).map(ap => `<button class="apartamento-opcao" data-on-click="BookCondominios.selecionarApartamento('${ap}')">Apartamento ${ap}</button>`).join("")}</div><div id="opcoesApartamento"><p>Selecione um apartamento para escolher o que deseja visualizar.</p></div>`;

@@ -14,6 +14,7 @@ async function main() {
   const users = [master]; let writes = 0;
   const client = { id:'22222222-2222-4222-8222-222222222222',nome:'Cliente teste',login:'cliente@example.com',funcao:'cliente',mestre:false };
   const records = new Map();
+  const addedCatalog=new Map();
   const uploaded = new Map();
   const noteRows=new Map(),supportRows=new Map(),reminderRows=new Map(),feedbackRows=new Map(),evaluationRows=[],processRows=new Map(),flowMetas=new Map(),flowRows=[];
   let notificationState={chat:{count:0},support:{count:0}},dueReminderQueue=[];
@@ -69,7 +70,14 @@ async function main() {
       if(input.id) Object.assign(users.find(user=>user.id===input.id),{nome:input.nome,funcao:input.funcao,tabs:input.tabs,version:2,book_hotel_access:input.hotels.map(hotel=>({hotel}))});
       else users.push({id:'55555555-5555-4555-8555-555555555555',nome:input.nome,login:input.login,funcao:input.funcao,version:1,mestre:false,book_hotel_access:input.hotels.map(hotel=>({hotel}))});
     },
-    async apartments(token) { return Catalog.hotels.filter(h=>identity(token).mestre || ['Be Urban','Lume Alto da Boa Vista'].includes(h)).flatMap(hotel=>Catalog.apartments[hotel].map(apartment=>({hotel,apartment}))); },
+    async condominiums(token){return [...Catalog.hotels,...addedCatalog.keys()].filter(h=>identity(token).mestre||['Be Urban','Lume Alto da Boa Vista'].includes(h)).map(name=>({name}));},
+    async saveCatalog(token,input){
+      if(input.kind==='condominium'){if(Catalog.hotels.includes(input.hotel)||addedCatalog.has(input.hotel))throw Object.assign(Error('Condomínio já cadastrado'),{status:409});addedCatalog.set(input.hotel,[]);}
+      const existing=addedCatalog.get(input.hotel)||[];
+      if(input.apartments.some(a=>existing.includes(a)||(Catalog.apartments[input.hotel]||[]).includes(a)))throw Object.assign(Error('Apartamento já cadastrado'),{status:409});
+      addedCatalog.set(input.hotel,[...existing,...input.apartments]);return {hotel:input.hotel,created:input.apartments.length};
+    },
+    async apartments(token) { return [...new Set([...Catalog.hotels,...addedCatalog.keys()])].filter(h=>identity(token).mestre || ['Be Urban','Lume Alto da Boa Vista'].includes(h)).flatMap(hotel=>[...(Catalog.apartments[hotel]||[]),...(addedCatalog.get(hotel)||[])].map(apartment=>({hotel,apartment}))); },
     async records(token,collection) { return {rows:[...records.entries()].filter(([key,row])=>key.startsWith(collection+'/') && (identity(token).mestre || row.owner_id===client.id)).map(([,row])=>row),next:null}; },
     async commit(token,changes) {
       for(const change of changes) {
@@ -304,6 +312,11 @@ async function main() {
       for(const name of BookCatalog.hotels){BookCondominios.mostrarHistorico(name);if(document.querySelectorAll('#historico .apartamento-opcao').length!==BookCatalog.apartments[name].length)throw Error('Histórico: '+name);}
       return {condominiums:BookCatalog.hotels.length,apartments:Object.values(BookCatalog.apartments).flat().length};
     })()`);
+    await evaluate("mostrarAba('onboarding');document.getElementById('onboardingName').value='Condomínio Teste Novo';document.getElementById('onboardingApartments').value='101, 194a';document.getElementById('onboardingCatalog').requestSubmit()");
+    await wait("document.getElementById('onboardingStatus').textContent.includes('salvo em Condomínios') && BookStore.apartments('Condomínio Teste Novo').length===2");
+    await evaluate("document.getElementById('onboardingKind').value='apartments';document.getElementById('onboardingKind').dispatchEvent(new Event('change'));document.getElementById('onboardingExisting').value='Condomínio Teste Novo';document.getElementById('onboardingApartments').value='102';document.getElementById('onboardingCatalog').requestSubmit()");
+    await wait("BookStore.apartments('Condomínio Teste Novo').length===3 && document.getElementById('onboardingCatalog').getAttribute('aria-busy')==='false'");
+    await evaluate("mostrarAba('condominios');BookCondominios.mostrarHistorico('Condomínio Teste Novo');if(document.querySelectorAll('#historico .apartamento-opcao').length!==3)throw Error('Onboarding não atualizou Condomínios');if(!document.getElementById('usuarioCondomínio Teste Novo'))throw Error('Cadastro ausente nas permissões');selecionarHotelVistoria('Condomínio Teste Novo');if(document.querySelectorAll('#areaVistorias .apartamentos-vistoria button').length!==3)throw Error('Vistorias sem novo catálogo');abrirFormularioOS('','Condomínio Teste Novo','194A');if(document.getElementById('osApartamento').value!=='194A')throw Error('Card sem apartamento novo');document.getElementById('osModal').style.display='none'");
     await evaluate(`(async()=>{
       mostrarAba('os');abrirFormularioOS('','Be Urban','214');
       document.getElementById('osTitulo').value='Card de teste';document.getElementById('osDescricao').value='Teste de fluxo';
@@ -356,6 +369,7 @@ async function main() {
     await wait("document.getElementById('routine-compras-area').textContent.includes('Rotina compras')");
     await evaluate("[...document.querySelectorAll('#routine-compras-area .routine-card')].find(c=>c.textContent.includes('Rotina compras')).querySelector('button').click();document.getElementById('processPhase').value='Comprada';document.getElementById('processForm').requestSubmit()");
     await wait("!document.getElementById('processDialog').open");
+    await wait("document.getElementById('processDialog').getAttribute('aria-busy')==='false'");
     await evaluate("[...document.querySelectorAll('#routine-compras-area .routine-card')].find(c=>c.textContent.includes('Rotina compras')).querySelector('button').click();document.getElementById('processStock').click()");
     await wait("document.getElementById('receiveDialog').open");
     await evaluate("document.getElementById('receiveForm').requestSubmit()");

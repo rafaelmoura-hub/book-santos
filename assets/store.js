@@ -63,6 +63,34 @@ window.BookStore = (() => {
         activeCollections = groups[tab] || keys;
     }
     const apartments = hotel => apartmentCatalog.filter(row => row.hotel === hotel).map(row => row.apartment).sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
+    function applyCatalog(hotels,catalog){
+        const compare=(a,b)=>a.localeCompare(b,'pt-BR',{numeric:true,sensitivity:'base'});
+        apartmentCatalog=catalog;
+        BookCatalog.hotels=[...new Set(hotels)].sort(compare);
+        BookCatalog.apartments=Object.fromEntries(BookCatalog.hotels.map(h=>[h,apartments(h)]));
+        document.querySelectorAll('.hoteis,.hoteis-vistoria').forEach(list=>{
+            const inspection=list.classList.contains('hoteis-vistoria');list.replaceChildren();
+            for(const hotel of BookCatalog.hotels){
+                const card=document.createElement(inspection?'button':'article');card.className=inspection?'hotel-vistoria':'hotel';card.dataset.hotel=hotel;
+                if(inspection)card.type='button';else{card.tabIndex=0;card.setAttribute('role','button');}
+                const title=document.createElement(inspection?'strong':'h2');title.textContent=hotel;card.append(title);
+                if(!inspection){const count=document.createElement('p'),n=apartments(hotel).length;count.textContent=n+' '+(n===1?'apartamento':'apartamentos');card.append(count);}
+                const total=document.createElement(inspection?'span':'p');total.id=(inspection?'totalVistorias':'total')+hotel;total.textContent=inspection?'0 vistorias':'0 chamados';card.append(total);
+                const open=()=>inspection?window.selecionarHotelVistoria(hotel):window.BookCondominios?BookCondominios.mostrarHistorico(hotel):window.mostrarHistorico(hotel);
+                card.onclick=open;if(!inspection)card.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open();}};list.append(card);
+            }
+        });
+        document.querySelectorAll('#hotel,#osHotel,#feedbackHotel,#processHotel,#decisionHotel,select[id^="routine-"][id$="-hotel"],#onboardingExisting').forEach(select=>{
+            const value=select.value,placeholder=select.options[0]?.textContent||'Selecione';select.replaceChildren(new Option(placeholder,''));
+            for(const hotel of BookCatalog.hotels)select.append(new Option(hotel,hotel));select.value=value;
+        });
+        const fieldset=document.querySelector('#formUsuario .usuario-hoteis');
+        if(fieldset){const selected=new Set([...fieldset.querySelectorAll('input:checked')].map(input=>input.id));fieldset.querySelectorAll('label').forEach(label=>label.remove());for(const hotel of BookCatalog.hotels){const label=document.createElement('label'),input=document.createElement('input');input.type='checkbox';input.id='usuario'+hotel;input.checked=selected.has(input.id);label.append(input,document.createTextNode(' '+hotel));fieldset.append(label);}}
+    }
+    async function refreshCatalog(){
+        const [hotels,catalog]=await Promise.all([BookAPI.request('/api/access'),BookAPI.request('/api/apartments')]);
+        applyCatalog(hotels,catalog);window.dispatchEvent(new Event('book:catalog'));notify();
+    }
     const clone = value => JSON.parse(JSON.stringify(value));
     const notify = () => window.dispatchEvent(new Event('book:data'));
     function message(text, error = false) {
@@ -195,7 +223,7 @@ window.BookStore = (() => {
         document.body.prepend(toolbar);
         message('Carregando dados do Supabase…');
         const [, hotels, catalog] = await Promise.all([refresh(true), BookAPI.request('/api/access'), BookAPI.request('/api/apartments')]);
-        apartmentCatalog = catalog;
+        applyCatalog(hotels,catalog);
         document.querySelectorAll('[data-hotel]').forEach(card => { card.hidden = !hotels.includes(card.dataset.hotel); });
         document.querySelectorAll('#hotel option, #osHotel option').forEach(option => { if (option.value && !hotels.includes(option.value)) option.remove(); });
         const compare = (a, b) => a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' });
@@ -231,5 +259,5 @@ window.BookStore = (() => {
             };
         }
     }
-    return { init, getItem, setItem, refresh, validateFiles, protectActions, apartments, activate, setupAttachments, includeRecord, totals: () => totals, id: () => Date.now() * 1000 + crypto.getRandomValues(new Uint16Array(1))[0] % 1000 };
+    return { init, getItem, setItem, refresh, refreshCatalog, validateFiles, protectActions, apartments, activate, setupAttachments, includeRecord, totals: () => totals, id: () => Date.now() * 1000 + crypto.getRandomValues(new Uint16Array(1))[0] % 1000 };
 })();

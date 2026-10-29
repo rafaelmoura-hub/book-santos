@@ -31,7 +31,7 @@ test('tela aguarda confirmação e preserva versão lida para impedir sobrescrit
   }};
   const context={
     document:{body:new Element(),createElement:()=>new Element(),querySelector:()=>null,querySelectorAll:()=>[],activeElement:{tagName:'DIV'},hidden:false},
-    localStorage:{getItem:key=>local.get(key)||null},BookAPI:api,crypto:webcrypto,Event,Blob,URL,console,
+    localStorage:{getItem:key=>local.get(key)||null},BookAPI:api,BookCatalog:{hotels:[],apartments:{}},crypto:webcrypto,Event,Blob,URL,console,
     setInterval:()=>{},setTimeout:()=>{},alert:()=>{},
     dispatchEvent:events.dispatchEvent.bind(events),addEventListener:events.addEventListener.bind(events)
   };

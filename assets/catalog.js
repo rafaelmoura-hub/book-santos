@@ -163,7 +163,8 @@
   ]
 };
   const hotels = Object.keys(apartments).sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' }));
-  const filePath = value => typeof value === 'string' && /^[a-f0-9-]{36}\/[^/]+\/[a-f0-9-]{36}$/.test(value) && [...hotels, 'Unique'].includes(value.split('/')[1]);
+  // This checks the path shape only; database policies authorize the actual file.
+  const filePath = value => typeof value === 'string' && /^[a-f0-9-]{36}\/[\p{L}\p{N}][\p{L}\p{N} ._()-]{1,99}\/[a-f0-9-]{36}$/u.test(value) && !['.','..'].includes(value.split('/')[1]);
   const catalog = { apartments, hotels, filePath };
   if (typeof module === 'object' && module.exports) module.exports = catalog;
   else root.BookCatalog = catalog;

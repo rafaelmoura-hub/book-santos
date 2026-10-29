@@ -17,6 +17,7 @@ const {validateCollaboration}=require('./collaboration');
 const {validateProcess,validateFlow}=require('./processes');
 const {definitions:processDefinitions,flowPhases}=require('../assets/processes');
 const { renderLegal, legalConfig } = require('./legal');
+const {validateCatalog,visibleHotels}=require('./catalog-management');
 const ROOT = path.resolve(__dirname, '..');
 const fail = (status, message) => Object.assign(new Error(message), { status });
 const digest = token => createHash('sha256').update(token).digest('hex');
@@ -156,7 +157,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
       if(route==='/api/decision' && req.method==='GET'){
         if(!canTab(user,'dashboard'))throw fail(403,'Sem acesso à visão geral.');
         const hotel=url.searchParams.get('hotel');
-        if(hotel && (!hotels.includes(hotel)||!(await provider.access(session.accessToken)).some(row=>row.hotel===hotel)&&!user.mestre))throw fail(403,'Sem acesso a este condomínio.');
+        if(hotel && !(await visibleHotels(provider,session.accessToken,user)).includes(hotel))throw fail(403,'Sem acesso a este condomínio.');
         try{return json(200,await provider.decision(session.accessToken,hotel));}
         catch(error){if(error.status===503)throw fail(503,'Painel SAD indisponível. Se ainda não aplicada, execute a migração 202610290015_decision.sql. As outras abas continuam disponíveis.');throw error;}
       }
@@ -181,7 +182,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         if(route==='/api/processes'){
           const valid=validateProcess(input),definition=processDefinitions[valid.kind];
           if(!canTab(user,definition.tab||valid.kind))throw fail(403,'Sem acesso a esta aba.');
-          if(valid.hotel){if(!hotels.includes(valid.hotel))throw fail(400,'Condomínio inválido.');const allowed=user.mestre?hotels:(await provider.access(session.accessToken)).map(a=>a.hotel);if(!allowed.includes(valid.hotel))throw fail(403,'Sem acesso ao condomínio.');}
+          if(valid.hotel){const allowed=await visibleHotels(provider,session.accessToken,user);if(!allowed.includes(valid.hotel))throw fail(403,'Sem acesso ao condomínio.');}
           else if(!definition.global||valid.apartment||valid.data.anexos.length)throw fail(400,'Selecione condomínio e apartamento para anexar arquivos.');
           const paths=[];try{const prepared=await storeAttachments([{data:{...valid.data,hotel:valid.hotel}}],user,(p,b,t)=>provider.upload(session.accessToken,p,b,t),paths);const {hotel,...data}=prepared[0].data;await provider.saveProcess(session.accessToken,{...valid,data});}
           catch(error){if(paths.length)await provider.removeFiles(session.accessToken,paths).catch(()=>{});throw error;}
@@ -227,7 +228,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
           if(!uuid(input?.id)||!Number.isSafeInteger(input.version)||input.version<1||typeof input.recordId!=='string'||!/^\d{1,16}$/.test(input.recordId))throw fail(400,'Card inválido.');
           return json(200,{id:await provider.feedbackService(session.accessToken,input)});
         }else{
-          const valid=validateCollaboration('feedbacks',input),allowed=user.mestre?hotels:(await provider.access(session.accessToken)).map(r=>r.hotel);
+          const allowed=await visibleHotels(provider,session.accessToken,user),valid=validateCollaboration('feedbacks',input,[...hotels,...allowed]);
           if(!allowed.includes(valid.data.hotel))throw fail(403,'Sem acesso ao condomínio.');
           if(Buffer.byteLength(JSON.stringify(valid.data,(k,v)=>typeof v==='string'&&v.startsWith('data:')?'[anexo]':v))>128*1024)throw fail(413,'Feedback acima do limite.');
           const uploaded=[];let committed=false;
@@ -308,13 +309,22 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         const quota = writes.get(key) || { count: 0, until: now + 60000 };
         if (quota.count >= 10) throw fail(429, 'Aguarde um minuto antes de gerenciar mais contas.');
         quota.count++; writes.set(key, quota);
-        const input = validateUser(await readBody(req, 16384));
+        const input = validateUser(await readBody(req, 16384),await visibleHotels(provider,session.accessToken,user));
         await provider.saveUser(session.accessToken, input);
         if (input.id) for (const [key, value] of sessions) if (value.userId === input.id) sessions.delete(key);
         return json(200, { ok: true });
       }
       if (route === '/api/apartments' && req.method === 'GET') return json(200, await provider.apartments(session.accessToken));
-      if (route === '/api/access' && req.method === 'GET') return json(200, user.mestre ? hotels : (await provider.access(session.accessToken)).map(row => row.hotel));
+      if (route === '/api/access' && req.method === 'GET') return json(200,await visibleHotels(provider,session.accessToken,user));
+      if(route==='/api/onboarding/catalog'&&req.method==='POST'){
+        if(!canTab(user,'onboarding'))throw fail(403,'Sem acesso ao Onboarding.');
+        const input=validateCatalog(await readBody(req,16384));
+        if(input.kind==='apartments'&&!(await visibleHotels(provider,session.accessToken,user)).includes(input.hotel))throw fail(403,'Sem acesso ao condomínio.');
+        const quotaKey='catalog:'+user.id,quota=writes.get(quotaKey)||{count:0,until:now+60000};
+        if(quota.count>=20)throw fail(429,'Aguarde um minuto antes de cadastrar novamente.');quota.count++;writes.set(quotaKey,quota);
+        if(!provider.saveCatalog)throw fail(503,'Aplique a migração 202610290016_onboarding_catalog.sql no Supabase.');
+        return json(200,await provider.saveCatalog(session.accessToken,input));
+      }
       if (route === '/api/snapshot' && req.method === 'GET') {
         let pages;
         try { pages = JSON.parse(url.searchParams.get('pages') || '{}'); }
@@ -354,7 +364,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         if (quota.count >= 60) throw fail(429, 'Limite de gravações atingido. Aguarde um minuto.');
         quota.count++; writes.set(user.id, quota);
         const raw = await readBody(req);
-        const changes = validateChanges(raw?.changes, user);
+        const changes = validateChanges(raw?.changes, user,[...hotels,...await visibleHotels(provider,session.accessToken,user)]);
         const uploadedPaths = [];
         try {
           const prepared = await storeAttachments(changes, user, (filename, bytes, type) => provider.upload(session.accessToken, filename, bytes, type), uploadedPaths);
@@ -382,11 +392,10 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
       if (route === '/api/users' || route.startsWith('/api/users/')) throw fail(403, 'Gerencie as contas em Authentication → Users e os perfis em book_profiles no painel Supabase.');
       if (route.startsWith('/api/')) throw fail(404, 'Rota não encontrada.');
       if (route === '/assets/catalog.js' && req.method === 'GET') {
-        const allowed = user.mestre ? hotels : (await provider.access(session.accessToken)).map(row => row.hotel === 'Unique' ? 'Unique Residence' : row.hotel);
-        const catalog = require('../assets/catalog');
-        const visible = hotels.filter(hotel => allowed.includes(hotel));
+        const visible=await visibleHotels(provider,session.accessToken,user);
+        const rows=await provider.apartments(session.accessToken);
         res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8' });
-        return res.end(`window.BookCatalog = ${JSON.stringify({ hotels: visible, apartments: Object.fromEntries(visible.map(hotel => [hotel, catalog.apartments[hotel]])) })};`);
+        return res.end(`window.BookCatalog = ${JSON.stringify({ hotels: visible, apartments: Object.fromEntries(visible.map(hotel => [hotel,rows.filter(r=>r.hotel===hotel).map(r=>r.apartment)])) })};`);
       }
       if (!['GET', 'HEAD'].includes(req.method)) throw fail(405, 'Método não permitido.');
       if (/^\/hotel\/(hotel\.html)?$/.test(route)) { res.writeHead(302, { Location: '/adm/admin.html#condominios' }); return res.end(); }

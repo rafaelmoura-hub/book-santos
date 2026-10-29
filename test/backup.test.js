@@ -49,6 +49,7 @@ test('backup e catálogo: bloqueio sem sessão, por função e por opções', as
   let role='cliente', master=false, backups=0;
   const provider={async login(){return {access_token:'token'};},async profile(){return {id,funcao:role,mestre:master};},async access(){return [{hotel:'Be Urban'}];},async backup(token,selected){backups++;return {records:Array.from({length:125},(_,i)=>({id:String(i),data:{anexoData:`/api/files/${id}/Be Urban/${id}`}}))};}};
   const server=createSupabaseApp(provider);server.listen(0,'127.0.0.1');await once(server,'listening');
+  provider.apartments=async()=>[{hotel:'Be Urban',apartment:'214'}];
   t.after(()=>new Promise(resolve=>server.close(resolve)));
   const base=`http://127.0.0.1:${server.address().port}`;
   const login=await fetch(base+'/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({login:'test@example.com',senha:'senha'})});

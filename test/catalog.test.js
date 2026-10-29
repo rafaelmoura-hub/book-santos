@@ -15,5 +15,7 @@ test('catálogo aceita os 17 condomínios nas permissões, registros e anexos', 
     await storeAttachments([change],{id},()=>assert.fail('Sem upload para anexo existente'));
     assert.equal(filePath(`${id}/${hotel}/${id}`),true);
   }
-  assert.equal(filePath(`${id}/Outro/${id}`),false);
+  assert.equal(filePath(`${id}/Novo Condomínio/${id}`),true,'O formato aceita nomes novos; a autorização pertence às políticas do banco.');
+  assert.equal(filePath(`${id}/../${id}`),false);
+  assert.equal(filePath(`${id}/Outro/extra/${id}`),false);
 });

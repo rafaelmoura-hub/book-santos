@@ -563,6 +563,8 @@ atualizarBadgeChat();
 BookWorkspace.init(sessao);
 BookCollaboration.init(sessao);
 BookRoutine.init(sessao);
+BookOnboarding.init();
+window.addEventListener('book:catalog',()=>{if(vistoriaHotel)selecionarHotelVistoria(vistoriaHotel);});
 BookDecision.init();
 BookNavigation.init();
 window.addEventListener('book:theme',()=>{if(!document.getElementById('visaoDashboard').hidden)atualizarDashboard();});

@@ -5,6 +5,7 @@ const {validateUser}=require('./users');
 const {validateWorkspace,uuid}=require('./workspace');
 const {validateAI}=require('./ai');
 const {hotels}=require('../assets/catalog');
+const {visibleHotels}=require('./catalog-management');
 const Periods=require('../assets/periods');
 const Money=require('../assets/money');
 const fail=(status,message)=>Object.assign(new Error(message),{status});
@@ -121,7 +122,7 @@ async function prepareAction(call,ctx){
    if(!previous||previous.mestre)throw fail(403,'Usuário indisponível ou protegido.');
   }
   const input=op==='editar_usuario'?{id:call.id,version:previous.version,nome:previous.nome,funcao:previous.funcao,hotels:(previous.book_hotel_access||[]).map(r=>canonical(r.hotel)),tabs:previous.tabs,...data}:{...data,tabs:data.tabs??(data.funcao==='adm'?TABS:[]),senha:'Senha-provisoria-de-validacao!'};
-  const valid=validateUser(input);delete valid.senha;action.input=valid;
+  const valid=validateUser(input,await visibleHotels(provider,token,user));delete valid.senha;action.input=valid;
   before=previous?{nome:previous.nome,funcao:previous.funcao,hotels:(previous.book_hotel_access||[]).map(r=>r.hotel),tabs:previous.tabs}:null;after=valid;
  }else if(['criar_nota','editar_nota','excluir_nota'].includes(op)){
   const previous=op==='criar_nota'?null:(await provider.notes(token)).find(n=>n.id===call.id);
@@ -145,7 +146,7 @@ async function prepareAction(call,ctx){
   const previous=await provider.record(token,'conversasSuporte',id);
   const message={id:randomUUID(),texto:data.texto.trim(),autorNome:user.nome,autorTipo:'admin',criadaEm:new Date().toISOString(),lidoAdmin:true,lidoCliente:false};
   const doc={...(previous?.data||{}),hotel:ticket.data.hotel,chamadoId:String(ticket.id),clienteLogin:ticket.data.criadaPorLogin,clienteNome:ticket.data.criadaPor,mensagens:[...(previous?.data.mensagens||[]),message]};
-  action.changes=validateChanges([{collection:'conversasSuporte',id,data:doc,version:previous?.version||0}],user);
+  action.changes=validateChanges([{collection:'conversasSuporte',id,data:doc,version:previous?.version||0}],user,[...hotels,...await visibleHotels(provider,token,user)]);
   after={chamadoId:ticket.id,cliente:ticket.data.criadaPor,hotel:ticket.data.hotel,texto:message.texto};
  }else{
   const creating=['criar_card','criar_chamado','registrar_vistoria'].includes(op);
@@ -195,7 +196,7 @@ async function prepareAction(call,ctx){
    const catalog=await provider.apartments(token);
    if(!catalog.some(row=>canonical(row.hotel)===canonical(doc.hotel)&&row.apartment===String(doc.apartamento))&&!(previous&&base.hotel===doc.hotel&&String(base.apartamento)===String(doc.apartamento)))throw fail(403,'Condomínio ou apartamento indisponível.');
   }
-  action.changes=validateChanges([{collection:action.collection,id,data:doc,version:previous?.version||0}],user);
+  action.changes=validateChanges([{collection:action.collection,id,data:doc,version:previous?.version||0}],user,[...hotels,...await visibleHotels(provider,token,user)]);
   before=previous?clone(base):null;after=clone(action.changes[0].data);
  }
  action.preview=changedReview(before,after);return action;
@@ -242,7 +243,7 @@ async function readTool(name,args,ctx){
  if(name==='consultar_registros'){
   if(!COLLECTIONS.includes(args.collection)||!canCollection(user,args.collection))throw fail(403,'Sem acesso a estes dados.');
   for(const key of ['id','hotel','apartamento','status','cursor'])if(typeof args[key]!=='string'||args[key].length>200)throw fail(400,'Filtro inválido.');
-  if(args.hotel&&!hotels.includes(canonical(args.hotel))||args.cursor&&!/^[0-9]{1,16}$/.test(args.cursor)||!Number.isInteger(args.limit)||args.limit<1||args.limit>50)throw fail(400,'Filtro inválido.');
+  if(args.hotel&&!(await visibleHotels(provider,token,user)).includes(canonical(args.hotel))||args.cursor&&!/^[0-9]{1,16}$/.test(args.cursor)||!Number.isInteger(args.limit)||args.limit<1||args.limit>50)throw fail(400,'Filtro inválido.');
   if(args.id)return getRecord(ctx,args.collection,args.id);
   return {rows:await provider.searchRecords(token,args.collection,args),partial:true,limit:args.limit};
  }
@@ -303,7 +304,7 @@ function createAgent({clock=Date.now,ttl=10*60000,maxProposals=500}={}){
     if(action.changes){
      if(action.stockVersion!==undefined){const stock=await getRecord(ctx,'estoqueBookSantos','singleton');if(stock.version!==action.stockVersion)throw fail(409,'O estoque mudou desde a revisão. Prepare uma nova proposta para conferir os valores.');}
      const changes=clone(action.changes);if(action.operation==='finalizar_card')changes[0].data.fechamento.finalizadaEm=new Date(clock()).toISOString();
-     validateChanges(changes,user);
+     validateChanges(changes,user,[...hotels,...await visibleHotels(provider,token,user)]);
      if(provider.aiCommit)await provider.aiCommit(token,changes,action.stockVersion??null);else await provider.commit(token,changes);
      result.recordId=changes[0].id;
     }
