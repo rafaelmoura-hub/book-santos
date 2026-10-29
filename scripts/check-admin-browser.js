@@ -15,13 +15,38 @@ async function main() {
   const client = { id:'22222222-2222-4222-8222-222222222222',nome:'Cliente teste',login:'cliente@example.com',funcao:'cliente',mestre:false };
   const records = new Map();
   const uploaded = new Map();
-  const noteRows=new Map(),supportRows=new Map();
+  const noteRows=new Map(),supportRows=new Map(),reminderRows=new Map(),feedbackRows=new Map(),evaluationRows=[],processRows=new Map(),flowMetas=new Map(),flowRows=[];
+  let notificationState={chat:{count:0},support:{count:0}},dueReminderQueue=[];
   const identity = token => token === 'client-token' ? client : token==='limited-token'?users[1]:master;
   records.set('chamados/101', { id:'101',version:1,owner_id:client.id,data:{id:101,hotel:'Be Urban',apartamento:'214',assunto:'Torneira',descricao:'Vazamento',categoria:'Hidráulica',status:'Aberto',criadaPor:client.nome,criadaPorLogin:client.login,data:'23/10/2026'} });
   const provider = {
+    async decision(token,hotel){
+      const stock=records.get('estoqueBookSantos/singleton')?.data.itens||[],alerts=stock.filter(i=>Number(i.quantidade)<=Number(i.minimo??0));
+      return {generatedAt:new Date().toISOString(),referenceDate:'2026-10-29',hotel:hotel||null,permissions:{stock:true,inspections:true},services:{total:150,open:150,overdue:12,today:4,urgent:2,unassigned:3,withoutDeadline:1},byHotel:[{hotel:hotel||'Be Urban',open:150,overdue:12,urgent:2}],byAssignee:[{id:master.id,name:master.nome,assignee:master.login,open:150,overdue:12}],byPhase:[{phase:'Novo',count:150}],queue:[],inspections:{units:126,missing:125,overdue:1,next30:0,items:[{hotel:'Be Urban',apartment:'214',last_date:null,next_due:null}]},stock:{global:true,alerts:alerts.length,unconfigured:stock.filter(i=>i.minimo==null).length,items:alerts.map(i=>({id:i.id,name:i.nome,quantity:i.quantidade,minimum:i.minimo??null}))}};
+    },
+    async processes(token,kind,offset,filters={}){let rows=[...processRows.values()].filter(p=>p.kind===kind&&(!filters.phase||p.phase===filters.phase)&&(!filters.assignee||p.data.responsavel===filters.assignee)&&(!filters.hotel||p.hotel===filters.hotel)&&(!filters.search||p.data.titulo.includes(filters.search)));const counts={};rows.forEach(r=>counts[r.phase]=(counts[r.phase]||0)+1);return {rows:rows.slice(offset,offset+50),total:rows.length,counts};},
+    async servicePage(token,offset,filters={}){let rows=[...records.entries()].filter(([k])=>k.startsWith('ordensServico/')).map(([,r])=>({...r,phase:r.data.status==='Finalizada'?'Resolvido':flowMetas.get('ordensServico:'+r.id)?.phase||(r.data.status==='Em andamento'?'Em andamento':'Novo')}));rows=rows.filter(r=>!filters.phase||r.phase===filters.phase);const counts={};rows.forEach(r=>counts[r.phase]=(counts[r.phase]||0)+1);return {rows:rows.slice(offset,offset+50),total:rows.length,counts};},
+    async saveProcess(token,input){const previous=processRows.get(input.id);if((previous?.version||0)!==input.version)throw Error('Conflito de processo');const row={...input,owner_id:identity(token).id,version:input.version+1,created_at:previous?.created_at||new Date().toISOString(),service_id:previous?.service_id,stock_receipt:previous?.stock_receipt};processRows.set(input.id,row);flowRows.push({id:String(flowRows.length+1),source:'process',record_id:row.id,actor_id:identity(token).id,actor_name:identity(token).nome,action:'Atualizado',body:'',current:{phase:row.phase},created_at:new Date().toISOString()});},
+    async flowDetails(token,source,id,before){const row=source==='process'?processRows.get(id):source==='feedbacks'?feedbackRows.get(id):records.get(source+'/'+id);if(!row)throw Error('Registro não encontrado');return {record:row,recordVersion:row.version,meta:flowMetas.get(source+':'+id)||null,events:flowRows.filter(e=>e.source===source&&e.record_id===id&&(!before||Number(e.id)<Number(before))).reverse().slice(0,51)};},
+    async saveFlow(token,input){const key=input.source+':'+input.id,previous=flowMetas.get(key),row=input.source==='feedbacks'?feedbackRows.get(input.id):records.get(input.source+'/'+input.id);if((previous?.version||0)!==input.version||row.version!==input.recordVersion)throw Error('Conflito de acompanhamento');flowMetas.set(key,{source:input.source,record_id:input.id,version:input.version+1,phase:input.phase,data:input.data});if(input.source==='ordensServico'&&row.data.status==='Aberta'&&input.phase==='Em andamento'){row.data.status='Em andamento';row.version++;}flowRows.push({id:String(flowRows.length+1),source:input.source,record_id:input.id,actor_name:identity(token).nome,action:'Acompanhamento atualizado',current:{phase:input.phase},created_at:new Date().toISOString()});},
+    async flowComment(token,input){flowRows.push({id:String(flowRows.length+1),source:input.source,record_id:input.id,actor_name:identity(token).nome,action:'Comentário',body:input.body,created_at:new Date().toISOString()});},
+    async processService(token,input){const p=input.source==='process'?processRows.get(input.id):records.get('vistorias/'+input.id);if(p.service_id)return p.service_id;p.service_id=input.recordId;const d=p.data;records.set('ordensServico/'+input.recordId,{id:input.recordId,version:1,owner_id:identity(token).id,data:{id:input.recordId,hotel:p.hotel||d.hotel,apartamento:p.apartment||d.apartamento,titulo:d.titulo||'Serviço da vistoria',descricao:d.observacoes||'Pendências',status:'Aberta',anexos:d.anexos||d.fotos||[]}});return input.recordId;},
+    async receivePurchase(token,input){const p=processRows.get(input.id);if(p.stock_receipt)return;p.stock_receipt={quantity:input.quantity,material_id:input.materialId};p.phase='Recebida';p.version++;const s=records.get('estoqueBookSantos/singleton');s.data.itens.find(i=>i.id===input.materialId).quantidade+=input.quantity;s.version++;},
+    async notifications(){return notificationState;},
+    async supportRead(){},
+    async supportSummary(){const rows=[...supportRows.values()];return {total:rows.length,open:rows.filter(r=>r.status==='Aberto').length,closed:rows.filter(r=>r.status==='Fechado').length};},
+    async reminders(token){return [...reminderRows.values()].filter(r=>r.owner_id===identity(token).id);},
+    async saveReminder(token,input){const previous=reminderRows.get(input.id);if((previous?.version||0)!==input.version)throw Error('Conflito de lembrete');reminderRows.set(input.id,{note_id:input.id,owner_id:identity(token).id,due_at:input.due,repeat:input.repeat,enabled:input.enabled,version:input.version+1});},
+    async dueReminders(){const rows=dueReminderQueue;dueReminderQueue=[];return rows;},
+    async ackReminder(){},
+    async feedbacks(token,offset=0,grade){return [...feedbackRows.values()].filter(f=>!grade||f.data.grau===grade).slice(offset,offset+51);},
+    async saveFeedback(token,input){const previous=feedbackRows.get(input.id);if((previous?.version||0)!==input.version)throw Error('Conflito de feedback');feedbackRows.set(input.id,{...input,hotel:input.data.hotel,version:input.version+1,service_id:previous?.service_id});},
+    async feedbackService(token,input){const f=feedbackRows.get(input.id);if(f.service_id)return f.service_id;if(f.version!==input.version)throw Error('Conflito');f.service_id=input.recordId;f.version++;records.set('ordensServico/'+input.recordId,{id:input.recordId,owner_id:identity(token).id,version:1,data:{id:input.recordId,hotel:f.hotel,apartamento:f.data.apartamento,titulo:f.data.assunto,descricao:f.data.observacoes,status:'Aberta',prioridade:'Normal',anexos:f.data.anexos,feedbackId:f.id}});return input.recordId;},
+    async evaluations(){return [...evaluationRows].reverse();},
+    async sendEvaluation(token,input){if(!evaluationRows.some(m=>m.id===input.id))evaluationRows.push({id:input.id,author_id:identity(token).id,author_name:identity(token).nome,target_name:users.find(u=>u.id===input.target)?.nome,body:input.body,created_at:new Date().toISOString()});},
     async notes(token){return [...noteRows.values()].filter(row=>row.owner_id===identity(token).id);},
     async saveNote(token,input){const old=noteRows.get(input.id);if((old?.version||0)!==input.version)throw Error('Conflito de nota');if(input.remove)noteRows.delete(input.id);else noteRows.set(input.id,{...input,owner_id:identity(token).id,version:input.version+1});},
-    async support(token,id,offset=0){const rows=[...supportRows.values()].filter(row=>(identity(token).mestre||row.owner_id===identity(token).id)&&(!id||row.id===id));return rows.slice(offset,offset+51);},
+    async support(token,id,offset=0,status){const rows=[...supportRows.values()].filter(row=>(identity(token).mestre||row.owner_id===identity(token).id)&&(!id||row.id===id)&&(!status||row.status===status));return rows.slice(offset,offset+51);},
     async sendSupport(token,input){let row=supportRows.get(input.id);if((row?.version||0)!==input.version)throw Error('Conflito de suporte');if(!row){row={id:input.id,subject:input.subject,status:'Aberto',owner_id:identity(token).id,owner_name:identity(token).nome,version:0,book_support_messages:[]};supportRows.set(input.id,row);}row.version++;if(input.status)row.status=input.status;if(input.body)row.book_support_messages.push({id:crypto.randomUUID(),author_id:identity(token).id,author_name:identity(token).nome,master:identity(token).mestre,body:input.body,created_at:new Date().toISOString()});},
     async reopenOrder(token,input){const row=records.get('ordensServico/'+input.id);if(row.version!==input.version)throw Error('Conflito');row.data={...row.data,status:'Em andamento',motivoReabertura:input.reason};row.version++;},
     canCreateUsers: true,
@@ -77,7 +102,7 @@ async function main() {
     await send('Page.enable');
     const dialogs=[];
     socket.addEventListener('message',event=>{const message=JSON.parse(event.data);if(message.method==='Page.javascriptDialogOpening'){dialogs.push(message.params.message);send('Page.handleJavaScriptDialog',{accept:true}).catch(()=>{});}});
-    const evaluate=async expression=>{const result=await send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(result.exceptionDetails)throw new Error(JSON.stringify(result.exceptionDetails));return result.result.value;};
+    const evaluate=async expression=>{const result=await send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(result.exceptionDetails)throw new Error(expression.slice(0,300)+'\n'+JSON.stringify(result.exceptionDetails));return result.result.value;};
     const wait=async expression=>{for(let i=0;i<100;i++){if(await evaluate(expression))return;await delay(100);}throw new Error(`Tempo excedido: ${expression}`);};
     const capture=async name=>{
       if(!process.env.BOOK_PREVIEW_DIR)return;
@@ -88,12 +113,21 @@ async function main() {
     await send('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
     await wait("location.origin === '"+base+"' && document.readyState === 'complete'");
     await capture('login-desktop');
+    await send('Page.addScriptToEvaluateOnNewDocument',{source:"Object.defineProperty(window,'localStorage',{get(){throw new DOMException('Armazenamento bloqueado','SecurityError');}});"});
     await evaluate("fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({login:'master@example.com',senha:'senha'})}).then(r=>{if(!r.ok)throw Error('login');})");
     await send('Page.navigate',{url:base+'/adm/admin.html'});
     await wait("typeof mostrarAba === 'function' && !document.body.hidden");
+    await evaluate("mostrarAba('os');document.querySelector('#visaoOS .acao-principal').focus();abrirFormularioOS()");
+    await wait("document.getElementById('osModal').getAttribute('aria-modal')==='true' && document.activeElement.tagName==='BUTTON'");
+    await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Tab',code:'Tab',windowsVirtualKeyCode:9,modifiers:8});
+    await evaluate("if(!document.getElementById('osModal').contains(document.activeElement))throw Error('Tab escapou do modal')");
+    await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
+    await wait("document.getElementById('osModal').style.display==='none' && document.activeElement===document.querySelector('#visaoOS .acao-principal')");
+    await evaluate("mostrarAba('chamados')");
+    await wait("!!document.querySelector('.linha-chamado .card-open') && document.querySelectorAll('.legal-footer a').length===6");
     await evaluate(`(async()=>{const row=document.getElementById('listaChamados').firstElementChild;await BookStore.refresh();if(row!==document.getElementById('listaChamados').firstElementChild)throw Error('Uma resposta idêntica reconstruiu a lista');})()`);
     await capture('painel-desktop');
-    const tabs=await evaluate(`(() => {const result=[];for(const tab of ['chamados','chat','os','vistorias','condominios','estoque','financeiro','dashboard','usuarios','backup','suporte']){document.getElementById('aba'+(tab==='os'?'OS':tab[0].toUpperCase()+tab.slice(1))).click();const id=tab==='os'?'OS':tab[0].toUpperCase()+tab.slice(1);if(document.getElementById('visao'+id).hidden)throw Error(tab);if(document.querySelector('nav').getBoundingClientRect().height===0)throw Error('nav');result.push(tab);}return result;})()`);
+    const tabs=await evaluate(`(() => {const result=[];for(const tab of ['chamados','chat','os','vistorias','condominios','estoque','financeiro','dashboard','usuarios','backup','suporte','feedbacks','avaliacoes','reservas','onboarding','projetos','compras','danos']){document.getElementById('aba'+(tab==='os'?'OS':tab[0].toUpperCase()+tab.slice(1))).click();const id=tab==='os'?'OS':tab[0].toUpperCase()+tab.slice(1);if(document.getElementById('visao'+id).hidden)throw Error(tab);if(document.querySelector('nav').getBoundingClientRect().height===0)throw Error('nav');result.push(tab);}return result;})()`);
     await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
     for(const tab of tabs){
       await evaluate(`mostrarAba(${JSON.stringify(tab)})`);
@@ -104,9 +138,25 @@ async function main() {
     await wait("document.querySelectorAll('#visaoCondominios [data-hotel]:not([hidden])').length === 1");
     await evaluate("if(document.querySelector('#visaoCondominios [data-hotel]:not([hidden])').dataset.hotel!=='Embaré')throw Error('Busca por condomínio sem acento');BookCondominios.filtrarLista('visaoCondominios','impossivel');if(document.getElementById('visaoCondominiosVazio').hidden)throw Error('Aviso de busca vazia');document.querySelector('.busca-condominio').value='';BookCondominios.filtrarLista('visaoCondominios','');");
     await send('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
+    await evaluate("mostrarAba('dashboard')");
+    await wait("document.getElementById('decisionStatus').textContent.includes('Totais de todos') && document.querySelector('#decisionContent .card p').textContent==='150'");
+    await evaluate("if(document.getElementById('decisionLegacyCharts').open)throw Error('Gráficos antigos devem ficar complementares');document.getElementById('decisionHotel').value='Be Urban';document.getElementById('decisionHotel').dispatchEvent(new Event('change'))");
+    await wait("document.getElementById('decisionContent').getAttribute('aria-busy')==='false'");
+    await capture('sad-desktop');
+    await evaluate("[...document.querySelectorAll('#decisionContent button')].find(b=>b.textContent==='Ver serviços vencidos').click()");
+    await wait("!document.getElementById('visaoOS').hidden && !document.getElementById('routine-services').hidden && document.getElementById('routine-services-period').value==='late' && document.getElementById('routine-services-hotel').value==='Be Urban'");
+    await evaluate("BookRoutine.openServices({},'board');document.querySelector('#visaoOS > .botao-secundario').click()");
+    await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+    await evaluate("mostrarAba('dashboard');if(document.documentElement.scrollWidth>document.documentElement.clientWidth+1)throw Error('SAD excede largura do celular')");
+    await capture('sad-mobile');
+    await send('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
     await evaluate("BookWorkspace.openNotes()");
     await evaluate("document.getElementById('noteTitle').value='Primeira nota';document.getElementById('noteBody').value='Assunto separado';document.getElementById('notesForm').requestSubmit()");
     await wait("document.querySelector('#notesDialog .workspace-status').textContent==='Salvo.'");
+    await wait("!document.getElementById('noteReminder').hidden");
+    await evaluate("document.getElementById('reminderEnabled').checked=true;document.getElementById('reminderRepeat').value='daily';document.getElementById('reminderSave').click()");
+    await wait("document.getElementById('reminderStatus').textContent==='Lembrete salvo.'");
+    if(reminderRows.size!==1||[...reminderRows.values()][0].repeat!=='daily')throw Error('Lembrete diário não foi salvo');
     await evaluate("document.getElementById('noteNew').click();document.getElementById('noteTitle').value='Outra nota';document.getElementById('noteBody').value='Outro assunto';document.getElementById('notesForm').requestSubmit()");
     await wait("document.querySelectorAll('#notesList button').length===2");
     await evaluate(`(() => {
@@ -134,6 +184,12 @@ async function main() {
     await evaluate("document.getElementById('supportBody').value='Resposta do mestre';document.getElementById('supportForm').requestSubmit()");
     await wait("document.querySelectorAll('#supportThread .mensagem-chat').length===2");
     await capture('suporte-desktop');
+    await evaluate("mostrarAba('suporte')");
+    await wait("document.getElementById('supportOpen').textContent==='1' && !!document.querySelector('#masterSupportList select') && document.getElementById('masterSupportList').getAttribute('aria-busy')!=='true'");
+    await evaluate("const supportStatus=document.querySelector('#masterSupportList select');supportStatus.value='Fechado';supportStatus.dispatchEvent(new Event('change'))");
+    await wait("document.getElementById('supportClosed').textContent==='1' && document.getElementById('supportOpen').textContent==='0'");
+    await evaluate("const reopenedStatus=document.querySelector('#masterSupportList select');reopenedStatus.value='Aberto';reopenedStatus.dispatchEvent(new Event('change'))");
+    await wait("document.getElementById('supportOpen').textContent==='1' && document.getElementById('supportClosed').textContent==='0'");
     await evaluate("document.getElementById('supportDialog').querySelector('.workspace-heading button').click();document.querySelector('.workspace-actions button').click();document.getElementById('aiKey').value='chave-de-teste-nao-real';document.getElementById('aiPrompt').value='Ajuda para organizar uma vistoria';document.getElementById('aiForm').requestSubmit()");
     await wait("document.getElementById('aiThread').textContent.includes('Resposta de IA simulada')");
     await capture('ia-desktop');
@@ -143,6 +199,55 @@ async function main() {
     await send('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
     await evaluate("document.getElementById('aiDialog').querySelector('.workspace-heading button').click();if(document.getElementById('aiKey').value)throw Error('Chave de IA permaneceu na tela após fechar');");
     await capture('condominios-desktop');
+    await evaluate("mostrarAba('feedbacks');document.getElementById('feedbackNew').click();document.getElementById('feedbackHotel').value='Be Urban';document.getElementById('feedbackHotel').dispatchEvent(new Event('change'));if(document.getElementById('feedbackApartment').options.length!==7)throw Error('Apartamentos do feedback');document.getElementById('feedbackApartment').value='214';document.getElementById('feedbackSubject').value='Feedback do hóspede';document.getElementById('feedbackGrade').value='Crítico';document.getElementById('feedbackNotes').value='Verificar manutenção';document.getElementById('feedbackCreateService').checked=true");
+    await evaluate(`(async()=>{const canvas=document.createElement('canvas');canvas.width=2;canvas.height=2;const blob=await new Promise(r=>canvas.toBlob(r,'image/png'));const files=new DataTransfer();files.items.add(new File([blob],'feedback.png',{type:'image/png'}));document.getElementById('feedbackFiles').files=files.files;document.getElementById('feedbackFiles').dispatchEvent(new Event('change'));document.getElementById('feedbackForm').requestSubmit();})()`);
+    await wait("!document.getElementById('feedbackDialog').open && document.getElementById('feedbackList').textContent.includes('Feedback do hóspede')");
+    const feedbackRow=[...feedbackRows.values()][0];if(!feedbackRow?.service_id||!feedbackRow.data.anexos[0].dados.startsWith('/api/files/'))throw Error('Feedback não vinculou foto e card');
+    await capture('feedbacks-desktop');
+    await evaluate("mostrarAba('avaliacoes');document.getElementById('evaluationBody').value='Parabéns pela vistoria <img src=x onerror=alert(1)>';document.getElementById('evaluationForm').requestSubmit()");
+    await wait("document.getElementById('evaluationThread').textContent.includes('Parabéns pela vistoria')");
+    await evaluate("if(document.querySelector('#evaluationThread img'))throw Error('Comentário executou HTML')");
+    await capture('avaliacoes-desktop');
+    notificationState={chat:{count:2,latest:{id:'mock-chat-1',body:'Nova mensagem do cliente',ticket:'101'}},support:{count:1,latest:{id:'mock-support-1',body:'Novo chamado de suporte'}}};
+    const reminder=[...reminderRows.values()][0];dueReminderQueue=[{id:reminder.note_id,due:reminder.due_at,title:'Lembrete de teste'}];
+    await evaluate("BookNotifications.refresh()");
+    await wait("document.getElementById('notificationsList').textContent.includes('Lembrete de teste')");
+    await evaluate("if(document.querySelector('.workspace-actions [data-workspace-target=\"supportDialog\"] .workspace-badge').textContent!=='1')throw Error('Badge do suporte');if(document.getElementById('chatBadge').textContent!=='2')throw Error('Badge do chat');document.getElementById('notificationsToggle').click()");
+    await capture('notificacoes-desktop');
+    await evaluate("document.getElementById('notificationsClose').click()");notificationState={chat:{count:0},support:{count:0}};
+    const routineCases=[
+      ['reservas',{cliente:'Hóspede fictício',canal:'Direta',codigo:'TEST-BROWSER',checkin:'2026-11-10',checkout:'2026-11-12',hospedes:'2'}],
+      ['onboarding',{cliente:'Proprietário fictício'}],
+      ['projetos',{categoria:'Operação',custoPrevisto:'120.50'}],
+      ['compras',{itens:'Material de manutenção',quantidade:'2'}],
+      ['danos',{item:'Taça',quantidade:'1',origem:'Vistoria'}],
+      ['desempenho',{funcionario:master.id,inicio:'2026-10-01',fim:'2026-10-28'}]
+    ];
+    for(const [kind,fields]of routineCases){
+      await evaluate(`(() => {mostrarAba(${JSON.stringify(kind==='desempenho'?'avaliacoes':kind)});${kind==='desempenho'?"document.querySelector('.routine-team-plans').open=true;":''}document.querySelector('#routine-${kind} .routine-actions .acao-principal').click();document.getElementById('processName').value=${JSON.stringify('Rotina '+kind)};document.getElementById('processHotel').value='Be Urban';document.getElementById('processHotel').dispatchEvent(new Event('change'));document.getElementById('processApartment').value='214';document.getElementById('processDue').value='2026-11-10';document.getElementById('processAssignee').value=${JSON.stringify(master.id)};for(const [key,value]of Object.entries(${JSON.stringify(fields)}))document.getElementById('process-field-'+key).value=value;document.getElementById('processForm').requestSubmit();})()`);
+      await wait(`!document.getElementById('processDialog').open && document.getElementById('processDialog').getAttribute('aria-busy')==='false' && document.getElementById('routine-${kind}-area').textContent.includes('Rotina ${kind}')`);
+    }
+    if(processRows.size!==6)throw Error('Novos processos não foram persistidos');
+    await evaluate("mostrarAba('reservas')");await capture('reservas-quadro-desktop');
+    await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+    await evaluate("if(document.documentElement.scrollWidth>innerWidth+1)throw Error('Quadro de reservas excedeu largura do celular')");await capture('reservas-quadro-mobile');
+    await send('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
+    const damage=[...processRows.values()].find(r=>r.kind==='danos');
+    await evaluate(`BookRoutine.openFlow('process',${JSON.stringify(damage.id)})`);
+    await wait("document.getElementById('flowDialog').open");
+    await evaluate("document.getElementById('flowCommentBody').value='Comentário da rotina <img src=x>';document.getElementById('flowComment').requestSubmit()");
+    await wait("document.getElementById('flowHistory').textContent.includes('Comentário da rotina')");
+    await evaluate("if(document.querySelector('#flowHistory img'))throw Error('Comentário de rotina executou HTML');document.getElementById('flowClose').click();mostrarAba('os');document.querySelector('#visaoOS > .botao-secundario').click()");
+    await wait("!document.getElementById('routine-services').hidden && document.getElementById('routine-services-area').textContent.includes('Feedback do hóspede')");
+    await capture('servicos-quadro-desktop');
+    const linkedService=feedbackRow.service_id;
+    await evaluate(`BookRoutine.openFlow('ordensServico',${JSON.stringify(linkedService)})`);
+    await wait("document.getElementById('flowDialog').open");
+    await evaluate("document.getElementById('flowPhase').value='Aguardando proprietário';document.getElementById('flow-proprietarioAvisado').checked=true;document.getElementById('flow-prazo').value='2026-11-10';document.getElementById('flowSettings').requestSubmit()");
+    await wait("document.getElementById('flowHistory').textContent.includes('Aguardando proprietário') && document.getElementById('flowDialog').getAttribute('aria-busy')==='false'");
+    await evaluate("document.getElementById('flowPurchase').click();document.getElementById('process-field-quantidade').value='2';document.getElementById('processForm').requestSubmit()");
+    await wait("!document.getElementById('processDialog').open");
+    if(![...processRows.values()].some(p=>p.kind==='compras'&&p.data.servicoId===linkedService))throw Error('Compra não vinculou o serviço existente');
     const catalogCheck=await evaluate(`(() => {
       mostrarAba('os');abrirFormularioOS();
       const hotel=document.getElementById('osHotel'),ap=document.getElementById('osApartamento');
@@ -206,7 +311,26 @@ async function main() {
       mostrarAba('estoque');await adicionarLinhaEstoque();if(JSON.parse(BookStore.getItem('estoqueBookSantos')).itens.length!==1)throw Error('Adicionar estoque');
       mostrarAba('dashboard');atualizarDashboard();
     })()`);
+    await evaluate("mostrarAba('estoque');const minimum=document.querySelector('#tabelaEstoque input[aria-label^=\"Estoque mínimo\"]');minimum.value='3';minimum.dispatchEvent(new Event('change'))");
+    await wait("JSON.parse(BookStore.getItem('estoqueBookSantos')).itens[0].minimo===3 && !BookStore.pending");
     await evaluate("BookFinance.load()");
+    await evaluate("mostrarAba('compras')");
+    await wait("document.getElementById('routine-compras-area').textContent.includes('Rotina compras')");
+    await evaluate("[...document.querySelectorAll('#routine-compras-area .routine-card')].find(c=>c.textContent.includes('Rotina compras')).querySelector('button').click();document.getElementById('processPhase').value='Comprada';document.getElementById('processForm').requestSubmit()");
+    await wait("!document.getElementById('processDialog').open");
+    await evaluate("[...document.querySelectorAll('#routine-compras-area .routine-card')].find(c=>c.textContent.includes('Rotina compras')).querySelector('button').click();document.getElementById('processStock').click()");
+    await wait("document.getElementById('receiveDialog').open");
+    await evaluate("document.getElementById('receiveForm').requestSubmit()");
+    await wait("!document.getElementById('receiveDialog').open && !document.getElementById('processDialog').open && document.getElementById('receiveDialog').getAttribute('aria-busy')==='false'");
+    if(![...processRows.values()].some(p=>p.kind==='compras'&&p.stock_receipt?.quantity===2))throw Error('Compra não recebeu material no estoque');
+    const inspected=[...records.entries()].find(([k])=>k.startsWith('vistorias/'))[1];
+    await evaluate(`BookRoutine.openFlow('vistorias',${JSON.stringify(inspected.id)})`);
+    await wait("document.getElementById('flowDialog').open");
+    await evaluate("document.getElementById('flowService').click()");
+    await wait("document.getElementById('flowStatus').textContent.includes('vinculado') && document.getElementById('flowDialog').getAttribute('aria-busy')==='false'");
+    if(dialogs.pop()!=='Criar ou consultar o serviço vinculado a esta vistoria?')throw Error('Confirmação do serviço da vistoria não exibida');
+    if(!inspected.service_id)throw Error('Vistoria não vinculou serviço');
+    await evaluate("document.getElementById('flowClose').click()");
     await evaluate("if(document.querySelectorAll('.financeiro-card').length!==2)throw Error('finance records');if(!document.getElementById('financeiroLista').textContent.includes('0,30'))throw Error('money display');document.getElementById('fechamentoValorServico').value='0.10';document.getElementById('fechamentoValorMaterial').value='0.20';atualizarCustoTotal();if(document.getElementById('fechamentoCustoTotal').value!=='0.30')throw Error('money sum');");
     await evaluate("[...document.querySelectorAll('#financeiroAbas button')].find(button=>button.textContent.startsWith('Book Santos')).click()");
     await wait("document.querySelectorAll('.financeiro-card').length === 1 && document.getElementById('financeiroLista').textContent.includes('Conserto')");
@@ -294,9 +418,23 @@ async function main() {
     await wait("document.querySelectorAll('#supportThread .mensagem-chat').length===1");
     await evaluate("document.getElementById('supportDialog').querySelector('.workspace-heading button').click();sair()");
     await wait("location.pathname === '/login.html'");
+    await send('Page.navigate',{url:base+'/legal/lgpd'});
+    await wait("document.readyState==='complete' && !!document.getElementById('privacyRequest')");
+    await evaluate(`(() => {
+      window.requestText='';const original=URL.createObjectURL;
+      URL.createObjectURL=function(blob){blob.text().then(text=>window.requestText=text);return original.call(this,blob);};
+      HTMLAnchorElement.prototype.click=function(){};
+      document.getElementById('privacyName').value='Pessoa de teste';document.getElementById('privacyEmail').value='pessoa@example.com';
+      document.getElementById('privacyRequest').requestSubmit();
+    })()`);
+    await wait("window.requestText.includes('Pessoa de teste') && document.getElementById('privacyStatus').textContent.includes('Nenhuma solicitação foi enviada')");
+    await capture('lgpd-desktop');
+    await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+    await evaluate("if(document.documentElement.scrollWidth>document.documentElement.clientWidth+1)throw Error('Documento legal excedeu largura do celular')");
+    await capture('lgpd-mobile');
     if(errors.length)throw new Error(errors.join('; '));
     if(dialogs.length)throw new Error('Alertas inesperados: '+dialogs.join('; '));
-    console.log(JSON.stringify({browser:'Chrome headless',tabs,catalogCheck,created:1,permissionsUpdated:1,tabPermissions:true,privateNotes:true,masterSupport:true,aiChat:'simulated',aiCardWithConfirmation:true,cardReopening:true,cardLifecycle:true,inspectionWithPhoto:true,inventorySaved:true,clientTicketWithPhoto:true,chatBothDirections:true,clientPermissions:true,backupAndVerification:true,responsiveWidths:[390,1440],externalDisk:'simulated',logout:true,uncaughtErrors:0}));
+    console.log(JSON.stringify({browser:'Chrome headless',tabs,catalogCheck,created:1,permissionsUpdated:1,tabPermissions:true,privateNotes:true,masterSupport:true,supportStatusCounters:true,dailyReminder:true,chatSupportNotifications:true,feedbackWithPhotoAndService:true,teamEvaluations:true,aiChat:'simulated',aiCardWithConfirmation:true,cardReopening:true,cardLifecycle:true,inspectionWithPhoto:true,inventorySaved:true,clientTicketWithPhoto:true,chatBothDirections:true,clientPermissions:true,backupAndVerification:true,responsiveWidths:[390,1440],externalDisk:'simulated',logout:true,uncaughtErrors:0}));
   } finally {
     socket?.close();child.kill();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));
     await delay(500);

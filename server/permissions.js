@@ -1,4 +1,4 @@
-const TABS = ['chamados','chat','os','vistorias','condominios','estoque','financeiro','dashboard'];
+const TABS = ['chamados','chat','os','vistorias','condominios','estoque','financeiro','dashboard','feedbacks','avaliacoes','reservas','onboarding','projetos','compras','danos'];
 const READ = { chamados:['chamados','chat','os','condominios','dashboard'], conversasSuporte:['chat'], ordensServico:['os','vistorias','condominios','financeiro','dashboard','estoque'], vistorias:['vistorias'], estoqueBookSantos:['estoque','os'] };
 const WRITE = { chamados:'chamados',conversasSuporte:'chat',ordensServico:'os',vistorias:'vistorias',estoqueBookSantos:'estoque' };
 const tabs = user => user.tabs ?? TABS;

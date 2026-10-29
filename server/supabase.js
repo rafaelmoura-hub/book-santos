@@ -21,6 +21,7 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
       catch { throw failure(503, 'Resposta incompleta do Supabase. Atualize os dados antes de tentar novamente.'); }
     }
     if (!response.ok) {
+      if(data?.code==='23505')throw failure(409,'Já existe um registro com esse identificador ou código. Confira a lista antes de tentar novamente.');
       if (['PGRST205', 'PGRST202', '42P01', '42703'].includes(data?.code)) throw failure(503, 'Execute primeiro a migração SQL do BOOK TESK no Supabase.');
       if (response.status === 409 || data?.code === 'PT409') throw failure(409, data?.message || 'Registro alterado por outro usuário. Atualize e tente novamente.');
       if (data?.code === '22023') throw failure(400, data.message || 'Dados inválidos.');
@@ -57,6 +58,15 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
     if (profile.funcao !== 'adm' || !profile.mestre) throw failure(403, 'Somente o administrador mestre pode gerenciar usuários.');
   }
   const provider = {
+    decision(token,hotel){return request('/rest/v1/rpc/book_decision_snapshot',{token,method:'POST',body:{site:hotel||null},timeoutMs:30000});},
+    processes(token,kind,offset,filters){return request('/rest/v1/rpc/book_process_page',{token,method:'POST',body:{process_kind:kind,page_offset:offset,filters}});},
+    servicePage(token,offset,filters){return request('/rest/v1/rpc/book_service_page',{token,method:'POST',body:{page_offset:offset,filters}});},
+    saveProcess(token,input){return request('/rest/v1/rpc/book_process_save',{token,method:'POST',body:{process_id:input.id,process_kind:input.kind,expected_version:input.version,site:input.hotel,unit:input.apartment,new_phase:input.phase,document:input.data}});},
+    flowDetails(token,source,id,before){return request('/rest/v1/rpc/book_flow_details',{token,method:'POST',body:{source_name:source,target_id:id,before_id:before||null}});},
+    saveFlow(token,input){return request('/rest/v1/rpc/book_flow_save',{token,method:'POST',body:{source_name:input.source,target_id:input.id,expected_version:input.version,expected_record_version:input.recordVersion,new_phase:input.phase,document:input.data}});},
+    flowComment(token,input){return request('/rest/v1/rpc/book_flow_comment',{token,method:'POST',body:{source_name:input.source,target_id:input.id,message_body:input.body}});},
+    processService(token,input){return request('/rest/v1/rpc/book_process_service',{token,method:'POST',body:{source_name:input.source,target_id:input.id,expected_version:input.version,record_id:input.recordId}});},
+    receivePurchase(token,input){return request('/rest/v1/rpc/book_purchase_receive',{token,method:'POST',body:{process_id:input.id,expected_version:input.version,stock_version:input.stockVersion,material_id:input.materialId,quantity:input.quantity}});},
     aiCommit(token,changes,stockVersion=null){return request('/rest/v1/rpc/book_ai_commit',{token,method:'POST',body:{changes,expected_stock_version:stockVersion}});},
     async record(token,collection,id) {
       const query=new URLSearchParams({select:'id,data,owner_id,version,hotel',collection:`eq.${collection}`,id:`eq.${id}`,limit:'1'});
@@ -69,10 +79,23 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
       return request(`/rest/v1/book_records?${query}`,{token});
     },
     notes(token) { return request('/rest/v1/book_notes?select=id,title,body,version,updated_at&order=updated_at.desc&limit=200', { token }); },
+    notifications(token){return request('/rest/v1/rpc/book_notifications',{token,method:'POST',body:{}});},
+    supportRead(token,id,seen){return request('/rest/v1/rpc/book_support_read',{token,method:'POST',body:{target_ticket:id,seen_at:seen}});},
+    supportSummary(token){return request('/rest/v1/rpc/book_support_summary',{token,method:'POST',body:{}});},
+    reminders(token){return request('/rest/v1/book_reminders?select=*&order=due_at&limit=200',{token});},
+    dueReminders(token){return request('/rest/v1/rpc/book_due_reminders',{token,method:'POST',body:{}});},
+    ackReminder(token,id,due){return request('/rest/v1/rpc/book_ack_reminder',{token,method:'POST',body:{target_note:id,delivered_due:due}});},
+    saveReminder(token,input){return request('/rest/v1/rpc/book_save_reminder',{token,method:'POST',body:{target_note:input.id,expected_version:input.version,next_due:input.due,repeat_mode:input.repeat,is_enabled:input.enabled}});},
+    async feedbacks(token,offset=0,grade){const query=new URLSearchParams({select:'*',order:'created_at.desc,id.desc',limit:'51',offset:String(offset)});if(grade)query.set('data->>grau','eq.'+grade);const rows=await request('/rest/v1/book_feedbacks?'+query,{token});if(!rows.length)return rows;const q=new URLSearchParams({select:'record_id,phase',source:'eq.feedbacks',record_id:'in.('+rows.map(r=>r.id).join(',')+')',limit:'51'});const meta=await request('/rest/v1/book_flow_meta?'+q,{token});return rows.map(r=>({...r,flowPhase:meta.find(m=>m.record_id===r.id)?.phase||'Feedback'}));},
+    saveFeedback(token,input){return request('/rest/v1/rpc/book_save_feedback',{token,method:'POST',body:{feedback_id:input.id,expected_version:input.version,document:input.data}});},
+    feedbackService(token,input){return request('/rest/v1/rpc/book_feedback_service',{token,method:'POST',body:{feedback_id:input.id,expected_version:input.version,record_id:input.recordId}});},
+    evaluations(token,before,beforeId){const q=new URLSearchParams({select:'*',order:'created_at.desc,id.desc',limit:'51'});if(before&&beforeId)q.set('or',`(created_at.lt.${before},and(created_at.eq.${before},id.lt.${beforeId}))`);return request('/rest/v1/book_team_messages?'+q,{token});},
+    sendEvaluation(token,input){return request('/rest/v1/rpc/book_team_send',{token,method:'POST',body:{message_id:input.id,message_body:input.body,target_user:input.target}});},
     saveNote(token, input) { return request('/rest/v1/rpc/book_save_note', { token, method: 'POST', body: {note_id:input.id,note_title:input.title,note_body:input.body,expected_version:input.version,remove_note:input.remove === true} }); },
-    support(token, id, offset = 0) {
+    support(token, id, offset = 0, status) {
       const query = new URLSearchParams({select: id ? '*,book_support_messages(*)' : '*', order:'updated_at.desc,id.desc',limit:id?'1':'51',offset:String(offset)});
       if (id) query.set('id', `eq.${id}`);
+      if(status)query.set('status','eq.'+status);
       return request(`/rest/v1/book_support_tickets?${query}`, { token });
     },
     sendSupport(token, input) { return request('/rest/v1/rpc/book_support_send', { token, method:'POST',body:{ticket_id:input.id,subject:input.subject || '',body:input.body || '',expected_version:input.version,new_status:input.status || null} }); },
@@ -119,7 +142,7 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
     apartments(token) { return request('/rest/v1/book_apartments?select=hotel,apartment&order=apartment&limit=10000', { token }); },
     async ready() {
       await request('/auth/v1/settings');
-      if (await request('/rest/v1/rpc/book_schema_version', { method: 'POST', body: {} }) !== 12) throw failure(503, 'Aplique as migrações até 202610280012_security.sql antes de publicar esta versão.');
+      if (![14,15].includes(await request('/rest/v1/rpc/book_schema_version', { method: 'POST', body: {} }))) throw failure(503, 'Aplique as migrações até 202610280014_routine.sql antes de publicar esta versão. O painel SAD utiliza também a migração 15.');
       return { ok: true };
     },
     commit(token, changes) { return request('/rest/v1/rpc/book_commit', { token, method: 'POST', body: { changes } }); },

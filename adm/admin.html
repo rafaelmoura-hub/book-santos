@@ -6,6 +6,8 @@
     <title>Admin | BOOK TESK</title>
     <link rel="stylesheet" href="admin.css">
     <link rel="stylesheet" href="../assets/ui.css">
+    <script src="../assets/accessibility.js" defer></script>
+    <noscript><style>body[hidden]{display:block!important}body>header,body>nav,body>main,body>.modal{display:none!important}noscript{display:block;padding:24px}</style></noscript>
 <script src="../assets/events.js" defer></script>
 </head>
 <body hidden data-screen="admin.js">
@@ -25,6 +27,7 @@
         <button id="abaUsuarios" class="aba" data-on-click="mostrarAba('usuarios')" hidden>Usu&aacute;rios</button>
         <button id="abaBackup" class="aba" data-on-click="mostrarAba('backup')" hidden>Backup</button>
     </nav>
+    <noscript>O sistema precisa de JavaScript. Consulte <a href="/legal/privacidade">privacidade</a> ou o responsável pelo seu acesso.</noscript>
     <main>
         <section id="visaoInicio" hidden><h2>Seu acesso</h2><p>Use os atalhos de suporte e notas no topo. Peça ao mestre a liberação das abas necessárias.</p></section>
         <section id="visaoSuporte" hidden><div class="titulo-secao"><h2>Suporte</h2><button type="button" id="masterSupportRefresh" class="botao-secundario">Atualizar chamados</button></div><div id="masterSupportList"></div></section>
@@ -39,6 +42,7 @@
             <label><input type="checkbox" value="conversasSuporte" checked> Conversas</label>
             <label><input type="checkbox" value="cadastros" checked> Usuários, permissões, condomínios e apartamentos</label>
             <label><input type="checkbox" value="auditoria" checked> Histórico de alterações</label>
+            <label><input type="checkbox" value="colaboracao" checked> Feedbacks, avaliações, suporte e minhas notas/lembretes</label>
             <label><input type="checkbox" value="anexos" checked> Fotos, vídeos e arquivos vinculados aos dados selecionados</label>
           </fieldset>
           <p>Cada execução cria uma cópia completa. Os backups anteriores são mantidos.</p>
@@ -147,7 +151,7 @@
           <div id="listaUsuarios"></div>
         </section>
         <section id="visaoDashboard" hidden>
-          <div class="titulo-secao"><div><h2>Painel</h2><p>Visão geral de chamados e cards.</p></div></div>
+          <div class="titulo-secao"><div><h2>Visão geral</h2><p>Prioridades, vistorias e materiais por condomínio.</p></div></div>
           <div class="dashboard-painel">
             <div class="dashboard-cabecalho"><div><h3>Cards</h3><p id="resumoDashboardOS"></p></div><div class="controles-grafico"><label>Per&iacute;odo<select id="periodoOS" data-on-change="atualizarDashboard()"><option value="diario">Di&aacute;rio</option><option value="semanal">Semanal</option><option value="mensal" selected>Mensal</option><option value="anual">Anual</option></select></label><label>Usu&aacute;rio<select id="usuarioOS" data-on-change="atualizarDashboard()"><option value="todos">Todos</option></select></label><label>Gr&aacute;fico<select id="tipoGraficoOS" data-on-change="atualizarDashboard()"><option value="linha" selected>Linha</option><option value="coluna">Coluna</option><option value="pizza">Pizza</option></select></label></div></div>
             <div id="graficoOS" class="grafico-dashboard" role="img" aria-label="Gr&aacute;fico de Cards"></div>
@@ -247,6 +251,11 @@
     <script src="../assets/periods.js"></script>
     <script src="financeiro.js"></script>
     <script src="condominios.js"></script>
+    <script src="../assets/notifications.js"></script>
+    <script src="../assets/processes.js"></script>
+    <script src="routine.js"></script>
+    <script src="decision.js"></script>
+    <script src="collaboration.js"></script>
     <script src="workspace.js"></script>
     <script src="usuarios.js"></script>
     <script src="backup.js"></script>

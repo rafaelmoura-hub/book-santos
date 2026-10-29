@@ -1,7 +1,7 @@
 const { hotels, filePath } = require('../assets/catalog');
 const http = require('node:http');
 const path = require('node:path');
-const { readFile } = require('node:fs/promises');
+const { asset, acceptsGzip } = require('./static-assets');
 const { randomBytes, randomUUID, createHash } = require('node:crypto');
 const { COLLECTIONS, validId, validateChanges, storeAttachments } = require('./operations');
 const { validateUser } = require('./users');
@@ -13,6 +13,10 @@ const { uuid, validateWorkspace } = require('./workspace');
 const { generateAI } = require('./ai');
 const { createAgent } = require('./ai-agent');
 const { boundedBytes,requireJSON,validateProfile } = require('./security');
+const {validateCollaboration}=require('./collaboration');
+const {validateProcess,validateFlow}=require('./processes');
+const {definitions:processDefinitions,flowPhases}=require('../assets/processes');
+const { renderLegal, legalConfig } = require('./legal');
 const ROOT = path.resolve(__dirname, '..');
 const fail = (status, message) => Object.assign(new Error(message), { status });
 const digest = token => createHash('sha256').update(token).digest('hex');
@@ -65,6 +69,11 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
     try {
       const url = new URL(req.url, 'http://localhost');
       const route = url.pathname;
+      if ((route === '/legal' || route.startsWith('/legal/')) && ['GET','HEAD'].includes(req.method)) {
+        const html=renderLegal(route === '/legal' ? 'privacidade' : route.slice(7), legalConfig());
+        if(!html)throw fail(404,'Documento não encontrado.');
+        res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'}); return res.end(req.method==='HEAD'?undefined:html);
+      }
       if (route === '/health' && req.method === 'GET') return json(200, { status: 'ok' });
       if (route === '/ready' && req.method === 'GET') {
         if(clock()>=readyUntil){
@@ -144,6 +153,91 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         }
       }
       if (route === '/api/session' && req.method === 'GET') return json(200, { ...user, provider: 'supabase' });
+      if(route==='/api/decision' && req.method==='GET'){
+        if(!canTab(user,'dashboard'))throw fail(403,'Sem acesso à visão geral.');
+        const hotel=url.searchParams.get('hotel');
+        if(hotel && (!hotels.includes(hotel)||!(await provider.access(session.accessToken)).some(row=>row.hotel===hotel)&&!user.mestre))throw fail(403,'Sem acesso a este condomínio.');
+        try{return json(200,await provider.decision(session.accessToken,hotel));}
+        catch(error){if(error.status===503)throw fail(503,'Painel SAD indisponível. Se ainda não aplicada, execute a migração 202610290015_decision.sql. As outras abas continuam disponíveis.');throw error;}
+      }
+      if(['/api/processes','/api/processes/services','/api/processes/flow','/api/processes/comment','/api/processes/service','/api/processes/receive'].includes(route)){
+        if(user.funcao!=='adm')throw fail(403,'Somente administradores.');
+        const validSource=(source,id)=>['process',...Object.keys(flowPhases)].includes(source)&&typeof id==='string'&&(['process','feedbacks'].includes(source)?uuid(id):/^\d{1,16}$/.test(id));
+        const flowAllowed=(source,writing=false)=>source==='process'?Object.entries(processDefinitions).some(([kind,definition])=>canTab(user,definition.tab||kind)):source==='feedbacks'?canTab(user,'feedbacks'):canCollection(user,source,writing);
+        if(req.method==='GET'){
+          if(route==='/api/processes/flow'){const source=url.searchParams.get('source'),id=url.searchParams.get('id'),before=url.searchParams.get('before');if(!validSource(source,id)||before&&!/^\d{1,16}$/.test(before))throw fail(400,'Registro inválido.');if(!flowAllowed(source))throw fail(403,'Sem acesso ao acompanhamento.');return json(200,await provider.flowDetails(session.accessToken,source,id,before));}
+          if(!['/api/processes','/api/processes/services'].includes(route))throw fail(405,'Método inválido.');
+          const kind=url.searchParams.get('kind'),offset=Number(url.searchParams.get('offset')||0);let filters;
+          try{filters=JSON.parse(url.searchParams.get('filters')||'{}');}catch{throw fail(400,'Filtros inválidos.');}
+          if(!Number.isSafeInteger(offset)||offset<0||offset>100000||!filters||typeof filters!=='object'||Array.isArray(filters)||Object.keys(filters).some(k=>!['search','phase','assignee','hotel','period'].includes(k))||Object.values(filters).some(v=>typeof v!=='string'||v.length>200)||filters.assignee&&!uuid(filters.assignee)||filters.period&&!['all','today','week','late'].includes(filters.period))throw fail(400,'Filtros inválidos.');
+          const tab=route.endsWith('/services')?'os':processDefinitions[kind]?.tab||kind;
+          if(route==='/api/processes'&&!Object.hasOwn(processDefinitions,kind))throw fail(400,'Processo inválido.');
+          if(!canTab(user,tab))throw fail(403,'Sem acesso a esta aba.');
+          return json(200,route.endsWith('/services')?await provider.servicePage(session.accessToken,offset,filters):await provider.processes(session.accessToken,kind,offset,filters));
+        }
+        if(req.method!=='POST')throw fail(405,'Método inválido.');
+        const key='routine:'+user.id,quota=writes.get(key)||{count:0,until:now+60000};if(quota.count>=40)throw fail(429,'Aguarde antes de salvar novamente.');quota.count++;writes.set(key,quota);
+        const input=await readBody(req);
+        if(route==='/api/processes'){
+          const valid=validateProcess(input),definition=processDefinitions[valid.kind];
+          if(!canTab(user,definition.tab||valid.kind))throw fail(403,'Sem acesso a esta aba.');
+          if(valid.hotel){if(!hotels.includes(valid.hotel))throw fail(400,'Condomínio inválido.');const allowed=user.mestre?hotels:(await provider.access(session.accessToken)).map(a=>a.hotel);if(!allowed.includes(valid.hotel))throw fail(403,'Sem acesso ao condomínio.');}
+          else if(!definition.global||valid.apartment||valid.data.anexos.length)throw fail(400,'Selecione condomínio e apartamento para anexar arquivos.');
+          const paths=[];try{const prepared=await storeAttachments([{data:{...valid.data,hotel:valid.hotel}}],user,(p,b,t)=>provider.upload(session.accessToken,p,b,t),paths);const {hotel,...data}=prepared[0].data;await provider.saveProcess(session.accessToken,{...valid,data});}
+          catch(error){if(paths.length)await provider.removeFiles(session.accessToken,paths).catch(()=>{});throw error;}
+        }else if(route==='/api/processes/flow'){const valid=validateFlow(input);if(!flowAllowed(valid.source,true))throw fail(403,'Sem acesso para alterar o acompanhamento.');await provider.saveFlow(session.accessToken,valid);}
+        else if(route==='/api/processes/comment'){
+          if(!validSource(input?.source,input?.id)||typeof input.body!=='string'||!input.body.trim()||input.body.length>2000)throw fail(400,'Comentário inválido.');if(!flowAllowed(input.source,true))throw fail(403,'Sem acesso para comentar.');await provider.flowComment(session.accessToken,{source:input.source,id:input.id,body:input.body.trim()});
+        }else if(route==='/api/processes/service'){
+          if(!canTab(user,'os'))throw fail(403,'Sem acesso a Cards.');if(!['process','vistorias'].includes(input?.source)||!validSource(input.source,input.id)||!Number.isSafeInteger(input.version)||input.version<1||typeof input.recordId!=='string'||!/^\d{1,16}$/.test(input.recordId))throw fail(400,'Vínculo inválido.');return json(200,{id:await provider.processService(session.accessToken,input)});
+        }else if(route==='/api/processes/receive'){
+          if(!canTab(user,'compras')||!canTab(user,'estoque'))throw fail(403,'Exige acesso a Compras e Estoque.');if(!uuid(input?.id)||!Number.isSafeInteger(input.version)||input.version<1||!Number.isSafeInteger(input.stockVersion)||input.stockVersion<1||typeof input.materialId!=='string'||!/^[\w-]{1,100}$/.test(input.materialId)||typeof input.quantity!=='number'||!Number.isFinite(input.quantity)||input.quantity<=0||input.quantity>10000)throw fail(400,'Recebimento inválido.');await provider.receivePurchase(session.accessToken,input);
+        }else throw fail(405,'Método inválido.');
+        return json(200,{ok:true});
+      }
+      if(route==='/api/notifications'&&req.method==='GET')return json(200,await provider.notifications(session.accessToken));
+      if(['/api/workspace/support-summary','/api/workspace/support-read','/api/workspace/reminders','/api/workspace/reminders-due','/api/workspace/reminders-ack','/api/feedbacks','/api/feedbacks/service','/api/evaluations'].includes(route)){
+        if(user.funcao!=='adm')throw fail(403,'Somente administradores.');
+        if(route.startsWith('/api/feedbacks')&&!canTab(user,'feedbacks')||route==='/api/evaluations'&&!canTab(user,'avaliacoes'))throw fail(403,'Sem acesso a esta aba.');
+        if(route==='/api/workspace/support-summary'){if(!user.mestre)throw fail(403,'Somente o mestre.');if(req.method!=='GET')throw fail(405,'Método inválido.');return json(200,await provider.supportSummary(session.accessToken));}
+        if(req.method==='GET'){
+          const offset=Number(url.searchParams.get('offset')||0),before=url.searchParams.get('before');
+          if(!Number.isSafeInteger(offset)||offset<0||offset>100000||before&&!Number.isFinite(Date.parse(before)))throw fail(400,'Consulta inválida.');
+          if(route==='/api/workspace/reminders')return json(200,await provider.reminders(session.accessToken));
+          if(route==='/api/feedbacks'){const grade=url.searchParams.get('grade');if(grade&&!['Crítico','Razoável','Irrelevante'].includes(grade))throw fail(400,'Grau inválido.');return json(200,await provider.feedbacks(session.accessToken,offset,grade));}
+          if(route==='/api/evaluations'){const beforeId=url.searchParams.get('beforeId');if(!!before!==!!beforeId||beforeId&&!uuid(beforeId)||before&&!/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,6})?(?:Z|[+-]\d\d:\d\d)$/.test(before))throw fail(400,'Página inválida.');return json(200,await provider.evaluations(session.accessToken,before,beforeId));}
+          throw fail(405,'Método inválido.');
+        }
+        if(req.method!=='POST')throw fail(405,'Método inválido.');
+        const quotaKey='collaboration:'+user.id,quota=writes.get(quotaKey)||{count:0,until:now+60000};
+        if(quota.count>=60)throw fail(429,'Aguarde antes de enviar novamente.');quota.count++;writes.set(quotaKey,quota);
+        const input=await readBody(req);
+        if(route==='/api/workspace/reminders-due')return json(200,await provider.dueReminders(session.accessToken));
+        if(route==='/api/workspace/reminders-ack'){
+          if(!uuid(input?.id)||typeof input.due!=='string'||!Number.isFinite(Date.parse(input.due)))throw fail(400,'Lembrete inválido.');
+          await provider.ackReminder(session.accessToken,input.id,input.due);return json(200,{ok:true});
+        }
+        if(route==='/api/workspace/support-read'){
+          if(!uuid(input?.id)||typeof input.seen!=='string'||!Number.isFinite(Date.parse(input.seen)))throw fail(400,'Leitura inválida.');
+          await provider.supportRead(session.accessToken,input.id,input.seen);
+        }else if(route==='/api/workspace/reminders')await provider.saveReminder(session.accessToken,validateCollaboration('reminders',input));
+        else if(route==='/api/evaluations')await provider.sendEvaluation(session.accessToken,validateCollaboration('evaluations',input));
+        else if(route==='/api/feedbacks/service'){
+          if(!canTab(user,'os'))throw fail(403,'Sem permissão para criar cards de serviço.');
+          if(!uuid(input?.id)||!Number.isSafeInteger(input.version)||input.version<1||typeof input.recordId!=='string'||!/^\d{1,16}$/.test(input.recordId))throw fail(400,'Card inválido.');
+          return json(200,{id:await provider.feedbackService(session.accessToken,input)});
+        }else{
+          const valid=validateCollaboration('feedbacks',input),allowed=user.mestre?hotels:(await provider.access(session.accessToken)).map(r=>r.hotel);
+          if(!allowed.includes(valid.data.hotel))throw fail(403,'Sem acesso ao condomínio.');
+          if(Buffer.byteLength(JSON.stringify(valid.data,(k,v)=>typeof v==='string'&&v.startsWith('data:')?'[anexo]':v))>128*1024)throw fail(413,'Feedback acima do limite.');
+          const uploaded=[];let committed=false;
+          try{
+            const prepared=await storeAttachments([{data:valid.data}],user,(p,b,t)=>provider.upload(session.accessToken,p,b,t),uploaded);
+            await provider.saveFeedback(session.accessToken,{...valid,data:prepared[0].data});committed=true;
+          }finally{if(!committed&&uploaded.length)await provider.removeFiles(session.accessToken,uploaded).catch(()=>{});}
+        }
+        return json(200,{ok:true});
+      }
       if((route==='/api/ai'||route==='/api/ai/actions')&&req.method==='POST'){
         if(user.funcao!=='adm')throw fail(403,'Disponível somente para administradores.');
         const context={provider,token:session.accessToken,user,session:sessionId,invalidateUser:id=>{for(const [key,value]of sessions)if(value.userId===id)sessions.delete(key);}};
@@ -165,7 +259,8 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
           const id = url.searchParams.get('id');
           const offset = Number(url.searchParams.get('offset') || 0);
           if (id && !uuid(id) || !Number.isSafeInteger(offset) || offset < 0 || offset > 100000) throw fail(400, 'Consulta inválida.');
-          return json(200, kind === 'notes' ? await provider.notes(session.accessToken) : await provider.support(session.accessToken, id, offset));
+          const filter=url.searchParams.get('status');if(filter&&!['Aberto','Fechado'].includes(filter))throw fail(400,'Status inválido.');
+          return json(200, kind === 'notes' ? await provider.notes(session.accessToken) : await provider.support(session.accessToken, id, offset,filter));
         }
         if (req.method !== 'POST') throw fail(405, 'Método não permitido.');
         const quotaKey = `workspace:${user.id}`, quota = writes.get(quotaKey) || {count:0,until:now+60000};
@@ -192,7 +287,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         quota.count++; writes.set(quotaKey, quota);
         const data = await provider.backup(session.accessToken, selected);
         if (!data || !Array.isArray(data.records)) throw fail(502, 'O servidor não confirmou os dados do backup. Nenhuma cópia completa foi gerada.');
-        return json(200, { format: 'book-santos-backup', version: 1, selected, data, files: selected.includes('anexos') ? attachments(data.records) : [] });
+        return json(200, { format: 'book-santos-backup', version: 1, selected, data, files: selected.includes('anexos') ? attachments(data) : [] });
       }
       if (route === '/api/finance' && req.method === 'GET') {
         if (!canTab(user, 'financeiro')) throw fail(403, 'Sem acesso ao financeiro.');
@@ -296,19 +391,23 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
       if (!['GET', 'HEAD'].includes(req.method)) throw fail(405, 'Método não permitido.');
       if (/^\/hotel\/(hotel\.html)?$/.test(route)) { res.writeHead(302, { Location: '/adm/admin.html#condominios' }); return res.end(); }
       const file = route === '/' ? '/login.html' : route;
-      if (!/^\/(login\.(html|css|js)|assets\/(api|session|store|money|periods|catalog|events)\.js|assets\/ui\.css|(adm|cliente|hotel)\/[a-z]+\.(html|css|js))$/.test(file)) throw fail(404, 'Arquivo não encontrado.');
+      if (!/^\/(login\.(html|css|js)|assets\/(api|session|store|money|periods|catalog|events|notifications|processes|accessibility|legal)\.js|assets\/(ui|legal)\.css|(adm|cliente|hotel)\/[a-z]+\.(html|css|js))$/.test(file)) throw fail(404, 'Arquivo não encontrado.');
       if (/^\/(adm|hotel)\//.test(file) && user?.funcao !== 'adm' || /^\/cliente\//.test(file) && user?.funcao !== 'cliente') {
         res.writeHead(302, { Location: '/login.html' }); return res.end();
       }
-      const content = await readFile(path.join(ROOT, file));
+      // Only allowlisted application files reach this cache, after access checks.
+      const content = await asset(path.join(ROOT, file));
+      res.setHeader('Vary','Accept-Encoding');
       if (/\.(css|js)$/.test(file)) {
-        const etag = `"${createHash('sha256').update(content).digest('hex')}"`;
+        const etag = content.etag;
         res.setHeader('ETag', etag);
         res.setHeader('Cache-Control', 'private, max-age=0, must-revalidate');
         if (req.headers['if-none-match'] === etag) { res.writeHead(304); return res.end(); }
       }
-      res.writeHead(200, { 'Content-Type': `${{ '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript' }[path.extname(file)]}; charset=utf-8` });
-      res.end(req.method === 'HEAD' ? undefined : content);
+      const zipped=content.gzip && acceptsGzip(req.headers['accept-encoding']);
+      const bytes=zipped?content.gzip:content.bytes;
+      res.writeHead(200, { 'Content-Type': `${{ '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript' }[path.extname(file)]}; charset=utf-8`, 'Content-Length':bytes.length, ...(zipped?{'Content-Encoding':'gzip'}:{}) });
+      res.end(req.method === 'HEAD' ? undefined : bytes);
     } catch (error) {
       if(error.status===413){res.setHeader('Connection','close');req.resume();}
       json(error.status || (error.code === 'ENOENT' ? 404 : 500), { message: error.status ? error.message : 'Não foi possível concluir a operação.' });

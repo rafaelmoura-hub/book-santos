@@ -8,8 +8,10 @@ Esta versão requer as migrações anteriores até 9. Antes de publicar o novo s
 2. Execute todo o arquivo `supabase/migrations/202610280010_permissions.sql`.
 3. Em uma nova consulta, execute todo o arquivo `supabase/migrations/202610280011_notes_support.sql`.
 4. Em uma nova consulta, execute todo o arquivo `supabase/migrations/202610280012_security.sql`.
-5. Execute `select public.book_schema_version();`. O resultado deve ser **12**.
-6. Publique a nova versão do servidor e entre novamente no site.
+5. Execute `supabase/migrations/202610280013_collaboration.sql` para ativar notificações, lembretes, Feedbacks e Avaliações.
+6. Execute `supabase/migrations/202610280014_routine.sql` para ativar a adaptação da rotina.
+7. Execute `select public.book_schema_version();`. O resultado deve ser **14**.
+8. Publique a nova versão do servidor e entre novamente no site. Veja [colaboração](COLABORACAO.md) e [rotina da equipe](ROTINA-BOOK-TESK.md).
 
 As migrações são transacionais e podem ser reaplicadas. Não apagam registros anteriores. Preserve o backup habitual antes da atualização. O servidor verifica a versão em `/ready` para evitar publicar funcionalidades sem as tabelas necessárias.
 
@@ -35,7 +37,7 @@ O Chat antigo continua atendendo os chamados operacionais dos clientes. O novo s
 
 O ícone de bloco de notas abre notas individuais com título e texto. É possível criar, selecionar, editar e excluir. Cada usuário tem até 200 notas com até 20.000 caracteres cada. O salvamento é explícito: **Salvar nota**. O banco valida proprietário e versão, e o mestre não lê as notas pessoais de outros administradores pela aplicação. Ao descartar alterações, a tela pede confirmação.
 
-As tabelas novas precisam fazer parte da rotina de backup completo do banco. O exportador antigo da aba Backup não inclui as tabelas de notas e suporte; não use apenas esse exportador como backup desses novos recursos.
+Com a migração 13, o grupo Colaboração da aba Backup inclui suporte e as notas/lembretes do próprio mestre. Notas privadas de outros usuários precisam da rotina de backup completo do banco; veja [backup e privacidade](BACKUP.md).
 
 ## Chat de IA integrado
 

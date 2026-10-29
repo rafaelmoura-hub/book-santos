@@ -10,6 +10,7 @@ window.BookStore = (() => {
     const attachmentFields = new Map();
     function setupAttachments() {
         document.querySelectorAll('input[type="file"]').forEach(input => {
+            if(attachmentFields.has(input))return;
             const list = document.createElement('div');
             list.className = 'attachment-list'; list.setAttribute('aria-live', 'polite');
             input.closest('label')?.insertAdjacentElement('afterend', list) || input.insertAdjacentElement('afterend', list);
@@ -57,7 +58,8 @@ window.BookStore = (() => {
         }
     }
     function activate(tab) {
-        const groups = { chamados: ['chamados'], chat: ['chamados','conversasSuporte'], os: ['ordensServico','chamados','estoqueBookSantos'], vistorias: ['vistorias','ordensServico'], condominios: ['chamados','ordensServico'], estoque: ['estoqueBookSantos','ordensServico'], dashboard: ['chamados','ordensServico'], financeiro: [], usuarios: [], backup: [] };
+        if(['reservas','onboarding','projetos','compras','danos'].includes(tab)){activeCollections=[];return;}
+        const groups = { chamados: ['chamados'], chat: ['chamados','conversasSuporte'], os: ['ordensServico','chamados','estoqueBookSantos'], vistorias: ['vistorias','ordensServico'], condominios: ['chamados','ordensServico'], estoque: ['estoqueBookSantos','ordensServico'], dashboard: [], dashboardCharts:['chamados','ordensServico'], financeiro: [], usuarios: [], backup: [], feedbacks:[],avaliacoes:[],suporte:[],inicio:[] };
         activeCollections = groups[tab] || keys;
     }
     const apartments = hotel => apartmentCatalog.filter(row => row.hotel === hotel).map(row => row.apartment).sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
@@ -71,6 +73,10 @@ window.BookStore = (() => {
         }
     }
     function rows(key) { return cache.get(key) || []; }
+    function includeRecord(key,row){
+        if(!keys.includes(key)||!row||typeof row.id!=='string'||!row.data||!Number.isSafeInteger(Number(row.version)))throw new Error('Registro inválido.');
+        const current=rows(key),index=current.findIndex(item=>item.id===row.id),next=[...current];if(index<0)next.push(row);else next[index]=row;cache.set(key,next);
+    }
     function recordId(key, data) {
         if (key === 'estoqueBookSantos') return 'singleton';
         if (key === 'conversasSuporte') {
@@ -102,6 +108,7 @@ window.BookStore = (() => {
         if (changed) notify();
     }
     function getItem(key) {
+        if (key === 'usuarioLogado') return JSON.stringify(user || null);
         if (!keys.includes(key)) return localStorage.getItem(key);
         if (key === 'estoqueBookSantos') return JSON.stringify({ ...(rows(key)[0]?.data || { colunas: [], itens: [] }), __bookVersion: rows(key)[0]?.version || 0 });
         return JSON.stringify(rows(key).map(row => ({ ...row.data, __bookVersion: row.version })));
@@ -224,5 +231,5 @@ window.BookStore = (() => {
             };
         }
     }
-    return { init, getItem, setItem, refresh, validateFiles, protectActions, apartments, activate, totals: () => totals, id: () => Date.now() * 1000 + crypto.getRandomValues(new Uint16Array(1))[0] % 1000 };
+    return { init, getItem, setItem, refresh, validateFiles, protectActions, apartments, activate, setupAttachments, includeRecord, totals: () => totals, id: () => Date.now() * 1000 + crypto.getRandomValues(new Uint16Array(1))[0] % 1000 };
 })();

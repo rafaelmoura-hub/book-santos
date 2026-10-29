@@ -1,4 +1,4 @@
-﻿function obterSessao() {
+function obterSessao() {
   try { return JSON.parse(BookStore.getItem("usuarioLogado") || "null"); } catch { return null; }
 }
 const sessao = obterSessao();
@@ -43,7 +43,7 @@ function mostrarAba(aba) {
   if (aba==='suporte'&&!ehAdministradorMestre) return;
   if (["usuarios", "backup"].includes(aba) && !ehAdministradorMestre) return;
   BookStore.activate(aba);
-  ["chamados", "chat", "os", "vistorias", "condominios", "estoque", "financeiro", "usuarios", "dashboard", "backup", "suporte", "inicio"].forEach(nome => {
+  ["chamados", "chat", "os", "vistorias", "condominios", "estoque", "financeiro", "usuarios", "dashboard", "backup", "suporte", "inicio", "feedbacks", "avaliacoes", "reservas", "onboarding", "projetos", "compras", "danos"].forEach(nome => {
     const sufixo = nome === "os" ? "OS" : nome[0].toUpperCase() + nome.slice(1);
     document.getElementById(`visao${sufixo}`).hidden = nome !== aba;
     if (document.getElementById(`aba${sufixo}`)) document.getElementById(`aba${sufixo}`).classList.toggle("ativa", nome === aba);
@@ -54,8 +54,11 @@ function mostrarAba(aba) {
   if (aba === "vistorias") atualizarTotaisVistorias();
   if (aba === "usuarios") mostrarUsuarios();
   if (aba === 'suporte') BookWorkspace.loadMaster();
+  if(aba==='feedbacks')BookCollaboration.loadFeedbacks();
+  if(aba==='avaliacoes')BookCollaboration.loadEvaluations();
+  window.BookRoutine?.activate(aba);
   if (aba === "condominios") BookCondominios.atualizarTotais();
-  if (aba === "dashboard") atualizarDashboard();
+  if (aba === "dashboard") { BookDecision.activate(); atualizarDashboard(); }
   if (aba === "estoque") mostrarEstoque();
   if (aba === "financeiro") BookFinance.load();
   if (aba === "chat") mostrarConversasChat();
@@ -70,9 +73,16 @@ function mostrarEstoque() {
   const dados = lerEstoque(), colunas = dados.colunas || [], tabela = document.getElementById("tabelaEstoque");
   tabela.innerHTML = `<thead><tr><th>Material</th><th>Quantidade</th><th>Valor unitário (R$)</th>${colunas.map(c => `<th>${escapar(c.nome)} <button class="remover-coluna" title="Remover coluna" data-on-click="removerColunaEstoque('${escapar(c.id)}')">×</button></th>`).join("")}<th>Ações</th></tr></thead><tbody>${dados.itens.map(item => `<tr><td><input aria-label="Nome do material" value="${escapar(item.nome)}" data-on-change="editarEstoque('${escapar(item.id)}','nome',this.value)"></td><td><input aria-label="Quantidade" type="number" min="0" step="0.01" value="${Number(item.quantidade)||0}" data-on-change="editarEstoque('${escapar(item.id)}','quantidade',this.value)"></td><td><input aria-label="Valor unitário" type="number" min="0" step="0.01" data-money value="${BookMoney.decimal(item.valor)}" data-on-change="editarEstoque('${escapar(item.id)}','valor',this.value)"></td>${colunas.map(c => `<td><input aria-label="${escapar(c.nome)}" value="${escapar(item.extra?.[c.id] || "")}" data-on-change="editarEstoque('${escapar(item.id)}','extra:${escapar(c.id)}',this.value)"></td>`).join("")}<td><button class="botao-remover" data-on-click="removerLinhaEstoque('${escapar(item.id)}')">Apagar</button></td></tr>`).join("") || `<tr><td colspan="${4+colunas.length}">Nenhum material cadastrado. Use “+ Material” para começar.</td></tr>`}</tbody>`;
   BookMoney.bind(tabela);
+  BookDecision.stockControls(tabela,dados);
 }
 async function adicionarLinhaEstoque() { const d=lerEstoque(); d.itens.push({id:String(Date.now())+Math.random().toString(16).slice(2),nome:"",quantidade:0,valor:"0.00",extra:{}}); await salvarEstoque(d); mostrarEstoque(); }
-async function editarEstoque(id,campo,valor) { const d=lerEstoque(), item=d.itens.find(i=>i.id===id); if(!item)return; if(campo.startsWith("extra:")){item.extra ||= {}; item.extra[campo.slice(6)]=valor;} else item[campo]=campo==="nome"?valor:campo==="valor"?BookMoney.parse(valor):Number(valor)||0; await salvarEstoque(d); }
+async function editarEstoque(id,campo,valor) {
+  const d=lerEstoque(),item=d.itens.find(i=>i.id===id);if(!item)return;
+  if(campo.startsWith('extra:')){item.extra ||= {};item.extra[campo.slice(6)]=valor;}
+  else if(campo==='minimo'&&valor==='')delete item.minimo;
+  else item[campo]=campo==='nome'?valor:campo==='valor'?BookMoney.parse(valor):Number(valor);
+  await salvarEstoque(d);
+}
 async function removerLinhaEstoque(id) { const emUso=osList().some(o=>(o.fechamento?.materiais||[]).some(m=>m.id===id)); if(emUso){alert("Este material já foi usado em uma O.S. e não pode ser removido.");return;} const d=lerEstoque(); if(!confirm("Apagar este material do estoque?"))return; d.itens=d.itens.filter(i=>i.id!==id); await salvarEstoque(d); mostrarEstoque(); }
 async function adicionarColunaEstoque() { const nome=prompt("Nome da nova coluna:"); if(!nome?.trim())return; const d=lerEstoque(); d.colunas.push({id:String(Date.now()),nome:nome.trim()}); await salvarEstoque(d); mostrarEstoque(); }
 async function removerColunaEstoque(id) { const d=lerEstoque(); d.colunas=d.colunas.filter(c=>c.id!==id); d.itens.forEach(i=>{if(i.extra)delete i.extra[id];}); await salvarEstoque(d); mostrarEstoque(); }
@@ -197,6 +207,7 @@ function abrirOS(id) {
   reabrir.hidden=o.status!=='Finalizada'||!BookWorkspace.can('os');
   botaoFechamento.textContent = o.status === "Em andamento" || o.fechamento ? "Preencher/editar informações do serviço" : "Registrar informações e finalizar o card";
   document.getElementById("osDetalhesModal").style.display = "block";
+  window.BookRoutine?.orderOpened(String(o.id));
 }
 function formatarMoeda(valor) { return BookMoney.format(valor); }
 function atualizarCustoTotal() {
@@ -375,11 +386,13 @@ function selecionarApartamentoVistoria(apartamento) {
     .sort((a, b) => String(b.data || "").localeCompare(String(a.data || "")));
   const ultima = itens[0];
   document.getElementById("detalheApartamentoVistoria").innerHTML = `<div class="vistoria-resumo"><div><h3>Apartamento ${escapar(apartamento)}</h3><p><strong>Total de vistorias:</strong> ${itens.length}</p><p><strong>Última vistoria:</strong> ${ultima ? `${formatarData(ultima.data)} — ${escapar(ultima.responsavel)}` : "Ainda não há vistorias"}</p></div><button class="acao-principal" data-on-click="abrirFormularioVistoria()">+ Começar vistoria</button></div><button type="button" class="botao-secundario" data-on-click="abrirFormularioOS('', '${escapar(vistoriaHotel)}', '${escapar(apartamento)}')">Abrir Card para este apartamento</button><div class="historico-vistorias"><h4>Histórico de vistorias</h4>${itens.length ? itens.map(renderizarVistoria).join("") : '<p class="vazio">Nenhuma vistoria registrada neste apartamento.</p>'}</div>`;
+  const proxima=window.BookProcesses?.nextInspection(ultima?.data);
+  if(proxima){const aviso=document.createElement('p');aviso.textContent='Próxima vistoria trimestral: '+formatarData(proxima);if(proxima<dataLocalHoje()){aviso.textContent+=' · Vencida';aviso.className='routine-overdue';}document.querySelector('#detalheApartamentoVistoria .vistoria-resumo > div')?.append(aviso);}
 }
 function renderizarVistoria(item) {
   const checklist = Object.entries(item.checklist || {}).map(([grupo, respostas]) => `<h5>${escapar(grupo)}</h5><ul>${Object.entries(respostas).map(([nome, estado]) => `<li><strong>${escapar(nome)}:</strong> ${escapar(estado)}</li>`).join("")}</ul>`).join("");
   const fotos = (item.fotos || []).map(foto => `<a href="${foto.dados}" target="_blank" rel="noopener"><img decoding="async" loading="lazy" src="${foto.dados}" alt="${escapar(foto.nome)}"></a>`).join("");
-  return `<details class="vistoria-registro"><summary><strong>${formatarData(item.data)} — ${escapar(item.tipo)}</strong><span>Responsável: ${escapar(item.responsavel)}</span></summary><div class="vistoria-registro-detalhes"><p><strong>Responsável:</strong> ${escapar(item.responsavel)}</p>${checklist}<p><strong>Observações:</strong> ${escapar(item.observacoes || "Nenhuma")}</p><p><strong>Fotos:</strong> ${(item.fotos || []).length}</p><div class="galeria-vistoria">${fotos}</div><button type="button" class="botao-secundario" data-on-click="abrirFormularioOS('', '${escapar(item.hotel)}', '${escapar(item.apartamento)}')">Abrir Card deste apartamento</button></div></details>`;
+  return `<details class="vistoria-registro"><summary><strong>${formatarData(item.data)} — ${escapar(item.tipo)}</strong><span>Responsável: ${escapar(item.responsavel)}</span></summary><div class="vistoria-registro-detalhes"><p><strong>Responsável:</strong> ${escapar(item.responsavel)}</p>${checklist}<p><strong>Observações:</strong> ${escapar(item.observacoes || "Nenhuma")}</p><p><strong>Fotos:</strong> ${(item.fotos || []).length}</p><div class="galeria-vistoria">${fotos}</div><button type="button" class="botao-secundario" data-on-click="BookRoutine.openFlow('vistorias','${Number(item.id)}')">Acompanhamento e serviço desta vistoria</button></div></details>`;
 }
 async function abrirFormularioVistoria() {
   try { await atualizarUsuarios(); }
@@ -509,6 +522,7 @@ function atualizarPainelDashboard(tipo, periodoId, usuarioId, graficoId, resumoI
   document.getElementById(areaId).innerHTML = desenharGrafico(dados, intervalos.map(p => p.nome), document.getElementById(graficoId).value);
 }
 function atualizarDashboard() {
+  if(!document.getElementById('decisionLegacyCharts')?.open)return;
   atualizarPainelDashboard("os", "periodoOS", "usuarioOS", "tipoGraficoOS", "resumoDashboardOS", "graficoOS");
   atualizarPainelDashboard("chamados", "periodoChamados", "usuarioChamados", "tipoGraficoChamados", "resumoDashboardChamados", "graficoChamados");
 }
@@ -531,12 +545,16 @@ function renderizarMensagensAdmin() { const area=document.getElementById("mensag
 async function enviarMensagemAdmin(event) { event.preventDefault();const campo=document.getElementById("textoAdmin"),texto=campo.value.trim();if(!conversaSelecionada||!texto)return;const items=lerConversasChat(),c=items.find(x=>chaveConversaChat(x)===conversaSelecionada);if(!c)return;c.mensagens.push({id:String(Date.now()),autorTipo:"admin",autorNome:sessao.nome||"Suporte",texto,criadaEm:new Date().toISOString(),lidoAdmin:true,lidoCliente:false});try{await salvarConversasChat(items);campo.value="";mostrarConversasChat();renderizarMensagensAdmin();}catch(error){return;} }
 let avisoChatTimer=null;
 function exibirAvisoChat(texto) { const aviso=document.getElementById("avisoChat");aviso.textContent=texto;aviso.hidden=false;clearTimeout(avisoChatTimer);avisoChatTimer=setTimeout(()=>aviso.hidden=true,6500); }
-function verificarNovasMensagensChat() { const conversas=lerConversasChat();let novas=[];conversas.forEach(c=>(c.mensagens||[]).forEach(m=>{if(!idsMensagensConhecidas.has(m.id)){idsMensagensConhecidas.add(m.id);if(m.autorTipo==="cliente")novas.push({c,m});}}));if(novas.length){const {c,m}=novas.at(-1);exibirAvisoChat(`Nova mensagem de ${c.clienteNome||c.clienteLogin} · Chamado #${c.chamadoId}`);if("Notification"in window&&Notification.permission==="granted")new Notification("Nova mensagem de cliente",{body:`${c.clienteNome||c.clienteLogin} · Chamado #${c.chamadoId}: ${m.texto}`});}atualizarBadgeChat();if(document.getElementById("visaoChat")&&!document.getElementById("visaoChat").hidden)mostrarConversasChat(); }
+function verificarNovasMensagensChat() { const conversas=lerConversasChat();let novas=[];conversas.forEach(c=>(c.mensagens||[]).forEach(m=>{if(!idsMensagensConhecidas.has(m.id)){idsMensagensConhecidas.add(m.id);if(m.autorTipo==="cliente")novas.push({c,m});}}));if(novas.length){const {c,m}=novas.at(-1);exibirAvisoChat(`Nova mensagem de ${c.clienteNome||c.clienteLogin} · Chamado #${c.chamadoId}`);}atualizarBadgeChat();if(document.getElementById("visaoChat")&&!document.getElementById("visaoChat").hidden)mostrarConversasChat(); }
 function ativarNotificacoesChat() { if(!("Notification"in window)){alert("Este navegador não oferece notificações do sistema.");return;}Notification.requestPermission().then(p=>alert(p==="granted"?"Notificações ativadas.":"Permissão de notificações não concedida.")); }
 window.addEventListener("storage",e=>{if(e.key===CHAVE_CHAT){verificarNovasMensagensChat();if(conversaSelecionada)renderizarMensagensAdmin();}});
 idsMensagensConhecidas=new Set(lerConversasChat().flatMap(c=>(c.mensagens||[]).map(m=>m.id)));
 atualizarBadgeChat();
 BookWorkspace.init(sessao);
+BookCollaboration.init(sessao);
+BookRoutine.init(sessao);
+BookDecision.init();
+BookNotifications.init(sessao);
 document.getElementById('masterSupportRefresh').onclick=()=>BookWorkspace.loadMaster();
 const primeiraAba=Object.keys(BookWorkspace.labels).find(tab=>BookWorkspace.can(tab))||'inicio';
 mostrarAba(primeiraAba);

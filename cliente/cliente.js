@@ -121,3 +121,4 @@ async function enviarMensagemCliente(event) {
 window.addEventListener("storage",e=>{if(e.key===CHAVE_CHAT)renderizarConversaCliente(); if(e.key==="chamados"){atualizarListaChamadosChat();mostrarChamados();}});
 
 window.addEventListener('book:data', () => { mostrarChamados(); atualizarListaChamadosChat(); renderizarConversaCliente(); });
+BookNotifications.init(sessaoCliente);
