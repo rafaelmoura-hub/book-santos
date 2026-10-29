@@ -20,6 +20,7 @@ function validateChanges(input, user, hotelsAllowed=hotels) {
     if (user.funcao !== 'adm' && !['chamados', 'conversasSuporte'].includes(change.collection)) throw fail(403, 'Acesso negado.');
     if (change.collection !== 'estoqueBookSantos' && !hotelsAllowed.includes(change.data.hotel)) throw fail(400, 'Hotel inválido.');
     if (change.collection === 'estoqueBookSantos' && change.id !== 'singleton') throw fail(400, 'Estoque inválido.');
+    if(change.collection==='ordensServico'&&change.data.status==='Recusada'&&(typeof change.data.motivoRecusa!=='string'||change.data.motivoRecusa.trim().length<3||change.data.motivoRecusa.length>2000))throw fail(400,'Informe o motivo da recusa (3 a 2000 caracteres).');
     try {
       // Numeric JSON also works before the finance migration. This conversion
       // only serializes canonical cents; arithmetic stays in Money/PostgreSQL.

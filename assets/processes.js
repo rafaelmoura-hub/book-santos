@@ -9,15 +9,16 @@
   desempenho:{label:'Planos da equipe',singular:'plano da equipe',tab:'avaliacoes',global:true,phases:['Avaliação','Reunião com gestão','Feedback','Plano de ação','Concluído'],terminal:['Concluído'],checks:['Autoavaliação recebida','Conversa com gestão realizada','Feedback apresentado','Plano de ação acordado'],fields:[f('funcionario','Funcionário','user',true),f('inicio','Início do período','date',true),f('fim','Fim do período','date',true),f('pontosFortes','Pontos fortes','textarea'),f('melhorias','Pontos de melhoria','textarea'),f('plano','Plano de ação','textarea'),f('reuniao','Data da reunião','date')]}
  };
  const flowPhases={ordensServico:['Novo','Em andamento','Recusa proprietário','Resolvido'],vistorias:['Registrada','Em revisão','Concluída'],feedbacks:['Feedback','Em andamento','Concluído']};
- const phaseLabel=phase=>({'Recusa proprietário':'Recusa',Resolvido:'Finalizado'}[phase]||phase);
+ const phaseLabel=phase=>({'Em andamento':'Andamento','Recusa proprietário':'Recusado',Resolvido:'Finalizado'}[phase]||phase);
+ const orderStatusLabel=status=>({Aberta:'Novo','Em andamento':'Andamento',Recusada:'Recusado',Finalizada:'Finalizado'}[status]||'Novo');
  function servicePhase(row){
   if(row.data?.status==='Finalizada')return 'Resolvido';
-  if(row.phase==='Recusa proprietário')return 'Recusa proprietário';
+  if(row.data?.status==='Recusada'||row.phase==='Recusa proprietário')return 'Recusa proprietário';
   if(['Em andamento','Aguardando proprietário','Pendente fornecedor','Conferência'].includes(row.phase)||row.data?.status==='Em andamento')return 'Em andamento';
   return 'Novo';
  }
  function date(value){return typeof value==='string'&&/^[1-9]\d{3}-\d\d-\d\d$/.test(value)&&Number.isFinite(Date.parse(value+'T12:00:00Z'))&&new Date(value+'T12:00:00Z').toISOString().slice(0,10)===value;}
  function csv(rows){return '\ufeff'+rows.map(row=>row.map(v=>{let s=String(v??'');if(/^[\s]*[=+@\-]/.test(s))s="'"+s;return '"'+s.replaceAll('"','""')+'"';}).join(';')).join('\r\n');}
  function nextInspection(value){if(!date(value))return null;const [y,m,d]=value.split('-').map(Number);const first=new Date(Date.UTC(y,m-1+3,1)),last=new Date(Date.UTC(first.getUTCFullYear(),first.getUTCMonth()+1,0)).getUTCDate();first.setUTCDate(Math.min(d,last));return first.toISOString().slice(0,10);}
- return {definitions,flowPhases,phaseLabel,servicePhase,date,csv,nextInspection};
+ return {definitions,flowPhases,phaseLabel,servicePhase,orderStatusLabel,date,csv,nextInspection};
 });

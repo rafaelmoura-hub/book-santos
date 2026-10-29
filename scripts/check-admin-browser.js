@@ -279,14 +279,16 @@ async function main() {
     await wait("document.getElementById('flowHistory').textContent.includes('Comentário da rotina')");
     await evaluate("if(document.querySelector('#flowHistory img'))throw Error('Comentário de rotina executou HTML');document.getElementById('flowClose').click();mostrarAba('os');document.querySelector('#visaoOS > .botao-secundario').click()");
     await wait("!document.getElementById('routine-services').hidden && document.getElementById('routine-services-area').textContent.includes('Feedback do hóspede')");
-    await evaluate("const columns=[...document.querySelectorAll('#routine-services-area .routine-column > h3')].map(h=>h.textContent.split(' · ')[0]);if(JSON.stringify(columns)!==JSON.stringify(['Novo','Em andamento','Recusa','Finalizado']))throw Error('Colunas incorretas: '+columns)");
+    await evaluate("const columns=[...document.querySelectorAll('#routine-services-area .routine-column > h3')].map(h=>h.textContent.split(' · ')[0]);if(JSON.stringify(columns)!==JSON.stringify(['Novo','Andamento','Recusado','Finalizado']))throw Error('Colunas incorretas: '+columns)");
     await capture('servicos-quadro-desktop');
     const linkedService=feedbackRow.service_id;
-    await evaluate(`BookRoutine.openFlow('ordensServico',${JSON.stringify(linkedService)})`);
-    await wait("document.getElementById('flowDialog').open");
-    await evaluate("document.getElementById('flowPhase').value='Em andamento';document.getElementById('flow-proprietarioAvisado').checked=true;document.getElementById('flow-prazo').value='2026-11-10';document.getElementById('flowSettings').requestSubmit()");
-    await wait("document.getElementById('flowHistory').textContent.includes('Em andamento') && document.getElementById('flowDialog').getAttribute('aria-busy')==='false'");
-    await evaluate("document.getElementById('flowClose').click()");
+    await evaluate("[...document.querySelectorAll('#routine-services-area .routine-card')].find(c=>c.textContent.includes('Feedback do hóspede')).querySelector('button').click()");
+    await wait("document.getElementById('osDetalhesModal').style.display==='block' && document.getElementById('osDetalhes').textContent.includes('Feedback do hóspede')");
+    await evaluate("if(document.getElementById('flowDialog').open||document.getElementById('processDialog').open)throw Error('Agenda abriu formulário diferente');if(JSON.stringify([...document.getElementById('osDetalheStatus').options].map(o=>o.text))!==JSON.stringify(['Novo','Andamento','Recusado','Finalizado']))throw Error('Status diferentes no card normal');document.getElementById('botaoFinalizarOS').click();if(document.getElementById('fechamentoModal').style.display!=='block')throw Error('Agenda sem fechamento normal');document.getElementById('fechamentoModal').style.display='none'");
+    await evaluate(`(async()=>{abrirOS(${JSON.stringify(linkedService)});const old=window.prompt;window.prompt=()=> 'Serviço recusado pelo responsável';try{await alterarStatusOS(${JSON.stringify(linkedService)},'Recusada');}finally{window.prompt=old;}document.getElementById('osDetalhesModal').style.display='none';})()`);
+    await wait("[...document.querySelectorAll('#routine-services-area .routine-column')].some(c=>c.querySelector('h3').textContent.startsWith('Recusado')&&c.textContent.includes('Feedback do hóspede'))");
+    await evaluate(`(async()=>{await alterarStatusOS(${JSON.stringify(linkedService)},'Em andamento');document.querySelector('#visaoOS .titulo-secao .acao-principal').click();if(document.getElementById('osModal').style.display!=='block'||document.querySelectorAll('#formOS').length!==1)throw Error('Criar pela agenda não reutilizou o formulário');document.getElementById('osModal').style.display='none';})()`);
+    await wait("[...document.querySelectorAll('#routine-services-area .routine-column')].some(c=>c.querySelector('h3').textContent.startsWith('Andamento')&&c.textContent.includes('Feedback do hóspede'))");
     const catalogCheck=await evaluate(`(() => {
       mostrarAba('os');abrirFormularioOS();
       const hotel=document.getElementById('osHotel'),ap=document.getElementById('osApartamento');

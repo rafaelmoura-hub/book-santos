@@ -155,10 +155,13 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
     },
     async ready() {
       await request('/auth/v1/settings');
-      if (![14,15,16,17].includes(await request('/rest/v1/rpc/book_schema_version', { method: 'POST', body: {} }))) throw failure(503, 'Aplique as migrações até 202610280014_routine.sql antes de publicar esta versão. O painel SAD utiliza também a migração 15.');
+      if (![14,15,16,17,18].includes(await request('/rest/v1/rpc/book_schema_version', { method: 'POST', body: {} }))) throw failure(503, 'Aplique as migrações até 202610280014_routine.sql antes de publicar esta versão. O painel SAD utiliza também a migração 15.');
       return { ok: true };
     },
-    commit(token, changes) { return request('/rest/v1/rpc/book_commit', { token, method: 'POST', body: { changes } }); },
+    async commit(token, changes) {
+      if(changes.some(c=>c.collection==='ordensServico'&&c.data?.status==='Recusada')&&await request('/rest/v1/rpc/book_schema_version',{token,method:'POST',body:{}})<18)throw failure(503,'Aplique a migração 202610290018_card_states.sql para usar os quatro status do card.');
+      return request('/rest/v1/rpc/book_commit', { token, method: 'POST', body: { changes } });
+    },
     removeFiles(token, paths) { return request('/storage/v1/object/book-attachments', { token, method: 'DELETE', body: { prefixes: paths } }); },
     async upload(token, filename, bytes, type) {
       let response;

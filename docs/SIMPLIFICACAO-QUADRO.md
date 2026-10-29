@@ -7,11 +7,11 @@ O quadro de serviços, sua lista, agenda, filtros e os indicadores agrupam as et
 | Coluna | Registros incluídos |
 | --- | --- |
 | Novo | Novos e preventivos ainda não iniciados |
-| Em andamento | Em andamento, aguardando proprietário, pendente de fornecedor e conferência |
-| Recusa | Recusa do proprietário |
+| Andamento | Em andamento, aguardando proprietário, pendente de fornecedor e conferência |
+| Recusado | Recusa do proprietário |
 | Finalizado | Cards efetivamente finalizados |
 
-Os nomes internos `Recusa proprietário` e `Resolvido` são mantidos para compatibilidade. A interface mostra **Recusa** e **Finalizado**. A conclusão depende do fechamento do card e dos dados obrigatórios; não pode ser forçada pelo seletor de acompanhamento. Reabrir um card continua usando a ação existente. O motivo da recusa permanece obrigatório. As etapas antigas registradas no histórico não são reescritas.
+Os nomes internos `Recusa proprietário` e `Resolvido` são mantidos para compatibilidade. A interface mostra **Recusado** e **Finalizado**. A conclusão depende do fechamento do card e dos dados obrigatórios. Reabrir um card continua usando a ação existente. O motivo da recusa permanece obrigatório. As etapas antigas registradas no histórico não são reescritas. A migração 18 unifica os status e faz a agenda abrir o formulário normal; veja [Cards e agenda](CARDS-AGENDA.md).
 
 ## Ativação
 

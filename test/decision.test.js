@@ -25,7 +25,7 @@ test('mínimo do estoque aceita ausência e zero; rejeita negativo, precisão ex
  for(const minimo of [-1,0.001,'2',Infinity,1e10])assert.throws(()=>validateChanges(change({minimo}),user));
  assert.equal(legalConfig({}).cnpj,'08.941.697/0001-07');
 });
-test('compatibilidade aceita esquemas de 14 a 17, sem aceitar versões desconhecidas',async()=>{
+test('compatibilidade aceita esquemas de 14 a 18, sem aceitar versões desconhecidas',async()=>{
  let version=14;const client=createSupabase({url:'https://example.supabase.co',key:'sb_publishable_test',fetchImpl:async url=>Response.json(url.pathname.endsWith('book_schema_version')?version:{})});
- await client.ready();version=15;await client.ready();version=16;await client.ready();version=17;await client.ready();version=18;await assert.rejects(client.ready(),/migrações/);
+ await client.ready();version=15;await client.ready();version=16;await client.ready();version=17;await client.ready();version=18;await client.ready();version=19;await assert.rejects(client.ready(),/migrações/);
 });

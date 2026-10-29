@@ -1,6 +1,11 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { validateChanges, fileBuffer, storeAttachments } = require('../server/operations');
+test('recusa do card exige motivo e não aceita texto vazio ou excessivo',()=>{
+ const changes=motivoRecusa=>[{collection:'ordensServico',id:'123',version:0,data:{hotel:'Unlimited',status:'Recusada',motivoRecusa}}];
+ for(const reason of [undefined,'','  ', 'x'.repeat(2001)])assert.throws(()=>validateChanges(changes(reason),{funcao:'adm',mestre:true}),/motivo/);
+ assert.doesNotThrow(()=>validateChanges(changes('Serviço recusado pelo responsável'),{funcao:'adm',mestre:true}));
+});
 
 test('validação da API não permite coleção privada, lote duplicado ou versão inválida', () => {
   const change = {collection:'chamados',id:'123',version:0,data:{hotel:'Unlimited'}};

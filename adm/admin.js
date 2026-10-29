@@ -176,6 +176,9 @@ async function salvarOS(event) {
     document.getElementById("osModal").style.display = "none"; atualizarPainel();
   }).catch(() => alert("Não foi possível ler um dos anexos selecionados."));
 }
+function opcoesStatusOS(status) {
+  return ['Aberta','Em andamento','Recusada','Finalizada'].map(value=>`<option value="${value}" ${status===value?'selected':''}>${BookProcesses.orderStatusLabel(value)}</option>`).join('');
+}
 function mostrarOS() {
   const area = document.getElementById("listaOS"); if (!area) return;
   const filtro = document.getElementById("filtroApartamento")?.value.trim().toLocaleLowerCase('pt-BR') || "";
@@ -184,12 +187,12 @@ function mostrarOS() {
   const andamento = items.filter(o => o.status === "Em andamento").length;
   const resumo = document.getElementById("resumoListaOS");
   if (resumo) resumo.textContent = `${items.length} cards exibidos · ${andamento} em andamento`;
-  const ordemStatus = { "Em andamento": 0, "Aberta": 1, "Finalizada": 2 };
+  const ordemStatus = { "Em andamento": 0, "Aberta": 1, "Recusada": 2, "Finalizada": 3 };
   items.sort((a, b) => (ordemStatus[a.status || "Aberta"] ?? 1) - (ordemStatus[b.status || "Aberta"] ?? 1) || String(a.vencimento || "9999-12-31").localeCompare(String(b.vencimento || "9999-12-31")));
   area.innerHTML = items.length ? items.map(o => {
     const finalizada = o.status === "Finalizada", status = o.status || "Aberta";
-    const vencida = !finalizada && o.vencimento && o.vencimento < dataLocalHoje();
-    return `<article class="chamado card-os ${finalizada ? "finalizado" : ""}" data-on-click="abrirOS(${Number(o.id)})" role="button" tabindex="0" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();abrirOS(${Number(o.id)})}"><div class="os-topo"><strong>Card #${escapar(o.id)}</strong><span class="selo-status ${finalizada ? "selo-finalizado" : ""}">${escapar(status)}</span></div><p>${escapar(o.hotel)} - Apartamento ${escapar(o.apartamento)}</p><h3>${escapar(o.titulo)}</h3><p>Prioridade: ${escapar(o.prioridade || "Normal")} &middot; Respons&aacute;vel: ${escapar(o.responsavelLogin || "A definir")}</p><p>${escapar(o.descricao)}</p><p class="vencimento ${vencida ? "vencida" : ""}"><strong>Vencimento:</strong> ${formatarData(o.vencimento)}${vencida ? " - Vencida" : ""}</p>${o.chamadoId ? `<small>Vinculada ao chamado #${escapar(o.chamadoId)}</small>` : "<small>Card independente</small>"}<label class="status-os" data-on-click="event.stopPropagation()">Status do card<select data-on-change="alterarStatusOS(${Number(o.id)},this.value)"><option value="Aberta" ${status === "Aberta" ? "selected" : ""}>Aberta</option><option value="Em andamento" ${status === "Em andamento" ? "selected" : ""}>Em andamento</option><option value="Finalizada" ${finalizada ? "selected" : ""}>Finalizada</option></select></label></article>`;
+    const vencida = !finalizada && status!=='Recusada' && o.vencimento && o.vencimento < dataLocalHoje();
+    return `<article class="chamado card-os ${finalizada ? "finalizado" : ""}" data-on-click="abrirOS(${Number(o.id)})" role="button" tabindex="0" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();abrirOS(${Number(o.id)})}"><div class="os-topo"><strong>Card #${escapar(o.id)}</strong><span class="selo-status ${finalizada ? "selo-finalizado" : ""}">${escapar(BookProcesses.orderStatusLabel(status))}</span></div><p>${escapar(o.hotel)} - Apartamento ${escapar(o.apartamento)}</p><h3>${escapar(o.titulo)}</h3><p>Prioridade: ${escapar(o.prioridade || "Normal")} &middot; Respons&aacute;vel: ${escapar(o.responsavelLogin || "A definir")}</p><p>${escapar(o.descricao)}</p><p class="vencimento ${vencida ? "vencida" : ""}"><strong>Vencimento:</strong> ${formatarData(o.vencimento)}${vencida ? " - Vencida" : ""}</p>${o.chamadoId ? `<small>Vinculada ao chamado #${escapar(o.chamadoId)}</small>` : "<small>Card independente</small>"}<label class="status-os" data-on-click="event.stopPropagation()">Status do card<select data-on-change="alterarStatusOS(${Number(o.id)},this.value)">${opcoesStatusOS(status)}</select></label></article>`;
   }).join("") : "<p class=\"vazio\">Nenhum card encontrado para esse apartamento.</p>";
 }
 function dataLocalHoje() {
@@ -208,7 +211,7 @@ function abrirOS(id) {
   }).join("") : "<p>Nenhum anexo neste card</p>";
   const fotosFechamento = (o.fechamento?.fotos || []).map(f => `<figure><img decoding="async" loading="lazy" src="${f.dados}" alt="${escapar(f.nome)}"><figcaption>${escapar(f.nome)}</figcaption></figure>`).join("");
   const fechamento = o.fechamento ? `<h3>Dados do fechamento</h3><p><b>Data de fechamento:</b> ${formatarData(o.fechamento.data)}</p><p><b>Serviço executado por terceiro:</b> ${escapar(o.fechamento.terceiro)}</p><p><b>Valor do serviço:</b> ${formatarMoeda(o.fechamento.valorServico)}</p><p><b>Tipo de material:</b> ${escapar(o.fechamento.tipoMaterial)}</p><p><b>Valor do material:</b> ${formatarMoeda(o.fechamento.valorMaterial)}</p><p><b>Descrição do material:</b> ${escapar(o.fechamento.descricaoMaterial || "Não informado")}</p><p><b>Responsável pelo pagamento:</b> ${escapar(o.fechamento.responsavelPagamento)}</p><p><b>Quem executou:</b> ${escapar(o.fechamento.executadoPor)}</p><p><b>Custo total:</b> ${formatarMoeda(o.fechamento.custoTotal)}</p><p><b>Observações:</b> ${escapar(o.fechamento.observacao || "Nenhuma")}</p><h4>Fotos do serviço concluído</h4>${fotosFechamento || "<p>Nenhuma foto anexada.</p>"}` : `<p>${o.status === "Finalizada" ? "Sem dados de fechamento registrados para este card." : "Este card ainda não foi finalizado."}</p>`;
-  document.getElementById("osDetalhes").innerHTML = `<h2>${escapar(o.titulo || "Card")}</h2><p><b>Card #:</b> ${escapar(o.id)}</p><p><b>Hotel:</b> ${escapar(o.hotel)}</p><p><b>Apartamento:</b> ${escapar(o.apartamento)}</p><p><b>Descrição:</b> ${escapar(o.descricao)}</p><p><b>Status:</b> ${escapar(o.status || "Aberta")}</p><p><b>Abertura:</b> ${escapar(o.data)}</p><p><b>Vencimento:</b> ${formatarData(o.vencimento)}</p>${vinculo}<h3>Anexos e arquivos</h3>${anexos}${fechamento}`;
+  document.getElementById("osDetalhes").innerHTML = `<h2>${escapar(o.titulo || "Card")}</h2><p><b>Card #:</b> ${escapar(o.id)}</p><p><b>Hotel:</b> ${escapar(o.hotel)}</p><p><b>Apartamento:</b> ${escapar(o.apartamento)}</p><p><b>Descrição:</b> ${escapar(o.descricao)}</p><label>Status do card<select id="osDetalheStatus" data-on-change="alterarStatusOS(${Number(o.id)},this.value)" ${BookWorkspace.can('os')?'':'disabled'}>${opcoesStatusOS(o.status||'Aberta')}</select></label>${o.motivoRecusa?`<p><b>${o.status==='Recusada'?'Motivo da recusa':'Último motivo de recusa'}:</b> ${escapar(o.motivoRecusa)}</p>`:''}<p><b>Abertura:</b> ${escapar(o.data)}</p><p><b>Vencimento:</b> ${formatarData(o.vencimento)}</p>${vinculo}<h3>Anexos e arquivos</h3>${anexos}${fechamento}`;
   const botaoFechamento = document.getElementById("botaoFinalizarOS");
   botaoFechamento.hidden = o.status === "Finalizada";
   if (!BookWorkspace.can('os')) botaoFechamento.hidden = true;
@@ -355,19 +358,28 @@ async function salvarFechamentoOS(event) {
 async function alterarStatusOS(id, status) {
   const items = osList(), order = items.find(o => o.id == id);
   if (!order) return;
+  if(!['Aberta','Em andamento','Recusada','Finalizada'].includes(status)){alert('Status inválido.');mostrarOS();return;}
+  if(order.status===status)return;
+  const wasOpen=document.getElementById('osDetalhesModal').style.display==='block';
   if (!BookWorkspace.can('os')) { alert('Sem permissão para alterar cards.'); mostrarOS(); return; }
   if (order.status==='Finalizada'&&status!=='Finalizada') {
-    if(status!=='Em andamento'){alert('Reabra o card como Em andamento para corrigir o fechamento.');mostrarOS();return;}
+    if(status!=='Em andamento'){alert('Reabra o card como Andamento para corrigir o fechamento.');mostrarOS();if(wasOpen)abrirOS(id);return;}
     const reason=prompt('Motivo da reabertura do card (3 a 1000 caracteres):');
-    if(!reason?.trim()){mostrarOS();return;}
+    if(!reason?.trim()){mostrarOS();if(wasOpen)abrirOS(id);return;}
     try{await BookAPI.request('/api/orders/reopen',{method:'POST',body:JSON.stringify({id:String(order.id),version:order.__bookVersion,reason:reason.trim()})});await BookStore.refresh(true);atualizarPainel();}
     catch(error){alert(error.message);}
-    mostrarOS();return;
+    mostrarOS();if(wasOpen)abrirOS(id);return;
   }
   if (status === "Finalizada") { abrirFechamentoOS(id); mostrarOS(); return; }
+  if(status==='Recusada'){
+    const motivo=prompt('Motivo da recusa do card (3 a 2000 caracteres):',order.motivoRecusa||'');
+    if(motivo===null){mostrarOS();if(wasOpen)abrirOS(id);return;}
+    if(motivo.trim().length<3||motivo.trim().length>2000){alert('Informe um motivo de 3 a 2000 caracteres.');mostrarOS();if(wasOpen)abrirOS(id);return;}
+    order.motivoRecusa=motivo.trim();
+  }
   order.status = status;
-  await BookStore.setItem("ordensServico", JSON.stringify(items));
-  atualizarPainel();
+  try{await BookStore.setItem("ordensServico", JSON.stringify(items));atualizarPainel();if(wasOpen)abrirOS(id);}
+  catch(error){alert(error.message);mostrarOS();if(wasOpen)abrirOS(id);}
 }
 const gruposChecklistVistoria = {
   "Estrutura física": ["Paredes e pintura", "Piso e revestimentos", "Teto e forro", "Portas e fechaduras", "Janelas e vidros", "Instalações hidráulicas", "Instalações elétricas", "Banheiro e louças"],

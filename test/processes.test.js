@@ -2,8 +2,10 @@ const {test}=require('node:test');const assert=require('node:assert/strict');con
 const {definitions,date,csv,nextInspection}=require('../assets/processes');const {validateProcess,validateFlow}=require('../server/processes');const {createSupabaseApp}=require('../server/supabase-app');
 const id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 test('quadro contém quatro etapas e agrupa os registros antigos sem concluir cards reabertos',()=>{
- const {flowPhases,phaseLabel,servicePhase}=require('../assets/processes');
- assert.deepEqual(flowPhases.ordensServico.map(phaseLabel),['Novo','Em andamento','Recusa','Finalizado']);
+ const {flowPhases,phaseLabel,servicePhase,orderStatusLabel}=require('../assets/processes');
+ assert.deepEqual(flowPhases.ordensServico.map(phaseLabel),['Novo','Andamento','Recusado','Finalizado']);
+ assert.deepEqual(['Aberta','Em andamento','Recusada','Finalizada'].map(orderStatusLabel),flowPhases.ordensServico.map(phaseLabel));
+ assert.equal(servicePhase({data:{status:'Recusada'}}),'Recusa proprietário');
  for(const phase of ['Aguardando proprietário','Pendente fornecedor','Conferência'])assert.equal(servicePhase({phase,data:{status:'Aberta'}}),'Em andamento');
  assert.equal(servicePhase({phase:'Preventivos periódicos',data:{status:'Aberta'}}),'Novo');
  assert.equal(servicePhase({phase:'Resolvido',data:{status:'Em andamento'}}),'Em andamento');

@@ -155,11 +155,11 @@ window.BookWorkspace = (() => {
     const dl=document.createElement('dl');dl.className='ai-review-fields';
     for(const [key,item]of Object.entries(value||{})){
       if(['version','remove','abertaEm','criadaEm','criadaPorLogin','criadaPor','owner_id'].includes(key)||item===null||item===undefined)continue;
-      const block=document.createElement('div'),dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=fieldLabels[key]||key;
+      const block=document.createElement('div'),dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=key==='motivoRecusa'?'Motivo da recusa':fieldLabels[key]||key;
       if(item&&typeof item==='object'){
         const details=document.createElement('details');details.open=depth<1;
         const summary=document.createElement('summary');summary.textContent=Array.isArray(item)?`${item.length} item(ns)`:'Ver detalhes';details.append(summary);reviewFields(item,details,depth+1);dd.append(details);
-      }else dd.textContent=typeof item==='boolean'?(item?'Sim':'Não'):String(item)||'Não informado';
+      }else dd.textContent=key==='status'&&['Aberta','Em andamento','Recusada','Finalizada'].includes(item)?BookProcesses.orderStatusLabel(item):typeof item==='boolean'?(item?'Sim':'Não'):String(item)||'Não informado';
       block.append(dt,dd);dl.append(block);
     }
     parent.append(dl);
