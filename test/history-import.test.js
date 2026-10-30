@@ -21,3 +21,11 @@ test('número inicial identifica apartamento e somente a sigla UQ confirma Uniqu
  assert.equal(locationFromTitle('Comprar buquê').hotel,null);
  assert.equal(locationFromTitle('20261030 - Reparo').apartment,null);
 });
+test('importação por CSV mantém comandos SQL pequenos e preserva aspas e quebras de linha',()=>{
+ const source=report();source.rows[0].title='1001 UQ - "Vidro", revisão\nOutra linha $& $$';const r=prepare(source);
+ assert.ok(Buffer.byteLength(r.stagingSetup)<4096);assert.ok(Buffer.byteLength(r.stagedSQL)<32768);assert.ok(Buffer.byteLength(r.stagedLocations)<16384);
+ assert.ok(!r.stagedSQL.includes('__PAYLOAD__'));assert.ok(!r.stagedSQL.includes(source.rows[0].title));assert.ok(r.stagedSQL.includes('book_history_import_stage'));
+ const line=r.csv.trimEnd().split('\r\n')[1];const cells=[];let value='',quoted=false;
+ for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'){if(quoted&&line[i+1]==='"'){value+='"';i++;}else quoted=!quoted;}else if(c===','&&!quoted){cells.push(value);value='';}else value+=c;}cells.push(value);
+ assert.equal(cells[0],source.sha256);assert.equal(Number(cells[1]),2);assert.equal(JSON.parse(cells[2]).title,source.rows[0].title);
+});

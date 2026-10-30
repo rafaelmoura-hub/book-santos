@@ -22,6 +22,18 @@ node scripts/prepare-history-import.js artifacts/pipefy-import-12598/source.json
 
 Executar o arquivo gerado como proprietário no SQL Editor do Supabase, com esquema 19. O SQL faz backup protegido em `book_history_import_backups`, substitui somente `ordensServico` e seus históricos, remove vínculos com os cards anteriores e valida a contagem na mesma transação. Preserva usuários, catálogo, estoque, vistorias, chamados de clientes e arquivos. Os arquivos físicos antigos não são apagados; o backup guarda suas referências, sem duplicar os binários.
 
+### Método recomendado para o Dashboard: CSV
+
+O arquivo completo pode exceder o limite de consulta do SQL Editor. Nesse caso, não cole os dados no editor:
+
+1. Execute `01-PREPARAR-CARGA.sql` no SQL Editor. Ele cria a tabela protegida `public.book_history_import_stage`, sem alterar os cards.
+2. No Table Editor, abra **book_history_import_stage**, escolha **Insert → Import data from CSV** e envie `02-DADOS-HISTORICO.csv`. As três colunas devem ser `source_hash`, `source_line`, `payload`; `payload` é texto para preservar o JSON sem depender de conversões do importador.
+3. Após terminar o upload, execute `03-CONCLUIR-IMPORTACAO.sql` no SQL Editor. Ele lê a tabela de carga, exige a contagem completa e usa o mesmo backup e a mesma transação da importação original. Os dados volumosos não fazem parte dessa consulta.
+
+Para repetir um upload incompleto, reexecute o arquivo 01 antes de enviar o CSV novamente; ele limpa apenas a carga desse arquivo, sem tocar nos cards nem nos backups. Não reexecute o arquivo 01 entre um upload completo e a conclusão.
+
+Se o histórico já foi importado e faltava somente classificar imóveis, após carregar o CSV use `04-ATUALIZAR-IMOVEIS-DA-CARGA.sql` em vez do arquivo 03. O arquivo SQL completo original continua disponível apenas como alternativa para conexão SQL direta; o Dashboard deve usar o método CSV.
+
 As validações operacionais de apartamento e sincronização de fase são pausadas somente durante a inserção sob trava de manutenção. As fases são construídas em lote com os mesmos quatro estados, e os gatilhos são reativados antes do commit. Falhas provocam rollback. Não executar novamente a mesma fonte: o hash bloqueia substituições repetidas.
 
 `RESTAURAR-CARDS-ANTERIORES.sql` restaura a cópia anterior. A restauração é bloqueada se houver novos cards, comentários ou alterações de vínculos que poderiam ser perdidos. O backup não fica acessível a clientes nem administradores comuns.

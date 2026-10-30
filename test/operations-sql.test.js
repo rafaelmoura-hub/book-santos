@@ -570,7 +570,12 @@ test('PostgreSQL: RLS, concorrência, auditoria e consumo atômico', async t => 
   const source={sha256:'a'.repeat(64),sourceFile:'teste.xlsx',rows:[{sourceRow:2,title:"Card histórico 'teste'",phase:'Resolvido',creator:'Criador original',createdLocal:'2024-06-15T10:20:00',createdOriginal:'45458.4'},{sourceRow:3,title:'Card recusado',phase:'Recusa Proprietário',creator:'Equipe',createdLocal:'2024-06-16T10:20:00',createdOriginal:'45459.4'},{sourceRow:4,title:'1001 UQ - Card novo',phase:'Novo',creator:'Equipe',createdLocal:'2024-06-17T10:20:00',createdOriginal:'45460.4'}]};
   const importedPlan=prepare(source),beforeImport=(await db.query("select count(*) n from public.book_records where collection='ordensServico'")).rows[0].n;
   const otherCollections=(await db.query("select count(*) n from public.book_records where collection<>'ordensServico'")).rows[0].n;
-  await db.exec(importedPlan.sql);
+  await db.exec(importedPlan.stagingSetup);
+  for(const staged of importedPlan.stagingRows.slice(0,2))await db.query('insert into public.book_history_import_stage values($1,$2,$3)',[staged.source_hash,staged.source_line,JSON.stringify(staged.payload)]);
+  await assert.rejects(db.exec(importedPlan.stagedSQL),/Dados de importação inválidos/);await db.exec('rollback');
+  assert.equal((await db.query("select count(*) n from public.book_records where collection='ordensServico'")).rows[0].n,beforeImport,'CSV incompleto não pode substituir cards');
+  const staged=importedPlan.stagingRows[2];await db.query('insert into public.book_history_import_stage values($1,$2,$3)',[staged.source_hash,staged.source_line,JSON.stringify(staged.payload)]);
+  await db.exec(importedPlan.stagedSQL);
   assert.equal((await db.query("select count(*) n from public.book_records where collection='ordensServico'")).rows[0].n,3);
   assert.equal((await db.query("select jsonb_array_length(payload->'records') n from public.book_history_import_backups")).rows[0].n,beforeImport);
   assert.equal((await db.query("select count(*) n from public.book_records where collection<>'ordensServico'")).rows[0].n,otherCollections);
@@ -581,6 +586,8 @@ test('PostgreSQL: RLS, concorrência, auditoria e consumo atômico', async t => 
   const importedSummary=await activity({start:'2024-06-01',end:'2024-06-30',group:'month',hotel:'',urgency:'',assignees:[]});assert.equal(importedSummary.metrics.created,3);assert.equal(importedSummary.metrics.closed||0,0);
   assert.equal((await db.query("select public.book_finance_history() value")).rows[0].value.records.length,0);
   await actor(admin);assert.equal((await db.query("select count(*) n from public.book_records where collection='ordensServico'")).rows[0].n,0);
+  assert.equal((await db.query('select count(*) n from public.book_history_import_stage')).rows[0].n,0,'Carga privada não fica visível ao administrador comum');
+  await assert.rejects(db.query('insert into public.book_history_import_stage values($1,9,$2)',['a'.repeat(64),'{"sourceRow":9}']),e=>e.code==='42501');
   await assert.rejects(db.exec('delete from public.book_history_import_backups'),e=>e.code==='42501');
   await db.exec('reset role');await assert.rejects(db.exec(importedPlan.sql),/já foi importado/);await db.exec('rollback');
   assert.equal((await db.query("select count(*) n from public.book_records where collection='ordensServico'")).rows[0].n,3);
