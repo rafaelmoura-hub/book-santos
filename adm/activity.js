@@ -12,13 +12,30 @@ window.BookActivity=(()=>{
  function render(){
   const content=el('activityContent');content.replaceChildren();const cards=node('div');cards.className='cards decision-metrics';
   for(const [key,label] of Object.entries(labels)){const c=node('div');c.className='card';c.append(node('h3',label),node('p',Number(report.metrics[key]||0).toLocaleString('pt-BR')),button('Ver registros',()=>{selected=key;details();}));cards.append(c);}content.append(cards);
-  const detailsArea=node('section');detailsArea.id='activityDetails';content.append(detailsArea);details();
   const series=node('details');series.className='help-panel';series.append(node('summary','Distribuição por período'));
   series.append(node('p','Distribuição conta eventos; os indicadores de cards contam cards distintos. Reaberturas e novas conclusões podem produzir mais de um evento para o mesmo card.','workspace-hint'));
   series.append(table(['Período','Indicador','Eventos'],report.series.map(s=>[BookPeriods.display(s.period),labels[s.kind],s.count])));content.append(series);
  }
- function details(){const area=el('activityDetails');area.replaceChildren(node('h3',labels[selected]));const rows=report.items.filter(r=>r.kind===selected);area.append(node('p','Até 100 ocorrências mais recentes deste indicador. Os totais incluem todos os registros autorizados.'));
-  area.append(rows.length?table(['Card / vistoria','Condomínio / apartamento','Data','Detalhe'],rows.map(r=>[button(r.title,async()=>{try{if(selected==='inspections'){mostrarAba('vistorias');selecionarHotelVistoria(r.hotel);selecionarApartamentoVistoria(r.apartment);}else{const d=await BookAPI.request('/api/processes/flow?source=ordensServico&id='+encodeURIComponent(r.id));BookStore.includeRecord('ordensServico',d.record);abrirOS(r.id);}}catch(error){el('activityStatus').textContent=error.message;}}),r.hotel+' · '+(r.apartment||''),BookPeriods.display(r.event_day),r.detail||'—'])):node('p','Nenhum registro neste filtro.'));
+ function details(){
+  let dialog=el('activityRecordsDialog');if(!dialog){dialog=node('dialog');dialog.id='activityRecordsDialog';dialog.className='collaboration-dialog routine-dialog';dialog.setAttribute('aria-labelledby','activityRecordsTitle');document.body.append(dialog);}
+  const heading=node('div');heading.className='titulo-secao';const title=node('h2',labels[selected]);title.id='activityRecordsTitle';heading.append(title,button('Fechar',()=>dialog.close()));
+  const area=node('section');area.id='activityDetails';const status=node('p');status.id='activityRecordsStatus';status.setAttribute('role','status');dialog.replaceChildren(heading,status,area);
+  const kind=selected,rows=report.items.filter(r=>r.kind===kind);area.append(node('p','Até 100 ocorrências mais recentes deste indicador. Os totais incluem todos os registros autorizados.'));
+  area.append(rows.length?table(['Card / vistoria','Condomínio / apartamento','Data','Detalhe'],rows.map(r=>[button(r.title||'#'+r.id,async()=>{
+   if(dialog.getAttribute('aria-busy')==='true')return;dialog.setAttribute('aria-busy','true');status.textContent='Abrindo registro…';
+   try{
+    const source=kind==='inspections'?'vistorias':'ordensServico',d=await BookAPI.request('/api/processes/flow?source='+source+'&id='+encodeURIComponent(r.id));
+    BookStore.includeRecord(source,d.record);
+    if(kind==='inspections'){
+     if(!BookWorkspace.can('vistorias'))throw Error('Seu usuário não possui acesso à aba de vistorias.');
+     mostrarAba('vistorias');selecionarHotelVistoria(r.hotel);selecionarApartamentoVistoria(String(r.apartment));
+     const entry=[...document.querySelectorAll('.vistoria-registro')].find(n=>n.dataset.vistoriaId===String(r.id));if(entry){entry.open=true;entry.scrollIntoView({block:'center'});entry.querySelector('summary')?.focus();}
+    }else abrirOS(r.id);
+    dialog.close();
+   }catch(error){status.textContent=error.message;}
+   finally{dialog.setAttribute('aria-busy','false');}
+  }),r.hotel+' · '+(r.apartment||''),BookPeriods.display(r.event_day),r.detail||'—'])):node('p','Nenhum registro neste filtro.'));
+  if(!dialog.open)dialog.showModal();
  }
  async function load(force=false){
   if(!el('activityStart')||!BookWorkspace.can('dashboard'))return;const f=filters(),key=JSON.stringify(f);if(!force&&report&&key===lastKey&&Date.now()-loaded<30000)return;
