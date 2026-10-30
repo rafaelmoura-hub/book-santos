@@ -58,6 +58,14 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
     if (profile.funcao !== 'adm' || !profile.mestre) throw failure(403, 'Somente o administrador mestre pode gerenciar usuários.');
   }
   const provider = {
+    async activity(token,filters){
+      if(await request('/rest/v1/rpc/book_schema_version',{token,method:'POST',body:{}})<19)throw failure(503,'Aplique a migração 202610300019_activity.sql para os indicadores por período.');
+      return request('/rest/v1/rpc/book_activity_snapshot',{token,method:'POST',body:{filters},timeoutMs:30000});
+    },
+    async scheduleCard(token,input){
+      if(await request('/rest/v1/rpc/book_schema_version',{token,method:'POST',body:{}})<19)throw failure(503,'Aplique a migração 202610300019_activity.sql para remarcar cards com histórico.');
+      return request('/rest/v1/rpc/book_card_schedule',{token,method:'POST',body:{target_id:input.id,expected_version:input.version,due_date:input.due,comment_body:input.comment||''}});
+    },
     decision(token,hotel){return request('/rest/v1/rpc/book_decision_snapshot',{token,method:'POST',body:{site:hotel||null},timeoutMs:30000});},
     processes(token,kind,offset,filters){return request('/rest/v1/rpc/book_process_page',{token,method:'POST',body:{process_kind:kind,page_offset:offset,filters}});},
     async servicePage(token,offset,filters){
@@ -155,7 +163,7 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
     },
     async ready() {
       await request('/auth/v1/settings');
-      if (![14,15,16,17,18].includes(await request('/rest/v1/rpc/book_schema_version', { method: 'POST', body: {} }))) throw failure(503, 'Aplique as migrações até 202610280014_routine.sql antes de publicar esta versão. O painel SAD utiliza também a migração 15.');
+if (![14,15,16,17,18,19].includes(await request('/rest/v1/rpc/book_schema_version', { method: 'POST', body: {} }))) throw failure(503, 'Aplique as migrações até 202610280014_routine.sql antes de publicar esta versão. O painel SAD utiliza também a migração 15.');
       return { ok: true };
     },
     async commit(token, changes) {

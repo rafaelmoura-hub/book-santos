@@ -41,7 +41,7 @@ window.BookRoutine=(()=>{
   const title=document.createElement('h3');title.textContent=data.titulo;const unit=document.createElement('p');unit.textContent=(isService?data.hotel:row.hotel)||'Equipe / geral';unit.textContent+=((isService?data.apartamento:row.apartment)?' · Apto '+(isService?data.apartamento:row.apartment):'');
   const detail=document.createElement('p');detail.textContent=isService?(people.find(p=>p.login===data.responsavelLogin)?.nome||data.responsavelLogin||'A definir'):name(data.responsavel);
   const due=document.createElement('p'),date=isService?data.vencimento:data.prazo;due.textContent=(date?'Prazo: '+formatarData(date):'Sem prazo')+' · '+data.prioridade;
-  const today=new Date().toLocaleDateString('en-CA',{timeZone:'America/Sao_Paulo'});if(date&&date<today&&!(isService?['Resolvido','Recusa proprietário']:defs[kind].terminal).includes(phase))due.className='routine-overdue';
+  const today=BookPeriods.today();if(isService){due.className='deadline deadline-'+BookProcesses.deadlineState(data,today);due.textContent=(date?'Prazo: '+formatarData(date):'Sem prazo')+' · Urgência '+BookProcesses.urgencyLabel(data.prioridade);}else if(date&&date<today&&!defs[kind].terminal.includes(phase))due.className='routine-overdue';
   article.append(title,unit,detail,due);
   const open=button(isService?'Abrir card':'Abrir registro',()=>{if(isService){BookStore.includeRecord('ordensServico',row);abrirOS(String(row.id));}else edit(kind,row);});article.append(open);
   if(row.service_id){const link=document.createElement('small');link.textContent='Serviço #'+row.service_id;article.append(link);}return article;
@@ -116,7 +116,7 @@ window.BookRoutine=(()=>{
   el('flowCommentBody').value='';flowEvents=flow.events.slice(0,50);flowBefore=flowEvents.at(-1)?.id;renderHistory();el('flowMore').hidden=flow.events.length<=50;status('flowStatus','');
  }
  function renderHistory(){el('flowHistory').replaceChildren(...flowEvents.map(e=>{const node=document.createElement('article');node.className='routine-event';const strong=document.createElement('strong');strong.textContent=e.action+' · '+e.actor_name;const time=document.createElement('small');time.textContent=new Date(e.created_at).toLocaleString('pt-BR');const text=document.createElement('p');text.className='collaboration-text';text.textContent=e.body||e.current?.phase||'';node.append(strong,time,text);if(e.current){const detail=document.createElement('details');const summary=document.createElement('summary');summary.textContent='Dados registrados';const code=document.createElement('pre');code.textContent=JSON.stringify(e.current,null,2);detail.append(summary,code);node.append(detail);}return node;}));}
- function orderOpened(id){let b=el('orderRoutineButton');if(!b){b=button('Histórico e comentários do card',()=>{});b.id='orderRoutineButton';el('osDetalhes').after(b);}b.onclick=()=>{el('osDetalhesModal').style.display='none';openFlow('ordensServico',id);};}
+ function orderOpened(id){BookActivity.openCard(id);let b=el('orderRoutineButton');if(!b){b=button('Histórico e comentários do card',()=>{});b.id='orderRoutineButton';el('osDetalhes').after(b);}b.onclick=()=>{el('osDetalhesModal').style.display='none';openFlow('ordensServico',id);};}
  async function activate(tab){if(defs[tab]&&tab!=='desempenho')load(tab);if(tab==='os'&&!el('routine-services').hidden)load('services');if(tab==='avaliacoes'&&!el('routine-desempenho').hidden)load('desempenho');}
  function init(profile){
   user=profile;

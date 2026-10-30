@@ -182,7 +182,7 @@
                 <label>Assunto<input id="osTitulo" required></label>
                 <label>Descri&ccedil;&atilde;o<textarea id="osDescricao" required></textarea></label>
                 <label>Data de vencimento<input id="osVencimento" type="date" required></label>
-                <label>Prioridade<select id="osPrioridade"><option>Normal</option><option>Alta</option><option>Urgente</option></select></label>
+                <label>Urgência<select id="osPrioridade"><option value="Normal">Baixa</option><option value="Alta">Média</option><option value="Urgente">Alta</option></select></label>
                 <label>Responsável<select id="osResponsavel" required></select></label>
                 <label>Fotos e arquivos relacionados<input id="osAnexos" type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,application/pdf"><small>Até 20 anexos, 5 MB por arquivo e 10 MB no total.</small></label>
                 <button type="submit">Criar Card</button>
@@ -259,6 +259,7 @@
     <script src="routine.js"></script>
     <script src="onboarding.js"></script>
     <script src="decision.js"></script>
+    <script src="activity.js"></script>
     <script src="navigation.js"></script>
     <script src="collaboration.js"></script>
     <script src="workspace.js"></script>

@@ -62,7 +62,7 @@ window.BookDecision=(()=>{
   rows.push([],['Totais globais autorizados; fila limitada a 12 serviços; detalhes de vistorias e estoque limitados a 20. Não é certificação ou previsão de desempenho.']);
   const url=URL.createObjectURL(new Blob([BookProcesses.csv(rows)],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='book-task-indicadores-'+d.referenceDate+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
  }
- function activate(){if(el('decisionLegacyCharts')?.open)BookStore.activate('dashboardCharts');load();}
+ function activate(){if(el('decisionLegacyCharts')?.open)BookStore.activate('dashboardCharts');load();window.BookActivity?.load();}
  function stockControls(table,data){
   const header=table.querySelector('thead tr');if(!header)return;
   const th=node('th','Mínimo / reposição');th.scope='col';header.insertBefore(th,header.lastElementChild);

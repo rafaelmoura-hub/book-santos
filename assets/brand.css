@@ -14,6 +14,21 @@ html[data-theme="dark"] {
  --brand-focus:#8dd3f1; --danger:#ffb4ab; --danger-soft:#46282e; --chart-blue:#75c8ed; --chart-green:#5ed3aa;
 }
 html { background:var(--fundo); }
+.deadline { padding:6px 10px; border-left:4px solid currentColor; border-radius:5px; }
+.deadline.deadline-future { color:#4b5563; background:#f1f3f5; }
+.deadline.deadline-today { color:#914000; background:#fff0d9; }
+.deadline.deadline-late { color:#a32020; background:#fff0ee; }
+.deadline.deadline-done { color:#17623d; background:#e5f5eb; }
+html[data-theme="dark"] .deadline-future { color:#c5cdd6; background:#263544; }
+html[data-theme="dark"] .deadline-today { color:#ffbf75; background:#493015; }
+html[data-theme="dark"] .deadline-late { color:#ffb4ab; background:#46282e; }
+html[data-theme="dark"] .deadline-done { color:#87e2b2; background:#173e2c; }
+.card-activity { margin-top:20px; border-top:1px solid var(--borda); padding-top:16px; }
+.card-activity form,.activity-filters { display:grid; gap:12px; }
+.activity-filters { grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr)); align-items:start; margin:16px 0; }
+.activity-filters label,.card-activity label { display:grid; gap:6px; min-width:0; overflow-wrap:anywhere; }
+.decision-panel .activity-filters input,.decision-panel .activity-filters select,.card-activity input,.card-activity textarea { box-sizing:border-box; width:100%; min-width:0; padding:10px; border:1px solid var(--control-border); border-radius:8px; font:inherit; }
+.activity-filters button { align-self:end; min-height:42px; }
 body,body[data-screen] { background:var(--fundo); color:var(--texto); }
 body[data-screen] > header,body[data-screen] > nav { background:var(--surface); color:var(--texto); border-color:var(--borda); }
 body[data-screen] > header { border-bottom-color:var(--brand-deep); }

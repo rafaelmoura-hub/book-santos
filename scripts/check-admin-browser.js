@@ -33,6 +33,8 @@ async function main() {
     async flowDetails(token,source,id,before){const row=source==='process'?processRows.get(id):source==='feedbacks'?feedbackRows.get(id):records.get(source+'/'+id);if(!row)throw Error('Registro não encontrado');return {record:row,recordVersion:row.version,meta:flowMetas.get(source+':'+id)||null,events:flowRows.filter(e=>e.source===source&&e.record_id===id&&(!before||Number(e.id)<Number(before))).reverse().slice(0,51)};},
     async saveFlow(token,input){const key=input.source+':'+input.id,previous=flowMetas.get(key),row=input.source==='feedbacks'?feedbackRows.get(input.id):records.get(input.source+'/'+input.id);if((previous?.version||0)!==input.version||row.version!==input.recordVersion)throw Error('Conflito de acompanhamento');flowMetas.set(key,{source:input.source,record_id:input.id,version:input.version+1,phase:input.phase,data:input.data});if(input.source==='ordensServico'&&row.data.status==='Aberta'&&input.phase==='Em andamento'){row.data.status='Em andamento';row.version++;}flowRows.push({id:String(flowRows.length+1),source:input.source,record_id:input.id,actor_name:identity(token).nome,action:'Acompanhamento atualizado',current:{phase:input.phase},created_at:new Date().toISOString()});},
     async flowComment(token,input){flowRows.push({id:String(flowRows.length+1),source:input.source,record_id:input.id,actor_name:identity(token).nome,action:'Comentário',body:input.body,created_at:new Date().toISOString()});},
+    async activity(token,filters){return {referenceDate:filters.end,start:filters.start,end:filters.end,metrics:{created:1,closed:0,overdue:0,comments:flowRows.filter(r=>r.action==='Comentário').length,inspections:0,postponed:0,rescheduledWithoutComment:0},series:[{period:filters.start,kind:'created',count:1}],items:[]};},
+    async scheduleCard(token,input){const row=records.get('ordensServico/'+input.id);if(!row||row.version!==input.version)throw Error('O card mudou');row.data.vencimento=input.due;row.version++;if(input.comment)await this.flowComment(token,{source:'ordensServico',id:input.id,body:input.comment});},
     async processService(token,input){const p=input.source==='process'?processRows.get(input.id):records.get('vistorias/'+input.id);if(p.service_id)return p.service_id;p.service_id=input.recordId;const d=p.data;records.set('ordensServico/'+input.recordId,{id:input.recordId,version:1,owner_id:identity(token).id,data:{id:input.recordId,hotel:p.hotel||d.hotel,apartamento:p.apartment||d.apartamento,titulo:d.titulo||'Serviço da vistoria',descricao:d.observacoes||'Pendências',status:'Aberta',anexos:d.anexos||d.fotos||[]}});return input.recordId;},
     async receivePurchase(token,input){const p=processRows.get(input.id);if(p.stock_receipt)return;p.stock_receipt={quantity:input.quantity,material_id:input.materialId};p.phase='Recebida';p.version++;const s=records.get('estoqueBookSantos/singleton');s.data.itens.find(i=>i.id===input.materialId).quantidade+=input.quantity;s.version++;},
     async notifications(){return notificationState;},
@@ -204,6 +206,11 @@ async function main() {
     await evaluate("if(document.getElementById('decisionLegacyCharts').open)throw Error('Gráficos antigos devem ficar complementares');document.getElementById('decisionHotel').value='Be Urban';document.getElementById('decisionHotel').dispatchEvent(new Event('change'))");
     await wait("document.getElementById('decisionContent').getAttribute('aria-busy')==='false'");
     await capture('sad-desktop');
+    await wait("document.getElementById('activityContent').querySelectorAll('.card').length===7");
+    await evaluate("document.getElementById('activityGroup').value='month';document.getElementById('activityUrgency').value='Urgente';document.querySelector('.activity-filters').requestSubmit()");
+    await wait("document.getElementById('activityContent').getAttribute('aria-busy')==='false'");
+    await capture('analise-periodo');
+    await evaluate("for(const input of document.querySelectorAll('.activity-filters input,.activity-filters select')){const a=input.getBoundingClientRect(),b=input.closest('label').getBoundingClientRect();if(a.right>b.right+1||a.left<b.left-1)throw Error('Filtro ultrapassa seu espaço: '+input.id)}");
     await evaluate("[...document.querySelectorAll('#decisionContent button')].find(b=>b.textContent==='Ver serviços vencidos').click()");
     await wait("!document.getElementById('visaoOS').hidden && !document.getElementById('routine-services').hidden && document.getElementById('routine-services-period').value==='late' && document.getElementById('routine-services-hotel').value==='Be Urban'");
     await evaluate("BookRoutine.openServices({},'board');document.querySelector('#visaoOS > .botao-secundario').click()");
@@ -334,10 +341,15 @@ async function main() {
       mostrarAba('os');abrirFormularioOS('','Be Urban','214');
       document.getElementById('osTitulo').value='Card de teste';document.getElementById('osDescricao').value='Teste de fluxo';
       document.getElementById('osResponsavel').value='master@example.com';
+      document.getElementById('osPrioridade').value='Urgente';
       await salvarOS({preventDefault(){}});
       const order=JSON.parse(BookStore.getItem('ordensServico'))[0];if(!order||order.apartamento!=='214')throw Error('Salvar card');
       window.testOrderId=order.id;
-      await alterarStatusOS(order.id,'Em andamento');abrirOS(order.id);abrirFechamentoOS(order.id);
+      await alterarStatusOS(order.id,'Em andamento');abrirOS(order.id);
+      const schedule=document.querySelector('#cardActivity details form');if(!schedule)throw Error('Remarcação ausente');schedule.querySelector('input').value='2099-01-01';schedule.querySelector('textarea').value='Aguardando disponibilidade do apartamento';await schedule.onsubmit({preventDefault(){}});
+      const updated=JSON.parse(BookStore.getItem('ordensServico')).find(r=>r.id===order.id);if(updated.vencimento!=='2099-01-01'||!document.querySelector('#osDetalhes .deadline-future'))throw Error('Prazo do card não foi atualizado');
+      const activity=await BookAPI.request('/api/processes/flow?source=ordensServico&id='+order.id);if(!activity.events.some(e=>e.body==='Aguardando disponibilidade do apartamento'))throw Error('Comentário da remarcação não foi preservado');
+      abrirFechamentoOS(order.id);
       document.getElementById('fechamentoTerceiro').value='Não';document.getElementById('fechamentoTipoMaterial').value='Nenhum';atualizarCamposMaterial();
       document.getElementById('fechamentoValorServico').value='12.34';document.getElementById('fechamentoResponsavelPagamento').value='Book Santos';
       document.getElementById('fechamentoExecutadoPor').value='master@example.com';atualizarCustoTotal();
@@ -379,7 +391,14 @@ async function main() {
     await wait("JSON.parse(BookStore.getItem('estoqueBookSantos')).itens[0].minimo===3 && !BookStore.pending");
     await evaluate("BookFinance.load()");
     await evaluate("mostrarAba('os')");await capture('cards-finalizados');
-    await evaluate("abrirFechamentoOS(window.testOrderId)");await capture('formulario-fechamento');
+    await evaluate("abrirOS(window.testOrderId)");
+    await wait("!!document.querySelector('#cardActivity form textarea')");
+    await evaluate("document.querySelector('#cardActivity form textarea').value='Comentário no card <img src=x>';document.querySelector('#cardActivity form').requestSubmit()");
+    await wait("document.getElementById('cardActivity').textContent.includes('Comentário no card <img src=x>') && !document.querySelector('#cardActivity button[type=submit]').disabled");
+    await evaluate("if(document.querySelector('#cardActivity img'))throw Error('Comentário executou HTML');document.querySelector('#cardActivity form textarea').value='Segunda informação preservada';document.querySelector('#cardActivity form').requestSubmit()");
+    await wait("document.getElementById('cardActivity').textContent.includes('Segunda informação preservada') && document.getElementById('cardActivity').textContent.includes('Comentário no card <img src=x>')");
+    await capture('card-comentarios');
+    await evaluate("document.getElementById('osDetalhesModal').style.display='none';abrirFechamentoOS(window.testOrderId)");await capture('formulario-fechamento');
     await evaluate("document.getElementById('fechamentoModal').style.display='none';mostrarAba('vistorias');selecionarHotelVistoria('Lume Alto da Boa Vista');selecionarApartamentoVistoria('194A');document.querySelectorAll('.vistoria-registro').forEach(node=>node.open=true)");await capture('vistorias-resumo');
     await evaluate("abrirFormularioVistoria()");await capture('formulario-vistoria');
     await evaluate("fecharVistoriaModal();mostrarAba('usuarios')");await evaluate("BookUsers.open()");await capture('formulario-usuario');
