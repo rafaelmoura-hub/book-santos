@@ -55,6 +55,14 @@ html:active-view-transition-type(login)::view-transition-new(root) { animation:b
 h1,h2,h3,h4,.titulo-secao h2,.titulo-secao h3,main > section > h2,.client-panel h2 { color:var(--texto); }
 .decision-section h3,.decision-panel > h3,.routine-column > h3 { color:var(--brand-link); }
 label,#formChamado label,.filtro-apartamento,.workspace-hint,.workspace-status,.card h3,.routine-card p,.routine-event small,.decision-table-wrap th { color:var(--suave); }
+#formOS label,#formFechamentoOS label,#formUsuario label,#formVistoria label { color:var(--suave); }
+.finalizado { filter:none; }
+.finalizado strong,.finalizado h3 { color:var(--texto); }
+.vistoria-resumo { background:var(--surface); color:var(--texto); border-color:var(--borda); }
+.modal { z-index:80; }
+.modal-conteudo { overflow-wrap:anywhere; }
+.botao-remover,.remover-coluna,.remover-material { background:var(--surface); border-color:var(--control-border); }
+#mensagemUsuario { color:var(--danger); }
 .login-box > p { color:var(--suave); }
 a { color:var(--brand-link); }
 input:not([type="checkbox"]):not([type="radio"]),select,textarea {
