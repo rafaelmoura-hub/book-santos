@@ -6,6 +6,10 @@ Estados: Novo → Novo; Resolvido → Finalizado; Recusa Proprietário ou Cancel
 
 Sem condomínio identificado, os registros ficam visíveis somente ao mestre, marcados como histórico parcial. Não é permitido reabrir, finalizar ou remarcar até a conferência dos imóveis. Comentários novos podem ser adicionados. Não são criados vencimentos, custos, urgências, anexos nem datas de conclusão.
 
+Regra confirmada pelo usuário: número no início do título → apartamento; sigla UQ → Unique Residence. Também são reconhecidos o prefixo “Apto.” e o formato “UQ 1001”. O título original não é modificado. Outras siglas não são adivinhadas e apartamentos históricos não são adicionados automaticamente ao catálogo atual. Com condomínio identificado, o acesso segue as permissões desse condomínio; sem identificação, continua restrito ao mestre.
+
+O gerador também cria `ATUALIZAR-IMOVEIS.sql`, para o caso de a primeira importação já ter sido executada. Esse ajuste faz uma cópia protegida dos registros, altera apenas hotel/apartamento e metadados de classificação e preserva IDs, comentários, datas e estados. Pode ser repetido sem duplicar registros nem incrementar versões quando não houver mudanças. Associações já existentes não são apagadas quando a regra não identifica outro condomínio.
+
 A visão geral conta criações pela data original da planilha. A carga não aparece como milhares de criações/conclusões de hoje. O fuso da exportação não foi informado: o texto original é preservado e a data civil é usada nos agrupamentos. Histórico parcial fica fora das somas financeiras.
 
 ## Execução

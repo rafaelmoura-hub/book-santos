@@ -18,11 +18,11 @@ create temp table book_incoming_history(document jsonb) on commit drop;
 insert into book_incoming_history values (__PAYLOAD__::jsonb);
 create temp table book_incoming_cards on commit drop as
 select jsonb_build_object('id',(8000000000000000+(r->>'sourceRow')::bigint)::text,
- 'hotel','Condomínio a conferir','apartamento','A conferir','titulo',r->>'title',
+ 'hotel',coalesce(r->>'inferredHotel','Condomínio a conferir'),'apartamento',coalesce(r->>'inferredApartment','A conferir'),'titulo',r->>'title',
  'descricao','Histórico parcial importado. A planilha não contém descrição, imóvel identificado, vencimento, fechamento, responsável, urgência, valores, comentários ou anexos.',
  'status',case r->>'phase' when 'Resolvido' then 'Finalizada' when 'Recusa Proprietário' then 'Recusada' when 'Cancelado' then 'Recusada' when 'Novo' then 'Aberta' else 'Em andamento' end,
  'criadaPor',coalesce(nullif(r->>'creator',''),'Não informado'),'data',to_char((r->>'createdLocal')::timestamp,'DD/MM/YYYY HH24:MI:SS'),'anexos','[]'::jsonb,
- 'importacao',jsonb_build_object('parcial',true,'origem','Pipefy','arquivo',document->>'file','hash',document->>'hash','linha',(r->>'sourceRow')::integer,'faseOriginal',r->>'phase','criadorOriginal',r->>'creator','criadoEmLocal',r->>'createdLocal','criadoEmOriginal',r->>'createdOriginal','fusoFonte','Não informado'))
+ 'importacao',jsonb_build_object('parcial',true,'origem','Pipefy','arquivo',document->>'file','hash',document->>'hash','linha',(r->>'sourceRow')::integer,'faseOriginal',r->>'phase','criadorOriginal',r->>'creator','criadoEmLocal',r->>'createdLocal','criadoEmOriginal',r->>'createdOriginal','fusoFonte','Não informado','condominioPeloTitulo',r->>'inferredHotel','apartamentoPeloTitulo',r->>'inferredApartment','siglaConfirmada',r->>'confirmedCode','regraImovel','numero-inicial; UQ=Unique Residence; v1'))
  ||case when r->>'phase' in ('Recusa Proprietário','Cancelado') then jsonb_build_object('motivoRecusa','Fase de origem: '||(r->>'phase')||'. Motivo detalhado não informado.') else '{}'::jsonb end data
 from book_incoming_history,jsonb_array_elements(document->'rows') r;
 do $$ begin
@@ -54,7 +54,7 @@ delete from public.book_records where collection='ordensServico';
 alter table public.book_records disable trigger book_validate_record;
 alter table public.book_records disable trigger book_card_state;
 insert into public.book_records(collection,id,data,owner_id,hotel,version)
-select 'ordensServico',data->>'id',data,(select id from public.book_profiles where mestre order by id limit 1),null,1 from book_incoming_cards;
+select 'ordensServico',data->>'id',data,(select id from public.book_profiles where mestre order by id limit 1),nullif(data->>'hotel','Condomínio a conferir'),1 from book_incoming_cards;
 insert into public.book_flow_meta(source,record_id,phase,data)
 select 'ordensServico',data->>'id',case data->>'status' when 'Finalizada' then 'Resolvido' when 'Recusada' then 'Recusa proprietário' when 'Em andamento' then 'Em andamento' else 'Novo' end,
 case when data->>'status'='Recusada' then jsonb_build_object('motivo',data->>'motivoRecusa') else '{}'::jsonb end from book_incoming_cards;

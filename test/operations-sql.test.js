@@ -567,7 +567,7 @@ test('PostgreSQL: RLS, concorrência, auditoria e consumo atômico', async t => 
   assert.equal((await activity({...activityFilters,hotel:''})).items.length,0,'Indicadores não revelam dados de condomínios sem acesso');
   await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub','',false)");
   const {prepare}=require('../scripts/prepare-history-import');
-  const source={sha256:'a'.repeat(64),sourceFile:'teste.xlsx',rows:[{sourceRow:2,title:"Card histórico 'teste'",phase:'Resolvido',creator:'Criador original',createdLocal:'2024-06-15T10:20:00',createdOriginal:'45458.4'},{sourceRow:3,title:'Card recusado',phase:'Recusa Proprietário',creator:'Equipe',createdLocal:'2024-06-16T10:20:00',createdOriginal:'45459.4'},{sourceRow:4,title:'Card novo',phase:'Novo',creator:'Equipe',createdLocal:'2024-06-17T10:20:00',createdOriginal:'45460.4'}]};
+  const source={sha256:'a'.repeat(64),sourceFile:'teste.xlsx',rows:[{sourceRow:2,title:"Card histórico 'teste'",phase:'Resolvido',creator:'Criador original',createdLocal:'2024-06-15T10:20:00',createdOriginal:'45458.4'},{sourceRow:3,title:'Card recusado',phase:'Recusa Proprietário',creator:'Equipe',createdLocal:'2024-06-16T10:20:00',createdOriginal:'45459.4'},{sourceRow:4,title:'1001 UQ - Card novo',phase:'Novo',creator:'Equipe',createdLocal:'2024-06-17T10:20:00',createdOriginal:'45460.4'}]};
   const importedPlan=prepare(source),beforeImport=(await db.query("select count(*) n from public.book_records where collection='ordensServico'")).rows[0].n;
   const otherCollections=(await db.query("select count(*) n from public.book_records where collection<>'ordensServico'")).rows[0].n;
   await db.exec(importedPlan.sql);
@@ -584,7 +584,19 @@ test('PostgreSQL: RLS, concorrência, auditoria e consumo atômico', async t => 
   await assert.rejects(db.exec('delete from public.book_history_import_backups'),e=>e.code==='42501');
   await db.exec('reset role');await assert.rejects(db.exec(importedPlan.sql),/já foi importado/);await db.exec('rollback');
   assert.equal((await db.query("select count(*) n from public.book_records where collection='ordensServico'")).rows[0].n,3);
-  await db.query("select set_config('request.jwt.claim.sub','',false)");await db.exec(importedPlan.restore);
+  await db.query("select set_config('request.jwt.claim.sub','',false)");
+  await db.exec("alter table public.book_records disable trigger book_validate_record; update public.book_records set hotel=null,data=data||'{\"hotel\":\"Condomínio a conferir\",\"apartamento\":\"A conferir\"}' where id='8000000000000004';alter table public.book_records enable trigger book_validate_record;");
+  await actor(master);await db.query("select public.book_flow_comment('ordensServico','8000000000000004','Comentário preservado durante classificação')");
+  await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub','',false)");await db.exec(importedPlan.locations);
+  const mappedRow=(await db.query("select * from public.book_records where id='8000000000000004'")).rows[0];
+  assert.equal(mappedRow.hotel,'Unique Residence');assert.equal(mappedRow.data.apartamento,'1001');assert.equal(mappedRow.data.status,'Aberta');assert.equal(mappedRow.data.titulo,'1001 UQ - Card novo');
+  assert.equal((await db.query("select count(*) n from public.book_flow_events where record_id='8000000000000004' and body='Comentário preservado durante classificação'")).rows[0].n,1);
+  await db.exec(importedPlan.locations);assert.equal((await db.query("select version from public.book_records where id='8000000000000004'")).rows[0].version,mappedRow.version);
+  await db.query("insert into public.book_hotel_access(user_id,hotel) values($1,'Unique Residence') on conflict do nothing",[admin]);await actor(admin);
+  assert.equal((await db.query("select count(*) n from public.book_records where collection='ordensServico'")).rows[0].n,1,'Somente histórico do condomínio autorizado fica visível');
+  await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub','',false)");
+  await assert.rejects(db.exec(importedPlan.restore),/recebeu atividades/);await db.exec('rollback');
+  await db.exec("delete from public.book_flow_events where source='ordensServico' and body='Comentário preservado durante classificação'");await db.exec(importedPlan.restore);
   assert.equal((await db.query("select count(*) n from public.book_records where collection='ordensServico'")).rows[0].n,beforeImport);
   assert.equal((await db.query("select count(*) n from public.book_records where collection<>'ordensServico'")).rows[0].n,otherCollections);
   if(process.env.BOOK_HISTORY_TEST_FILE){

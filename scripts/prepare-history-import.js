@@ -1,6 +1,13 @@
 const fs=require('node:fs');
 const path=require('node:path');
 const statuses={Resolvido:'Finalizada','Recusa Proprietário':'Recusada','Em Andamento':'Em andamento','Pendente Fornecedor':'Em andamento','Aguardando Proprietário':'Em andamento','Conferência':'Em andamento',Novo:'Aberta',Cancelado:'Recusada'};
+function locationFromTitle(title){
+ const prefix=/^\s*(?:(?:apartamento|apto|ap)\.?\s*)?(\d{1,4})([AB])?(?=\s|$|[-:;/.,–—]|[A-Z]{1,3}(?:\s|$|[-:]))/i.exec(title);
+ const reversed=/^\s*UQ\s*[-:–—]?\s*(\d{1,4})([AB])?(?=\s|$|[-:;/.,–—])/i.exec(title);
+ const match=prefix||reversed,apartment=match?match[1]+(match[2]||'').toUpperCase():null;
+ const unique=/(?:^|[^A-Z0-9])UQ(?=$|[^A-Z0-9])/i.test(title)||/^\s*\d{1,4}[AB]?UQ(?=$|[^A-Z0-9])/i.test(title);
+ return {hotel:unique?'Unique Residence':null,apartment,code:unique?'UQ':null};
+}
 function prepare(source){
  if(!source||!Array.isArray(source.rows)||!source.rows.length||!/^[a-f0-9]{64}$/.test(source.sha256))throw Error('Relatório inválido.');
  const seen=new Set(),counts={};const cards=source.rows.map(r=>{
@@ -9,6 +16,8 @@ function prepare(source){
   const id=(8000000000000000n+BigInt(r.sourceRow)).toString(),[day,time]=r.createdLocal.split('T');
   const data={id,hotel:'Condomínio a conferir',apartamento:'A conferir',titulo:r.title,descricao:'Histórico parcial importado. A planilha não contém descrição, imóvel identificado, vencimento, fechamento, responsável, urgência, valores, comentários ou anexos.',status,criadaPor:r.creator||'Não informado',data:day.split('-').reverse().join('/')+' '+time,anexos:[],importacao:{parcial:true,origem:'Pipefy',arquivo:source.sourceFile,hash:source.sha256,linha:r.sourceRow,faseOriginal:r.phase,criadorOriginal:r.creator,criadoEmLocal:r.createdLocal,criadoEmOriginal:r.createdOriginal,fusoFonte:'Não informado'}};
   if(status==='Recusada')data.motivoRecusa='Fase de origem: '+r.phase+'. Motivo detalhado não informado.';
+  const location=locationFromTitle(r.title);data.hotel=location.hotel||data.hotel;data.apartamento=location.apartment||data.apartamento;
+  Object.assign(data.importacao,{condominioPeloTitulo:location.hotel,apartamentoPeloTitulo:location.apartment,siglaConfirmada:location.code,regraImovel:'numero-inicial; UQ=Unique Residence; v1'});
   return data;
  });
  const activity=fs.readFileSync(path.join(__dirname,'../supabase/migrations/202610300019_activity.sql'),'utf8');
@@ -19,10 +28,11 @@ function prepare(source){
  const finance=financeSource.slice(financeSource.indexOf('create or replace function public.book_finance_history'),financeSource.indexOf('create or replace function public.book_reopen_order'));
  if(!finance.includes("where collection='ordensServico'"))throw Error('Consulta financeira não localizada.');
  report+='\n'+finance.replace("where collection='ordensServico'","where collection='ordensServico' and data#>>'{importacao,parcial}' is distinct from 'true'");
- const payload={hash:source.sha256,file:source.sourceFile,count:cards.length,rows:source.rows};
+ const payload={hash:source.sha256,file:source.sourceFile,count:cards.length,rows:source.rows.map(r=>{const location=locationFromTitle(r.title);return {...r,inferredHotel:location.hotel,inferredApartment:location.apartment,confirmedCode:location.code};})};
  const sql=fs.readFileSync(path.join(__dirname,'history-import.sql'),'utf8').replace('__PAYLOAD__',()=>"'"+JSON.stringify(payload).replaceAll("'","''")+"'").replace('__REPORT_FUNCTIONS__',()=>report);
  const restore=fs.readFileSync(path.join(__dirname,'restore-history.sql'),'utf8').replaceAll('__HASH__',"'"+source.sha256+"'");
- return {sql,counts,cards,restore};
+ const locations=fs.readFileSync(path.join(__dirname,'history-locations.sql'),'utf8').replace('__PAYLOAD__',()=>"'"+JSON.stringify(payload).replaceAll("'","''")+"'");
+ return {sql,counts,cards,restore,locations};
 }
-if(require.main===module){const input=process.argv[2],output=process.argv[3];if(!input||!output)throw Error('Uso: node scripts/prepare-history-import.js source.json destino.sql');const source=JSON.parse(fs.readFileSync(input,'utf8').replace(/^\uFEFF/,''));const result=prepare(source);fs.writeFileSync(output,result.sql);fs.writeFileSync(path.join(path.dirname(output),'RESTAURAR-CARDS-ANTERIORES.sql'),result.restore);console.log(JSON.stringify({rows:result.cards.length,counts:result.counts,sqlBytes:Buffer.byteLength(result.sql),output}));}
-module.exports={prepare};
+if(require.main===module){const input=process.argv[2],output=process.argv[3];if(!input||!output)throw Error('Uso: node scripts/prepare-history-import.js source.json destino.sql');const source=JSON.parse(fs.readFileSync(input,'utf8').replace(/^\uFEFF/,''));const result=prepare(source);fs.writeFileSync(output,result.sql);fs.writeFileSync(path.join(path.dirname(output),'RESTAURAR-CARDS-ANTERIORES.sql'),result.restore);fs.writeFileSync(path.join(path.dirname(output),'ATUALIZAR-IMOVEIS.sql'),result.locations);console.log(JSON.stringify({apartmentsIdentified:result.cards.filter(c=>c.apartamento!=='A conferir').length,uniqueResidence:result.cards.filter(c=>c.hotel==='Unique Residence').length,rows:result.cards.length,counts:result.counts,sqlBytes:Buffer.byteLength(result.sql),output}));}
+module.exports={prepare,locationFromTitle};
