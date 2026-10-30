@@ -68,4 +68,13 @@ test('tela aguarda confirmação e preserva versão lida para impedir sobrescrit
   await assert.rejects(store.setItem('chamados',JSON.stringify(stale)),/Conflito/);
   assert.equal(rows[0].data.assunto,'Outro funcionário');
   assert.equal(local.get('chamados'),'[{"id":"antigo"}]');
+  const request=api.request,oldSnapshot=JSON.parse(JSON.stringify({chamados:{loaded:rows,cursor:null}}));let finishSnapshot;
+  api.request=async url=>url.startsWith('/api/snapshot')?new Promise(resolve=>{finishSnapshot=resolve;}):request(url);
+  const refreshing=store.refresh(true);
+  const confirmed={...rows[0],version:4,data:{...rows[0].data,vencimento:'2099-01-01'}};
+  store.includeRecord('chamados',confirmed);finishSnapshot(oldSnapshot);await refreshing;
+  assert.equal(JSON.parse(store.getItem('chamados'))[0].vencimento,'2099-01-01','Resposta atrasada não pode reverter a data já confirmada.');
+  assert.equal(JSON.parse(store.getItem('chamados'))[0].__bookVersion,4);
+  api.request=async()=>({chamados:{loaded:[],cursor:null}});await store.refresh(true);
+  assert.equal(JSON.parse(store.getItem('chamados')).length,0,'Registros ausentes do escopo autorizado não são preservados.');
 });

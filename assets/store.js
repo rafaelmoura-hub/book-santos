@@ -126,6 +126,9 @@ window.BookStore = (() => {
             for (const [key, data] of Object.entries(result)) {
                 if (key === '__counts') { if (JSON.stringify(totals) !== JSON.stringify(data)) changed = true; totals = data; continue; }
                 const previous = cache.get(key);
+                // An older in-flight snapshot must not undo a confirmed card update.
+                const confirmed = new Map((previous || []).map(row => [row.id, row]));
+                data.loaded = data.loaded.map(row => Number(confirmed.get(row.id)?.version) > Number(row.version) ? confirmed.get(row.id) : row);
                 const different = force || !previous || previous.length !== data.loaded.length || cursors.get(key) !== data.cursor || data.loaded.some((row, index) => row.id !== previous[index]?.id || row.version !== previous[index]?.version || row.updated_at !== previous[index]?.updated_at);
                 if (different) { cache.set(key, data.loaded); cursors.set(key, data.cursor); changed = true; }
             }

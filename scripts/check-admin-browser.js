@@ -346,7 +346,7 @@ async function main() {
       const order=JSON.parse(BookStore.getItem('ordensServico'))[0];if(!order||order.apartamento!=='214')throw Error('Salvar card');
       window.testOrderId=order.id;
       await alterarStatusOS(order.id,'Em andamento');abrirOS(order.id);
-      const schedule=document.querySelector('#cardActivity details form');if(!schedule)throw Error('Remarcação ausente');schedule.querySelector('input').value='2099-01-01';schedule.querySelector('textarea').value='Aguardando disponibilidade do apartamento';await schedule.onsubmit({preventDefault(){}});
+      const schedule=document.querySelector('#cardActivity details form');if(!schedule)throw Error('Remarcação ausente');schedule.querySelector('input').value='2099-01-01';schedule.querySelector('textarea').value='Aguardando disponibilidade do apartamento';const originalRefresh=BookStore.refresh;BookStore.refresh=async()=>{};try{await schedule.onsubmit({preventDefault(){}});}finally{BookStore.refresh=originalRefresh;}
       const updated=JSON.parse(BookStore.getItem('ordensServico')).find(r=>r.id===order.id);if(updated.vencimento!=='2099-01-01'||!document.querySelector('#osDetalhes .deadline-future'))throw Error('Prazo do card não foi atualizado');
       const activity=await BookAPI.request('/api/processes/flow?source=ordensServico&id='+order.id);if(!activity.events.some(e=>e.body==='Aguardando disponibilidade do apartamento'))throw Error('Comentário da remarcação não foi preservado');
       abrirFechamentoOS(order.id);

@@ -30,4 +30,6 @@ Datas na lista, nos detalhes e no quadro/agenda: futuro ou sem prazo em cinza, h
 
 ## Verificação
 
+Após remarcar, o card é consultado diretamente no servidor e sua versão confirmada atualiza os detalhes, a lista e o quadro. Uma resposta anterior da sincronização não pode substituir essa versão por outra mais antiga. Registros que deixarem de aparecer no escopo autorizado continuam sendo removidos da tela normalmente.
+
 Testes da API verificam autenticação, permissões, filtros inválidos e entrada de datas. O PostgreSQL isolado executa a migração duas vezes e verifica contagens, remarcações, comentários, conflitos de versão e isolamento por condomínio. O Chrome exercita filtros, publicação de comentários e remarcação, além das verificações existentes de contraste e navegação. Nenhum dado operacional real é alterado por esses testes.
