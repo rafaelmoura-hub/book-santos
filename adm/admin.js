@@ -306,6 +306,7 @@ async function salvarRascunhoFechamentoOS() {
       executadoPor: usuariosQueFinalizam().find(usuario => usuario.login === login)?.nome || "", executadoPorLogin: login,
       custoTotal: BookMoney.parse(document.getElementById("fechamentoCustoTotal").value || "0.00"), observacao: document.getElementById("fechamentoObservacao").value.trim(),
       fotos: [...(order.fechamento?.fotos || []), ...fotos], atualizadaEm: new Date().toISOString() };
+    if (BookProcesses.date(order.fechamento.data)) order.vencimento = order.fechamento.data;
     order.status = "Em andamento";
     try { await BookStore.setItem("ordensServico", JSON.stringify(items)); }
     catch (erro) { return; }
@@ -346,6 +347,7 @@ async function salvarFechamentoOS(event) {
       fotos: [...(order.fechamento?.fotos || []), ...fotos],
       materiais: materiaisSelecionados
     };
+    if (BookProcesses.date(order.fechamento.data)) order.vencimento = order.fechamento.data;
     order.status = "Finalizada";
     order.fechadaEm = order.fechamento.finalizadaEm;
     try { await BookStore.setItem("ordensServico", JSON.stringify(items)); }

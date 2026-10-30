@@ -218,7 +218,7 @@
             <h2>Dados para finalizar Card</h2>
             <form id="formFechamentoOS" data-on-submit="salvarFechamentoOS(event)">
                 <input id="fechamentoIdOS" type="hidden">
-                <label>Data do fechamento<input id="fechamentoData" type="date" required></label>
+                <label>Data do fechamento<input id="fechamentoData" type="date" required><small>Ao salvar, esta data também atualiza o vencimento do card.</small></label>
                 <label>Servi&ccedil;o realizado por terceiro?<select id="fechamentoTerceiro" required><option value="">Selecione</option><option>Sim</option><option>N&atilde;o</option></select></label>
                 <label>Valor do servi&ccedil;o (R$)<input id="fechamentoValorServico" data-money type="number" min="0" step="0.01" value="0.00" required data-on-input="atualizarCustoTotal()"></label>
                 <label>Tipo do material<select id="fechamentoTipoMaterial" required data-on-change="atualizarCamposMaterial()"><option value="">Selecione</option><option>Material de consumo</option><option>Material de repasse</option><option>Item de reposi&ccedil;&atilde;o</option><option>Nenhum</option></select></label>

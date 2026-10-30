@@ -18,6 +18,8 @@ Datas de eventos usam São Paulo. O responsável e a urgência dos filtros são 
 
 ## Cards
 
+Ao salvar as informações do serviço ou finalizar o card, a data de fechamento preenchida também passa a ser seu vencimento. Os dois campos são enviados juntos na mesma gravação e aparecem atualizados na lista, nos detalhes e no quadro/agenda. Uma data vazia no rascunho não apaga o vencimento existente.
+
 Na visão geral, **Ver registros** abre uma janela com a lista do indicador. Clicar no título abre os detalhes do card ou carrega a vistoria específica, expandindo seu registro no histórico do apartamento. Falhas de acesso ou de rede aparecem nessa janela, permitindo tentar novamente.
 
 Comentários aparecem nos detalhes, com autor e data, e continuam disponíveis no histórico anterior. São cumulativos e não permitem que outro usuário altere a autoria ou apague o histórico. A paginação carrega atividades anteriores.

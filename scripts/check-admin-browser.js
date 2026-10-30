@@ -353,7 +353,11 @@ async function main() {
       document.getElementById('fechamentoTerceiro').value='Não';document.getElementById('fechamentoTipoMaterial').value='Nenhum';atualizarCamposMaterial();
       document.getElementById('fechamentoValorServico').value='12.34';document.getElementById('fechamentoResponsavelPagamento').value='Book Santos';
       document.getElementById('fechamentoExecutadoPor').value='master@example.com';atualizarCustoTotal();
-      await salvarRascunhoFechamentoOS();abrirFechamentoOS(order.id);await salvarFechamentoOS({preventDefault(){}});
+      document.getElementById('fechamentoData').value='2026-11-02';
+      await salvarRascunhoFechamentoOS();
+      let savedOrder=JSON.parse(BookStore.getItem('ordensServico')).find(r=>r.id===order.id);if(savedOrder.vencimento!=='2026-11-02'||savedOrder.fechamento.data!=='2026-11-02'||!document.getElementById('osDetalhes').textContent.includes('02/11/2026'))throw Error('Salvar informações não sincronizou fechamento e vencimento');
+      abrirFechamentoOS(order.id);document.getElementById('fechamentoData').value='2026-11-03';await salvarFechamentoOS({preventDefault(){}});
+      savedOrder=JSON.parse(BookStore.getItem('ordensServico')).find(r=>r.id===order.id);if(savedOrder.vencimento!=='2026-11-03'||savedOrder.fechamento.data!=='2026-11-03'||!document.querySelector('#osDetalhes .deadline-done'))throw Error('Finalizar não sincronizou fechamento e vencimento');
       const saved=JSON.parse(BookStore.getItem('ordensServico'))[0];if(saved.status!=='Finalizada'||saved.fechamento.custoTotal!==12.34)throw Error('Finalizar card');
       const originalPrompt=window.prompt;window.prompt=()=> 'Corrigir os dados de teste';
       try{await alterarStatusOS(order.id,'Em andamento');}finally{window.prompt=originalPrompt;}
