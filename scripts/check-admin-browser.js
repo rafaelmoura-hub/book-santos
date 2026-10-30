@@ -465,6 +465,13 @@ async function main() {
     await wait("document.getElementById('aiActions').textContent.includes('execução confirmada') && document.getElementById('aiDialog').getAttribute('aria-busy')==='false'");
     if([...records.values()].filter(row=>row.data.titulo==='Card criado pela IA').length!==1)throw Error('Confirmação não criou exatamente um card');
     await evaluate("document.getElementById('aiDialog').querySelector('.workspace-heading button').click()");
+    const partialHistory={id:'8000000000099999',version:1,owner_id:master.id,hotel:null,data:{id:'8000000000099999',hotel:'Condomínio a conferir',apartamento:'A conferir',titulo:'Histórico parcial de teste',descricao:'Dados da origem preservados',status:'Em andamento',anexos:[],importacao:{parcial:true,faseOriginal:'Pendente Fornecedor',criadorOriginal:'Equipe da origem',criadoEmLocal:'2024-01-02T10:00:00'}}};
+    records.set('ordensServico/'+partialHistory.id,partialHistory);
+    await evaluate(`BookStore.includeRecord('ordensServico',${JSON.stringify(partialHistory)});mostrarAba('os');abrirOS('${partialHistory.id}')`);
+    await wait("document.getElementById('cardActivity').textContent.includes('Histórico parcial')");
+    await evaluate("if(!document.getElementById('osDetalheStatus').disabled||!document.getElementById('botaoFinalizarOS').hidden||!document.getElementById('botaoReabrirOS').hidden||document.querySelector('#cardActivity details form')||!document.getElementById('osDetalhes').textContent.includes('Não informada'))throw Error('Histórico parcial tratado como card operacional')");
+    await capture('historico-parcial');
+    await evaluate("document.getElementById('osDetalhesModal').style.display='none'");records.delete('ordensServico/'+partialHistory.id);
     await evaluate("BookAPI.request('/api/logout',{method:'POST',body:'{}'})");
     await send('Page.navigate',{url:base+'/login.html'});
     await wait("typeof entrar === 'function'");

@@ -565,4 +565,36 @@ test('PostgreSQL: RLS, concorrência, auditoria e consumo atômico', async t => 
   await db.query('delete from public.book_hotel_access where user_id=$1',[admin]);
   await actor(admin);await assert.rejects(activity(),e=>e.code==='42501');
   assert.equal((await activity({...activityFilters,hotel:''})).items.length,0,'Indicadores não revelam dados de condomínios sem acesso');
+  await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub','',false)");
+  const {prepare}=require('../scripts/prepare-history-import');
+  const source={sha256:'a'.repeat(64),sourceFile:'teste.xlsx',rows:[{sourceRow:2,title:"Card histórico 'teste'",phase:'Resolvido',creator:'Criador original',createdLocal:'2024-06-15T10:20:00',createdOriginal:'45458.4'},{sourceRow:3,title:'Card recusado',phase:'Recusa Proprietário',creator:'Equipe',createdLocal:'2024-06-16T10:20:00',createdOriginal:'45459.4'},{sourceRow:4,title:'Card novo',phase:'Novo',creator:'Equipe',createdLocal:'2024-06-17T10:20:00',createdOriginal:'45460.4'}]};
+  const importedPlan=prepare(source),beforeImport=(await db.query("select count(*) n from public.book_records where collection='ordensServico'")).rows[0].n;
+  const otherCollections=(await db.query("select count(*) n from public.book_records where collection<>'ordensServico'")).rows[0].n;
+  await db.exec(importedPlan.sql);
+  assert.equal((await db.query("select count(*) n from public.book_records where collection='ordensServico'")).rows[0].n,3);
+  assert.equal((await db.query("select jsonb_array_length(payload->'records') n from public.book_history_import_backups")).rows[0].n,beforeImport);
+  assert.equal((await db.query("select count(*) n from public.book_records where collection<>'ordensServico'")).rows[0].n,otherCollections);
+  await actor(master);
+  assert.equal((await db.query("select data->>'titulo' title from public.book_records where id='8000000000000002'")).rows[0].title,"Card histórico 'teste'");
+  await assert.rejects(db.exec("update public.book_records set data=data||'{\"status\":\"Em andamento\"}' where id='8000000000000002'"),e=>e.code==='42501');
+  await assert.rejects(db.query("select public.book_reopen_order('8000000000000002',1,'Teste de proteção do histórico')"),e=>e.code==='42501');
+  const importedSummary=await activity({start:'2024-06-01',end:'2024-06-30',group:'month',hotel:'',urgency:'',assignees:[]});assert.equal(importedSummary.metrics.created,3);assert.equal(importedSummary.metrics.closed||0,0);
+  assert.equal((await db.query("select public.book_finance_history() value")).rows[0].value.records.length,0);
+  await actor(admin);assert.equal((await db.query("select count(*) n from public.book_records where collection='ordensServico'")).rows[0].n,0);
+  await assert.rejects(db.exec('delete from public.book_history_import_backups'),e=>e.code==='42501');
+  await db.exec('reset role');await assert.rejects(db.exec(importedPlan.sql),/já foi importado/);await db.exec('rollback');
+  assert.equal((await db.query("select count(*) n from public.book_records where collection='ordensServico'")).rows[0].n,3);
+  await db.query("select set_config('request.jwt.claim.sub','',false)");await db.exec(importedPlan.restore);
+  assert.equal((await db.query("select count(*) n from public.book_records where collection='ordensServico'")).rows[0].n,beforeImport);
+  assert.equal((await db.query("select count(*) n from public.book_records where collection<>'ordensServico'")).rows[0].n,otherCollections);
+  if(process.env.BOOK_HISTORY_TEST_FILE){
+    await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub','',false)");
+    const fullSource=JSON.parse(readFileSync(process.env.BOOK_HISTORY_TEST_FILE,'utf8').replace(/^\uFEFF/,'')),fullPlan=prepare(fullSource);
+    await db.exec(fullPlan.sql);
+    const loaded=(await db.query("select data->>'status' status,count(*)::integer n from public.book_records where collection='ordensServico' group by 1")).rows;
+    assert.deepEqual(Object.fromEntries(loaded.map(r=>[r.status,r.n])),fullPlan.counts);
+    await actor(master);const lastPage=(await db.query("select public.book_service_page($1,'{}') value",[Math.floor((fullPlan.cards.length-1)/50)*50])).rows[0].value;
+    assert.equal(lastPage.total,fullPlan.cards.length);assert.ok(lastPage.rows.length>0);
+    console.log(JSON.stringify({historyRowsVerified:fullPlan.cards.length,states:fullPlan.counts,lastPageRows:lastPage.rows.length}));
+  }
 });
