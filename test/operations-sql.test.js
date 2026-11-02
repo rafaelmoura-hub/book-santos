@@ -620,7 +620,7 @@ test('PostgreSQL: RLS, concorrência, auditoria e consumo atômico', async t => 
   const feedbackPlan=prepareFeedback(feedbackSource),feedbackBefore=(await db.query('select count(*) n from public.book_feedbacks')).rows[0].n;
   await db.exec(feedbackPlan.setup);
   await assert.rejects(db.exec(feedbackPlan.sql),/Carga incompleta/);await db.exec('rollback');
-  for(const row of feedbackPlan.rows)await db.query('insert into public.book_history_import_stage(source_hash,source_line,payload) values($1,$2,$3)',[feedbackSource.sha256,row.sourceRow,JSON.stringify(row)]);
+  for(const batch of feedbackPlan.batches)await db.exec(batch);
   await db.exec(feedbackPlan.sql);
   assert.equal((await db.query('select count(*) n from public.book_feedbacks')).rows[0].n,feedbackBefore+feedbackPlan.rows.length);
   assert.equal((await db.query("select count(*) n from public.book_flow_meta where source='feedbacks' and record_id in(select id::text from public.book_feedbacks where data#>>'{importacao,hash}'=$1)",[feedbackSource.sha256])).rows[0].n,feedbackPlan.rows.length);
