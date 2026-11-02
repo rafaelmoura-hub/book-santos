@@ -613,6 +613,24 @@ test('PostgreSQL: RLS, concorrência, auditoria e consumo atômico', async t => 
   await db.exec("delete from public.book_flow_events where source='ordensServico' and body='Comentário preservado durante classificação'");await db.exec(importedPlan.restore);
   assert.equal((await db.query("select count(*) n from public.book_records where collection='ordensServico'")).rows[0].n,beforeImport);
   assert.equal((await db.query("select count(*) n from public.book_records where collection<>'ordensServico'")).rows[0].n,otherCollections);
+  // Feedbacks são adicionados sem substituir dados ou criar serviços.
+  await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub','',false)");
+  const {prepareFeedback}=require('../scripts/prepare-feedback-import');
+  const feedbackSource=process.env.BOOK_FEEDBACK_TEST_FILE?JSON.parse(readFileSync(process.env.BOOK_FEEDBACK_TEST_FILE,'utf8')):{sha256:'b'.repeat(64),sourceFile:'feedback.xlsx',rows:[{sourceRow:2,'Título':'1001 UQ','Fase atual':'Concluído','Criado em':'45310','Resposta Ao Cliente':'Resposta original'},{sourceRow:3,'Título':'1504 Gonzaga','Fase atual':'Feedback','Criado em':'45311'}]};
+  const feedbackPlan=prepareFeedback(feedbackSource),feedbackBefore=(await db.query('select count(*) n from public.book_feedbacks')).rows[0].n;
+  await db.exec(feedbackPlan.setup);
+  await assert.rejects(db.exec(feedbackPlan.sql),/Carga incompleta/);await db.exec('rollback');
+  for(const row of feedbackPlan.rows)await db.query('insert into public.book_history_import_stage(source_hash,source_line,payload) values($1,$2,$3)',[feedbackSource.sha256,row.sourceRow,JSON.stringify(row)]);
+  await db.exec(feedbackPlan.sql);
+  assert.equal((await db.query('select count(*) n from public.book_feedbacks')).rows[0].n,feedbackBefore+feedbackPlan.rows.length);
+  assert.equal((await db.query("select count(*) n from public.book_flow_meta where source='feedbacks' and record_id in(select id::text from public.book_feedbacks where data#>>'{importacao,hash}'=$1)",[feedbackSource.sha256])).rows[0].n,feedbackPlan.rows.length);
+  await assert.rejects(db.exec(feedbackPlan.sql),/já importada/);await db.exec('rollback');
+  await actor(master);assert.equal((await db.query("select count(*) n from public.book_feedbacks where data#>>'{importacao,hash}'=$1",[feedbackSource.sha256])).rows[0].n,feedbackPlan.rows.length);
+  await assert.rejects(db.query('select public.book_feedback_service($1,1,$2)',[feedbackPlan.rows[0].id,'888888']),e=>['42501','22023'].includes(e.code));
+  await db.exec('reset role');await db.query("update public.book_profiles set tabs=array['feedbacks','dashboard','os'] where id=$1",[admin]);await actor(admin);
+  assert.equal((await db.query("select count(*) n from public.book_feedbacks where data#>>'{importacao,hash}'=$1",[feedbackSource.sha256])).rows[0].n,feedbackPlan.rows.filter(r=>r.data.hotel==='Unique Residence').length);
+  await actor(client);assert.equal((await db.query("select count(*) n from public.book_feedbacks where data#>>'{importacao,hash}'=$1",[feedbackSource.sha256])).rows[0].n,0);
+  await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub','',false)");
   if(process.env.BOOK_HISTORY_TEST_FILE){
     await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub','',false)");
     const fullSource=JSON.parse(readFileSync(process.env.BOOK_HISTORY_TEST_FILE,'utf8').replace(/^\uFEFF/,'')),fullPlan=prepare(fullSource);

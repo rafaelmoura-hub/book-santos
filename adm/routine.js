@@ -104,6 +104,7 @@ window.BookRoutine=(()=>{
   el('flowEdit').hidden=flow.source==='process';el('flowService').hidden=flow.source!=='vistorias'||!BookWorkspace.can('os');
   el('flowService').textContent='Gerar / consultar serviço da vistoria';el('flowSettings').hidden=flow.source==='process';
   if(flow.source==='ordensServico')el('flowSettings').hidden=true; // Card fields and status are edited only in the shared card screen.
+  if(flow.source==='feedbacks'&&d.importacao?.parcial){el('flowSettings').hidden=true;el('flowEdit').hidden=true;}
   const writable=flow.source==='process'?can(r.kind):BookWorkspace.can({ordensServico:'os',vistorias:'vistorias',feedbacks:'feedbacks'}[flow.source]);el('flowComment').hidden=!writable;if(!writable)el('flowSettings').hidden=true;
   if(flow.source!=='process'){
    const options=phases[flow.source];el('flowPhase').replaceChildren(...options.map(p=>new Option(BookProcesses.phaseLabel(p),p)));

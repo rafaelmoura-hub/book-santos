@@ -224,7 +224,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
           const offset=Number(url.searchParams.get('offset')||0),before=url.searchParams.get('before');
           if(!Number.isSafeInteger(offset)||offset<0||offset>100000||before&&!Number.isFinite(Date.parse(before)))throw fail(400,'Consulta inválida.');
           if(route==='/api/workspace/reminders')return json(200,await provider.reminders(session.accessToken));
-          if(route==='/api/feedbacks'){const grade=url.searchParams.get('grade');if(grade&&!['Crítico','Razoável','Irrelevante'].includes(grade))throw fail(400,'Grau inválido.');return json(200,await provider.feedbacks(session.accessToken,offset,grade));}
+          if(route==='/api/feedbacks'){const grade=url.searchParams.get('grade');if(grade&&!['Crítico','Razoável','Irrelevante','Alta','Média','Baixa','A conferir','Não informado'].includes(grade))throw fail(400,'Grau inválido.');return json(200,await provider.feedbacks(session.accessToken,offset,grade));}
           if(route==='/api/evaluations'){const beforeId=url.searchParams.get('beforeId');if(!!before!==!!beforeId||beforeId&&!uuid(beforeId)||before&&!/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,6})?(?:Z|[+-]\d\d:\d\d)$/.test(before))throw fail(400,'Página inválida.');return json(200,await provider.evaluations(session.accessToken,before,beforeId));}
           throw fail(405,'Método inválido.');
         }
