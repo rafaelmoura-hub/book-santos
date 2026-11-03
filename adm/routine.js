@@ -9,7 +9,7 @@ window.BookRoutine=(()=>{
  function staffOptions(select,value=''){select.replaceChildren(new Option('A definir',''));for(const p of people)select.append(new Option(p.nome,p.id));select.value=value;}
  function name(id){return people.find(p=>p.id===id)?.nome||'A definir';}
  function addSelect(label,id,options,parent){const wrap=document.createElement('label');wrap.textContent=label;const select=document.createElement('select');select.id=id;for(const [value,title]of options)select.append(new Option(title,value));wrap.append(select);parent.append(wrap);return select;}
- function filters(kind){const prefix='routine-'+kind;return {search:el(prefix+'-search').value.trim(),phase:el(prefix+'-phase').value,hotel:el(prefix+'-hotel').value,assignee:el(prefix+'-assignee').value,period:el(prefix+'-period').value};}
+ function filters(kind){const prefix='routine-'+kind;return {search:el(prefix+'-search').value.trim(),phase:el(prefix+'-phase').value,hotel:el(prefix+'-hotel').value,assignee:el(prefix+'-assignee').value,period:el(prefix+'-period').value,...(kind==='services'?{label:el(prefix+'-label').value}:{})};}
  function surface(kind,parent){
   const def=kind==='services'?{label:'Quadro de serviços',phases:phases.ordensServico}:defs[kind];
   const prefix='routine-'+kind,node=document.createElement('div');node.className='routine-surface';node.id=prefix;
@@ -19,10 +19,12 @@ window.BookRoutine=(()=>{
   addSelect('Condomínio',prefix+'-hotel',[['','Todos'],...BookCatalog.hotels.map(h=>[h,h])],toolbar);
   const assignee=addSelect('Responsável',prefix+'-assignee',[['','Todos']],toolbar);staffOptions(assignee);assignee.options[0].text='Todos';
   addSelect('Prazo',prefix+'-period',[['all','Todos'],['today','Hoje'],['week','Esta semana'],['late','Vencidas']],toolbar);
+  if(kind==='services')BookLabels.filter(toolbar,prefix+'-label');
   const modes=document.createElement('div');modes.className='routine-actions';
   for(const [view,label]of [['board','Quadro'],['list','Lista'],['agenda','Agenda']]){const b=button(label,()=>{states.get(kind).view=view;render(kind);});b.dataset.view=view;modes.append(b);}
   modes.append(button('Minhas demandas',()=>{el(prefix+'-assignee').value=user.id;states.get(kind).offset=0;load(kind);}));modes.append(button('Atualizar',()=>load(kind)));modes.append(button('Exportar página',()=>exportPage(kind)));
   if(kind!=='services')modes.append(button('+ Novo registro',()=>edit(kind),true));
+  if(kind==='services')modes.append(button('Gerenciar etiquetas',()=>BookLabels.open()));
   node.append(toolbar,modes);const summary=document.createElement('p');summary.id=prefix+'-summary';summary.setAttribute('role','status');node.append(summary);const area=document.createElement('div');area.id=prefix+'-area';node.append(area);
   const paging=document.createElement('div');paging.className='collaboration-pagination';const previous=button('Anterior',()=>{states.get(kind).offset=Math.max(0,states.get(kind).offset-50);load(kind);}),next=button('Próxima',()=>{states.get(kind).offset+=50;load(kind);});previous.id=prefix+'-previous';next.id=prefix+'-next';paging.append(previous,next);node.append(paging);parent.append(node);
   states.set(kind,{rows:[],total:0,counts:{},offset:0,view:'board',generation:0});let timer;
@@ -42,7 +44,7 @@ window.BookRoutine=(()=>{
   const detail=document.createElement('p');detail.textContent=isService?(people.find(p=>p.login===data.responsavelLogin)?.nome||data.responsavelLogin||'A definir'):name(data.responsavel);
   const due=document.createElement('p'),date=isService?data.vencimento:data.prazo;due.textContent=(date?'Prazo: '+formatarData(date):'Sem prazo')+' · '+data.prioridade;
   const today=BookPeriods.today();if(isService){due.className='deadline deadline-'+BookProcesses.deadlineState(data,today);due.textContent=(date?'Prazo: '+formatarData(date):'Sem prazo')+' · Urgência '+(data.importacao?.parcial?'Não informada':BookProcesses.urgencyLabel(data.prioridade));}else if(date&&date<today&&!defs[kind].terminal.includes(phase))due.className='routine-overdue';
-  article.append(title,unit,detail,due);
+  article.append(title,unit,detail,due);if(isService)BookLabels.chips(article,row.id);
   const open=button(isService?'Abrir card':'Abrir registro',()=>{if(isService){BookStore.includeRecord('ordensServico',row);abrirOS(String(row.id));}else edit(kind,row);});article.append(open);
   if(row.service_id){const link=document.createElement('small');link.textContent='Serviço #'+row.service_id;article.append(link);}return article;
  }
@@ -57,6 +59,7 @@ window.BookRoutine=(()=>{
    area.className='routine-list';let rows=[...state.rows];if(state.view==='agenda')rows.sort((a,b)=>String((kind==='services'?a.data.vencimento:a.data.prazo)||'9999').localeCompare(String((kind==='services'?b.data.vencimento:b.data.prazo)||'9999')));
    for(const row of rows){const item=card(kind,row);const stage=document.createElement('p');stage.className='routine-stage';stage.textContent=kind==='services'?BookProcesses.phaseLabel(canonicalPhase(row)):row.phase;item.prepend(stage);area.append(item);}
   }
+  if(kind==='services')BookLabels.hydrate(area);
  }
  function exportPage(kind){const state=states.get(kind),rows=[['Título','Condomínio','Apartamento','Etapa','Responsável','Prazo'],...state.rows.map(r=>[r.data.titulo,kind==='services'?r.data.hotel:r.hotel,kind==='services'?r.data.apartamento:r.apartment,kind==='services'?BookProcesses.phaseLabel(canonicalPhase(r)):r.phase,kind==='services'?r.data.responsavelLogin:name(r.data.responsavel),kind==='services'?r.data.vencimento:r.data.prazo])];const url=URL.createObjectURL(new Blob([BookProcesses.csv(rows)],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='BOOK-TASK-'+kind+'-pagina.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
  function field(def,value=''){
@@ -145,7 +148,7 @@ window.BookRoutine=(()=>{
  }
  function openServices(query={},view='list'){
   if(!BookWorkspace.can('os'))return;
-  for(const key of ['search','phase','hotel','assignee','period']){
+  for(const key of ['search','phase','hotel','assignee','period','label']){
    const input=el('routine-services-'+key),value=query[key]||(key==='period'?'all':'');
    if(key==='assignee'&&value&&![...input.options].some(o=>o.value===value))input.append(new Option('Responsável selecionado',value));
    input.value=value;

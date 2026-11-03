@@ -163,6 +163,25 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         if(filters.hotel&&!(await visibleHotels(provider,session.accessToken,user)).includes(filters.hotel))throw fail(403,'Sem acesso ao condomínio.');
         return json(200,await provider.activity(session.accessToken,filters));
       }
+      if(['/api/labels','/api/card-labels'].includes(route)){
+        if(user.funcao!=='adm'||!canTab(user,'os'))throw fail(403,'Sem acesso aos cards.');
+        if(req.method==='GET'){
+          if(route==='/api/labels')return json(200,await provider.labels(session.accessToken));
+          const ids=(url.searchParams.get('ids')||'').split(',');
+          if(ids.length>100||ids.some(id=>!/^\d{1,16}$/.test(id)))throw fail(400,'Cards inválidos.');
+          return json(200,await provider.cardLabels(session.accessToken,ids));
+        }
+        if(req.method!=='POST')throw fail(405,'Método não permitido.');
+        const key='labels:'+user.id,quota=writes.get(key)||{count:0,until:now+60000};
+        if(quota.count>=40)throw fail(429,'Aguarde antes de salvar novamente.');quota.count++;writes.set(key,quota);
+        const input=await readBody(req,8192);
+        if(route==='/api/labels'){
+          if(!input||typeof input.name!=='string'||!input.name.trim()||input.name.trim().length>40||!['teal','blue','purple','pink','orange','green','gray'].includes(input.color))throw fail(400,'Nome ou cor da etiqueta inválidos.');
+          return json(200,await provider.labels(session.accessToken,{name:input.name.trim(),color:input.color}));
+        }
+        if(!input||typeof input.id!=='string'||!/^\d{1,16}$/.test(input.id)||!Number.isSafeInteger(input.version)||input.version<0||!Array.isArray(input.labelIds)||input.labelIds.length>10||new Set(input.labelIds).size!==input.labelIds.length||input.labelIds.some(id=>!uuid(id)))throw fail(400,'Etiquetas inválidas.');
+        return json(200,await provider.assignLabels(session.accessToken,input));
+      }
       if(route==='/api/cards/schedule'&&req.method==='POST'){
         if(!canTab(user,'os'))throw fail(403,'Sem acesso aos cards.');
         const key='schedule:'+user.id,quota=writes.get(key)||{count:0,until:now+60000};if(quota.count>=20)throw fail(429,'Aguarde antes de remarcar novamente.');quota.count++;writes.set(key,quota);
@@ -188,7 +207,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
           const kind=url.searchParams.get('kind'),offset=Number(url.searchParams.get('offset')||0);let filters;
           if(route==='/api/processes'&&['reservas','projetos','compras','onboarding'].includes(kind))throw fail(410,'Este processo foi removido. Onboarding está disponível apenas para cadastro de imóveis.');
           try{filters=JSON.parse(url.searchParams.get('filters')||'{}');}catch{throw fail(400,'Filtros inválidos.');}
-          if(!Number.isSafeInteger(offset)||offset<0||offset>100000||!filters||typeof filters!=='object'||Array.isArray(filters)||Object.keys(filters).some(k=>!['search','phase','assignee','hotel','period'].includes(k))||Object.values(filters).some(v=>typeof v!=='string'||v.length>200)||filters.assignee&&!uuid(filters.assignee)||filters.period&&!['all','today','week','late'].includes(filters.period))throw fail(400,'Filtros inválidos.');
+          if(!Number.isSafeInteger(offset)||offset<0||offset>100000||!filters||typeof filters!=='object'||Array.isArray(filters)||Object.keys(filters).some(k=>!['search','phase','assignee','hotel','period','label'].includes(k))||Object.values(filters).some(v=>typeof v!=='string'||v.length>200)||filters.label&&(!route.endsWith('/services')||!uuid(filters.label))||filters.assignee&&!uuid(filters.assignee)||filters.period&&!['all','today','week','late'].includes(filters.period))throw fail(400,'Filtros inválidos.');
           const tab=route.endsWith('/services')?'os':processDefinitions[kind]?.tab||kind;
           if(route==='/api/processes'&&!Object.hasOwn(processDefinitions,kind))throw fail(400,'Processo inválido.');
           if(!canTab(user,tab))throw fail(403,'Sem acesso a esta aba.');

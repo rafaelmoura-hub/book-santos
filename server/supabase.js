@@ -68,6 +68,9 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
     },
     decision(token,hotel){return request('/rest/v1/rpc/book_decision_snapshot',{token,method:'POST',body:{site:hotel||null},timeoutMs:30000});},
     processes(token,kind,offset,filters){return request('/rest/v1/rpc/book_process_page',{token,method:'POST',body:{process_kind:kind,page_offset:offset,filters}});},
+    labels(token,input={}){return request('/rest/v1/rpc/book_labels_catalog',{token,method:'POST',body:{new_name:input.name??null,new_color:input.color??null}});},
+    cardLabels(token,ids){return request('/rest/v1/rpc/book_labels_read',{token,method:'POST',body:{card_ids:ids}});},
+    assignLabels(token,input){return request('/rest/v1/rpc/book_labels_assign',{token,method:'POST',body:{target_id:input.id,expected_version:input.version,selected_ids:input.labelIds}});},
     async servicePage(token,offset,filters){
       if(await request('/rest/v1/rpc/book_schema_version',{token,method:'POST',body:{}})<17)throw failure(503,'Aplique a migração 202610290017_simplify.sql para usar as quatro etapas do quadro.');
       return request('/rest/v1/rpc/book_service_page',{token,method:'POST',body:{page_offset:offset,filters}});

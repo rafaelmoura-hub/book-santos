@@ -127,3 +127,10 @@ body[data-screen="admin.js"] .support-card .support-open-thread{text-align:left;
 body[data-screen="admin.js"] .support-card select{padding:9px;border-radius:8px;border:1px solid var(--control-border);background:var(--control,var(--surface));color:var(--texto)}
 body.login-page input,body.login-page button,body.login-page label{font-family:"Segoe UI",Arial,sans-serif}
 @media(max-width:600px){body[data-screen="admin.js"] .support-card{grid-template-columns:1fr}}
+/* Shared card labels: the name remains visible alongside its color. */
+.label-chips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.label-chip{display:inline-block;border-radius:6px;padding:4px 9px;font-size:.78rem;font-weight:700;line-height:1.4;overflow-wrap:anywhere;max-width:100%}
+.label-teal{background:#c8f2ed;color:#075b55}.label-blue{background:#dceafe;color:#174b87}.label-purple{background:#ece0ff;color:#61328c}.label-pink{background:#fce0ec;color:#8d2451}.label-orange{background:#ffebcd;color:#784600}.label-green{background:#d5f2dc;color:#195e2c}.label-gray{background:#e2e8ee;color:#334450}
+.card-label-section{padding:12px 0;border-bottom:1px solid var(--borda,#b5c9d5)}
+.labels-dialog{width:min(520px,calc(100vw - 32px));max-height:85dvh;overflow:auto;border:1px solid var(--borda,#b5c9d5);border-radius:16px;padding:24px;color:var(--texto,#102e40);background:var(--surface,#fff)}
+.labels-dialog::backdrop{background:#001c2bb3}.labels-dialog p{line-height:1.6}.labels-dialog form{display:grid;gap:12px;margin-top:20px}.labels-dialog label{display:grid;gap:6px}.labels-choices{display:flex;flex-wrap:wrap;gap:10px;max-height:240px;overflow:auto;padding:6px 0}.labels-choices .label-choice{display:flex;align-items:center;gap:7px;cursor:pointer}.label-choice input{width:18px;height:18px;accent-color:#00868c}
