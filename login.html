@@ -8,13 +8,19 @@
     <link rel="icon" href="/assets/book-task-logo.png" type="image/png">
     <link rel="stylesheet" href="login.css">
     <link rel="stylesheet" href="/assets/brand.css">
+    <link rel="stylesheet" href="/assets/layout.css">
     <script src="assets/accessibility.js" defer></script>
 <script src="assets/events.js" defer></script>
 </head>
 <body class="login-page">
+    <aside class="login-brand-panel" aria-label="BOOK TASK">
+        <div class="login-brand-copy"><p class="login-brand-name">BOOK TASK</p><p>Gestão operacional dos seus imóveis.<br>Mais organização para o dia a dia.</p></div>
+        <img class="login-skyline" src="/assets/login-skyline.svg" alt="" width="600" height="440">
+    </aside>
     <main class="login-box">
         <h1 class="brand-heading"><img class="brand-logo" src="/assets/book-task-logo.png" width="128" height="128" alt="BOOK TASK — Gestão Operacional" decoding="async"></h1>
-        <p>Entre para continuar.</p>
+        <h2>Bem-vindo ao BOOK TASK</h2>
+        <p>Acesse sua operação.</p>
         <form data-on-submit="entrar(event)">
         <label for="login">E-mail</label>
         <input type="email" id="login" aria-label="E-mail" placeholder="seu@email.com" maxlength="254" autocomplete="username" required>

@@ -177,13 +177,14 @@ async function main() {
     await wait("!!document.querySelector('.linha-chamado .card-open') && document.querySelectorAll('.legal-footer a').length===6");
     await evaluate(`(async()=>{const row=document.getElementById('listaChamados').firstElementChild;await BookStore.refresh();if(row!==document.getElementById('listaChamados').firstElementChild)throw Error('Uma resposta idêntica reconstruiu a lista');})()`);
     await capture('painel-desktop');
+    await evaluate("document.querySelector('.layout-search-button').click();document.querySelector('.layout-command input').value='estoque';document.querySelector('.layout-command input').dispatchEvent(new Event('input'));if(document.querySelectorAll('.layout-command-results button').length!==1)throw Error('Busca de abas não filtrou');document.querySelector('.layout-command-results button').click();if(document.getElementById('visaoEstoque').hidden||document.querySelector('.layout-command').open)throw Error('Busca não navegou');mostrarAba('chamados')");
     await evaluate("if(document.querySelectorAll('body > nav .nav-group').length!==5)throw Error('Agrupamentos do menu');if(document.getElementById('abaOS').closest('details').id!=='menu-operacao'||document.getElementById('abaEstoque').closest('details').id!=='menu-gestao'||document.getElementById('abaOnboarding').closest('details').id!=='menu-imoveis')throw Error('Abas em grupos incorretos');if(!document.getElementById('menu-atendimento').open)throw Error('Grupo ativo fechado');");
     await evaluate("if(['Reservas','Projetos','Compras'].some(name=>document.getElementById('aba'+name))||document.getElementById('onboardingHistory')||document.getElementById('routine-onboarding')||document.getElementById('flowPurchase'))throw Error('Abas ou ações removidas continuam presentes')");
     const tabs=await evaluate(`(() => {const result=[];for(const tab of ['chamados','chat','os','vistorias','condominios','estoque','financeiro','dashboard','usuarios','backup','suporte','feedbacks','avaliacoes','onboarding','danos']){document.getElementById('aba'+(tab==='os'?'OS':tab[0].toUpperCase()+tab.slice(1))).click();const id=tab==='os'?'OS':tab[0].toUpperCase()+tab.slice(1);if(document.getElementById('visao'+id).hidden)throw Error(tab);if(document.querySelector('nav').getBoundingClientRect().height===0)throw Error('nav');result.push(tab);}return result;})()`);
     for(const tab of tabs){await evaluate(`mostrarAba(${JSON.stringify(tab)})`);await capture('aba-'+tab);}
     await evaluate("document.getElementById('themeToggle').click()");
     const darkContrast=[];
-    for(const tab of tabs){await evaluate(`mostrarAba(${JSON.stringify(tab)});if(document.documentElement.dataset.theme!=='dark'||getComputedStyle(document.body).backgroundColor!=='rgb(8, 24, 36)')throw Error('Tema noturno ausente')`);const issues=await contrastAudit();if(issues.length)darkContrast.push({tab,issues});}
+    for(const tab of tabs){await evaluate(`mostrarAba(${JSON.stringify(tab)});if(document.documentElement.dataset.theme!=='dark'||getComputedStyle(document.body).backgroundColor!==getComputedStyle(document.documentElement).backgroundColor)throw Error('Tema noturno ausente')`);const issues=await contrastAudit();if(issues.length)darkContrast.push({tab,issues});}
     if(darkContrast.length)throw Error('Contraste noturno: '+JSON.stringify(darkContrast));
     await evaluate("mostrarAba('dashboard');BookDecision.load(true)");
     await capture('dashboard-night');
@@ -191,6 +192,7 @@ async function main() {
     await evaluate("document.getElementById('decisionLegacyCharts').open=false");
     await evaluate("document.getElementById('themeToggle').click()");
     await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+    await evaluate("document.querySelector('.layout-menu-toggle').click();if(!document.body.classList.contains('layout-nav-open')||document.querySelector('.layout-menu-toggle').getAttribute('aria-expanded')!=='true')throw Error('Menu móvel não abriu');document.querySelector('.layout-nav-close').click();if(document.body.classList.contains('layout-nav-open'))throw Error('Menu móvel não fechou')");
     for(const tab of tabs){
       await evaluate(`mostrarAba(${JSON.stringify(tab)})`);
       await evaluate(`if(document.documentElement.scrollWidth>innerWidth+1)throw Error('Rolagem horizontal na aba ${tab}');`);

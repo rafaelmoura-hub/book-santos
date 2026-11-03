@@ -34,6 +34,7 @@ window.addEventListener('book:catalog',()=>{
 });
 function mostrarHistorico(hotel) {
   hotelSelecionado = hotel; apartamentoSelecionado = ""; tipoSelecionado = "";
+  document.querySelectorAll('#visaoCondominios .hotel').forEach(card=>{card.classList.toggle('layout-selected',card.dataset.hotel===hotel);card.setAttribute('aria-pressed',String(card.dataset.hotel===hotel));});
   document.getElementById("historico").innerHTML = `<h2>${esc(hotel)} - Apartamentos</h2><div class="apartamentos">${BookStore.apartments(hotel).map(ap => `<button class="apartamento-opcao" data-on-click="BookCondominios.selecionarApartamento('${ap}')">Apartamento ${ap}</button>`).join("")}</div><div id="opcoesApartamento"><p>Selecione um apartamento para escolher o que deseja visualizar.</p></div>`;
 }
 function selecionarApartamento(ap) {
