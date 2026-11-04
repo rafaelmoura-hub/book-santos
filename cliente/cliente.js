@@ -122,3 +122,5 @@ window.addEventListener("storage",e=>{if(e.key===CHAVE_CHAT)renderizarConversaCl
 
 window.addEventListener('book:data', () => { mostrarChamados(); atualizarListaChamadosChat(); renderizarConversaCliente(); });
 BookNotifications.init(sessaoCliente);
+
+BookMobile.initClient();

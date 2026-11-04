@@ -1,7 +1,7 @@
 async function entrar(event) {
     event.preventDefault();
     const mensagem = document.getElementById('mensagem');
-    const button = event.target.querySelector('button');
+    const button = event.target.querySelector('button[type="submit"]');
     if (button.disabled) return;
     const logo = document.querySelector('.brand-logo');
     button.disabled = true;
@@ -27,3 +27,9 @@ if (location.protocol === 'file:') {
     document.querySelector('button[type="submit"]').disabled = true;
     document.getElementById('mensagem').textContent = 'Abra pelo servidor: execute npm.cmd start na pasta do projeto e acesse http://127.0.0.1:3000. O arquivo HTML sozinho não conecta ao sistema.';
 }
+// Keep the password manager field and submission flow intact.
+const passwordInput=document.getElementById('senha');
+const passwordWrap=document.createElement('div');passwordWrap.className='password-field';
+passwordInput.before(passwordWrap);passwordWrap.append(passwordInput);
+const revealPassword=document.createElement('button');revealPassword.type='button';revealPassword.className='password-reveal';revealPassword.textContent='Mostrar';revealPassword.setAttribute('aria-label','Mostrar senha');revealPassword.setAttribute('aria-controls','senha');revealPassword.setAttribute('aria-pressed','false');
+revealPassword.onclick=()=>{const show=passwordInput.type==='password';passwordInput.type=show?'text':'password';revealPassword.textContent=show?'Ocultar':'Mostrar';revealPassword.setAttribute('aria-label',show?'Ocultar senha':'Mostrar senha');revealPassword.setAttribute('aria-pressed',String(show));};passwordWrap.append(revealPassword);

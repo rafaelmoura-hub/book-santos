@@ -37,8 +37,8 @@ test('documentos e assets comprimidos funcionam sem sessão sem liberar os dados
 });
 test('login prossegue com storage bloqueado e sem persistir identificação pessoal',async()=>{
   let requested;const status={},button={};const location={protocol:'http:',href:''};
-  const elements={mensagem:status,login:{value:' teste@example.com '},senha:{value:'senha'}};
-  const context={location,document:{getElementById:id=>elements[id],querySelector:()=>({classList:{add(){},remove(){}}})},localStorage:{removeItem(){throw Error('bloqueado');}},BookAPI:{request:async(url,opts)=>{requested=JSON.parse(opts.body);return {funcao:'adm'};}}};
+  const elements={mensagem:status,login:{value:' teste@example.com '},senha:{value:'senha',type:'password',before(){}}};
+  const context={location,document:{createElement:()=>({append(){},setAttribute(){}}),getElementById:id=>elements[id],querySelector:()=>({classList:{add(){},remove(){}}})},localStorage:{removeItem(){throw Error('bloqueado');}},BookAPI:{request:async(url,opts)=>{requested=JSON.parse(opts.body);return {funcao:'adm'};}}};
   vm.createContext(context);vm.runInContext(readFileSync('login.js','utf8'),context);
   await context.entrar({preventDefault(){},target:{querySelector:()=>button,setAttribute(){}}});
   assert.equal(location.href,'/adm/admin.html');assert.equal(button.disabled,false);assert.equal(requested.login,'teste@example.com');

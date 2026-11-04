@@ -587,9 +587,10 @@ BookOnboarding.init();
 window.addEventListener('book:catalog',()=>{if(vistoriaHotel)selecionarHotelVistoria(vistoriaHotel);});
 BookDecision.init();
 BookActivity.init();
+BookNotifications.init(sessao);
 BookNavigation.init();
 window.addEventListener('book:theme',()=>{if(!document.getElementById('visaoDashboard').hidden)atualizarDashboard();});
-BookNotifications.init(sessao);
+
 document.getElementById('masterSupportRefresh').onclick=()=>BookWorkspace.loadMaster();
 const primeiraAba=Object.keys(BookWorkspace.labels).find(tab=>BookWorkspace.can(tab))||'inicio';
 mostrarAba(primeiraAba);

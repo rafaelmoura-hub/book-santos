@@ -438,7 +438,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
       if (!['GET', 'HEAD'].includes(req.method)) throw fail(405, 'Método não permitido.');
       if (/^\/hotel\/(hotel\.html)?$/.test(route)) { res.writeHead(302, { Location: '/adm/admin.html#condominios' }); return res.end(); }
       const file = route === '/' ? '/login.html' : route;
-      if (!/^\/(login\.(html|css|js)|assets\/(api|session|store|money|periods|catalog|events|notifications|processes|accessibility|legal|theme)\.js|assets\/(ui|legal|brand|layout)\.css|assets\/book-task-logo\.png|assets\/login-skyline\.svg|(adm|cliente|hotel)\/[a-z]+\.(html|css|js))$/.test(file)) throw fail(404, 'Arquivo não encontrado.');
+      if (!/^\/(login\.(html|css|js)|assets\/(api|session|store|money|periods|catalog|events|notifications|processes|accessibility|legal|theme|mobile)\.js|assets\/(ui|legal|brand|layout|mobile)\.css|assets\/book-task-logo\.png|assets\/login-skyline\.svg|(adm|cliente|hotel)\/[a-z]+\.(html|css|js))$/.test(file)) throw fail(404, 'Arquivo não encontrado.');
       if (/^\/(adm|hotel)\//.test(file) && user?.funcao !== 'adm' || /^\/cliente\//.test(file) && user?.funcao !== 'cliente') {
         res.writeHead(302, { Location: '/login.html' }); return res.end();
       }

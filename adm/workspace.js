@@ -42,7 +42,7 @@ window.BookWorkspace = (() => {
     node.close();
     document.body.classList.remove('workspace-open');
     document.querySelectorAll('[data-workspace-target]').forEach(button=>button.setAttribute('aria-pressed','false'));
-    document.querySelector(`.workspace-actions [data-workspace-target="${node.id}"]`)?.focus({preventScroll:true});
+    (matchMedia('(max-width:760px)').matches?document.querySelector('.mobile-bottom [data-mobile-tab="more"]'):document.querySelector(`.workspace-actions [data-workspace-target="${node.id}"]`))?.focus({preventScroll:true});
   }
   async function run(node, action) {
     if(saving)return; saving=true;node.setAttribute('aria-busy','true');

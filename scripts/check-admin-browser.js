@@ -119,6 +119,7 @@ async function main() {
     const dialogs=[];
     socket.addEventListener('message',event=>{const message=JSON.parse(event.data);if(message.method==='Page.javascriptDialogOpening'){dialogs.push(message.params.message);send('Page.handleJavaScriptDialog',{accept:true}).catch(()=>{});}});
     const evaluate=async expression=>{const result=await send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(result.exceptionDetails)throw new Error(expression.slice(0,300)+'\n'+JSON.stringify(result.exceptionDetails));return result.result.value;};
+    const tap=async selector=>{const point=await evaluate('(() => {const b=document.querySelector('+JSON.stringify(selector)+');b.scrollIntoView({block:"center",behavior:"instant"});const r=b.getBoundingClientRect();const x=r.left+r.width/2,y=r.top+r.height/2;if(!r.width||!r.height||!b.contains(document.elementFromPoint(x,y)))throw Error(JSON.stringify({rect:r.toJSON(),hit:document.elementFromPoint(x,y)?.outerHTML.slice(0,300)})+" Controle inacessivel: "+'+JSON.stringify(selector)+');return {x,y};})()');await send('Input.dispatchMouseEvent',{type:'mousePressed',...point,button:'left',clickCount:1});await send('Input.dispatchMouseEvent',{type:'mouseReleased',...point,button:'left',clickCount:1});};
     const wait=async expression=>{for(let i=0;i<100;i++){if(await evaluate(expression))return;await delay(100);}const state=await evaluate("JSON.stringify({url:location.href,ready:document.readyState,text:document.body?.innerText.slice(0,1200)})");throw new Error(`Tempo excedido: ${expression}\n${state}`);};
     const visualResults=[];
     const capture=async name=>{
@@ -154,6 +155,8 @@ async function main() {
     await send('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
     await wait("location.origin === '"+base+"' && document.readyState === 'complete'");
     await capture('login-desktop');
+    for(const width of [320,360,390]){await send('Emulation.setDeviceMetricsOverride',{width,height:844,deviceScaleFactor:1,mobile:true});await evaluate("if(document.documentElement.scrollWidth>innerWidth+1)throw Error('Login excede largura');document.getElementById('senha').value='private-test';document.querySelector('.password-reveal').click();if(document.getElementById('senha').type!=='text')throw Error('Senha nao visivel');document.querySelector('.password-reveal').click();document.getElementById('senha').value=''");await tap('#senha');await send('Input.insertText',{text:'input-test'});await evaluate("if(document.activeElement.id!=='senha'||document.getElementById('senha').value!=='input-test')throw Error('Campo de senha obstruido');document.getElementById('senha').value=''");await capture('login-mobile-'+width);}
+    await send('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
     await wait("!!document.getElementById('themeToggle') && document.querySelector('.brand-logo').naturalWidth===256 && document.querySelector('.brand-heading').textContent.trim()==='' ");
     await evaluate("document.getElementById('themeToggle').click()");
     await wait("document.documentElement.dataset.theme==='dark'");
@@ -197,6 +200,15 @@ async function main() {
     await evaluate("document.getElementById('themeToggle').click()");
     await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
     await evaluate("document.querySelector('.layout-menu-toggle').click();if(!document.body.classList.contains('layout-nav-open')||document.querySelector('.layout-menu-toggle').getAttribute('aria-expanded')!=='true')throw Error('Menu móvel não abriu');document.querySelector('.layout-nav-close').click();if(document.body.classList.contains('layout-nav-open'))throw Error('Menu móvel não fechou')");
+    await tap('.mobile-bottom [data-mobile-tab="more"]');
+    await wait("document.body.classList.contains('layout-nav-open') && document.querySelector('main').inert");
+    await capture('mais-mobile');
+    await tap('.mobile-more-tools button');
+    await wait("document.getElementById('aiDialog').open && !document.querySelector('main').inert");
+    await evaluate("document.querySelector('#aiDialog .workspace-heading button').click()");
+    await tap('.mobile-bottom [data-mobile-tab="os"]');
+    await wait("!document.getElementById('visaoOS').hidden && document.querySelector('.mobile-bottom [data-mobile-tab=\"os\"]').getAttribute('aria-current')==='page'");
+    await tap('.mobile-profile');await capture('minha-conta-mobile');await evaluate("document.querySelector('.mobile-account[open] button').click()");
     for(const tab of tabs){
       await evaluate(`mostrarAba(${JSON.stringify(tab)})`);
       await evaluate(`if(document.documentElement.scrollWidth>innerWidth+1)throw Error('Rolagem horizontal na aba ${tab}');`);
@@ -504,6 +516,10 @@ async function main() {
     await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
     await evaluate("if(document.documentElement.scrollWidth>innerWidth+1)throw Error('Rolagem horizontal no cliente');");
     await capture('cliente-mobile');
+    await tap('.client-quick-actions button');await wait("document.body.dataset.clientView==='form'");await capture('cliente-formulario-mobile');
+    await tap('.mobile-bottom [data-mobile-tab="tickets"]');await wait("document.body.dataset.clientView==='tickets'");await capture('cliente-chamados-mobile');
+    await tap('.mobile-bottom [data-mobile-tab="chat"]');await wait("!document.getElementById('chatCliente').hidden");await capture('cliente-chat-mobile');
+    await evaluate("alternarChatCliente()");await tap('.mobile-bottom [data-mobile-tab="home"]');
     await send('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
     const ticketId=await evaluate(`(async()=>{
       const hotels=[...document.getElementById('hotel').options].filter(o=>o.value).map(o=>o.value);
@@ -540,6 +556,10 @@ async function main() {
     await send('Page.navigate',{url:base+'/adm/admin.html'});
     await wait("typeof mostrarAba === 'function' && !document.body.hidden");
     await evaluate("if(!document.getElementById('abaFinanceiro').hidden||!document.getElementById('abaOS').hidden||document.getElementById('abaVistorias').hidden||document.getElementById('visaoVistorias').hidden)throw Error('Permissões por aba na interface');mostrarAba('financeiro');if(!document.getElementById('visaoFinanceiro').hidden)throw Error('Aba negada abriu');");
+    await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+    await evaluate("if(!document.querySelector('.mobile-bottom [data-mobile-tab=\"os\"]').hidden||!document.querySelector('.mobile-bottom [data-mobile-tab=\"chamados\"]').hidden)throw Error('Atalho sem permissao')");
+    await tap('.mobile-bottom [data-mobile-tab="more"]');await capture('permissoes-mobile');await tap('.mobile-bottom [data-mobile-tab="more"]');
+    await send('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
     await evaluate("if(document.querySelectorAll('body > nav .nav-group').length!==1||!document.getElementById('menu-operacao').open)throw Error('Grupo vazio ou não autorizado no menu');BookWorkspace.openNotes()");
     await wait("document.getElementById('notesList').textContent.includes('Nenhuma nota')");
     await evaluate("document.getElementById('notesDialog').querySelector('.workspace-heading button').click();BookWorkspace.openSupport()");
@@ -573,7 +593,7 @@ async function main() {
     if(process.env.BOOK_PREVIEW_DIR)fs.writeFileSync(path.join(path.resolve(process.env.BOOK_PREVIEW_DIR),'visual-report.json'),JSON.stringify(visualResults,null,2));
     if(visualFailures.length){const unique=new Map();for(const r of visualFailures)for(const kind of ['contrast','clipped','images'])for(const issue of r[kind]){const key=r.theme+kind+JSON.stringify(issue);if(!unique.has(key))unique.set(key,{state:r.state,theme:r.theme,width:r.width,kind,...(typeof issue==='object'?issue:{source:issue})});}throw Error('Revisão visual: '+JSON.stringify({states:visualResults.length,issues:[...unique.values()]}));}
     if(dialogs.length)throw new Error('Alertas inesperados: '+dialogs.join('; '));
-    console.log(JSON.stringify({browser:'Chrome headless',tabs,catalogCheck,created:1,permissionsUpdated:1,tabPermissions:true,privateNotes:true,masterSupport:true,supportStatusCounters:true,dailyReminder:true,chatSupportNotifications:true,feedbackWithPhotoAndService:true,teamEvaluations:true,aiChat:'simulated',aiCardWithConfirmation:true,cardReopening:true,cardLifecycle:true,inspectionWithPhoto:true,inventorySaved:true,clientTicketWithPhoto:true,chatBothDirections:true,clientPermissions:true,backupAndVerification:true,responsiveWidths:[390,1440],externalDisk:'simulated',logout:true,uncaughtErrors:0}));
+    console.log(JSON.stringify({browser:'Chrome headless',tabs,catalogCheck,created:1,permissionsUpdated:1,tabPermissions:true,privateNotes:true,masterSupport:true,supportStatusCounters:true,dailyReminder:true,chatSupportNotifications:true,feedbackWithPhotoAndService:true,teamEvaluations:true,aiChat:'simulated',aiCardWithConfirmation:true,cardReopening:true,cardLifecycle:true,inspectionWithPhoto:true,inventorySaved:true,clientTicketWithPhoto:true,chatBothDirections:true,clientPermissions:true,backupAndVerification:true,responsiveWidths:[320,360,390,1440],mobileBottomNavigation:true,mobileMoreMenu:true,mobileClientHome:true,externalDisk:'simulated',logout:true,uncaughtErrors:0}));
   } finally {
     socket?.close();child.kill();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));
     await delay(500);
