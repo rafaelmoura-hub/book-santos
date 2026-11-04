@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="login.css">
     <link rel="stylesheet" href="/assets/brand.css">
     <link rel="stylesheet" href="/assets/layout.css">
-    <link rel="stylesheet" href="/assets/mobile.css">
+    <link rel="stylesheet" href="/assets/mobile.css?v=20261104-mobile2">
     <script src="assets/accessibility.js" defer></script>
 <script src="assets/events.js" defer></script>
 </head>
@@ -20,12 +20,12 @@
     </aside>
     <main class="login-box">
         <h1 class="brand-heading"><img class="brand-logo" src="/assets/book-task-logo.png" width="128" height="128" alt="BOOK TASK — Gestão Operacional" decoding="async"></h1>
-        <h2>Bem-vindo ao BOOK TASK</h2>
-        <p>Acesse sua operação.</p>
+        <h2><span class="login-title-desktop">Bem-vindo ao BOOK TASK</span><span class="login-title-mobile">Entrar no BOOK TASK</span></h2>
+        <p><span class="login-title-desktop">Acesse sua operação.</span><span class="login-title-mobile">Acesse sua conta</span></p>
         <form data-on-submit="entrar(event)">
-        <label for="login">E-mail</label>
+        <label for="login"><svg class="login-field-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v14H3ZM3 5l9 8 9-8"/></svg>E-mail</label>
         <input type="email" id="login" aria-label="E-mail" placeholder="seu@email.com" maxlength="254" autocomplete="username" required>
-        <label for="senha">Senha</label>
+        <label for="senha"><svg class="login-field-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 10h14v11H5ZM8 10V6a4 4 0 0 1 8 0v4"/></svg>Senha</label>
         <input type="password" id="senha" placeholder="Sua senha" maxlength="100" autocomplete="current-password" required>
         <button type="submit">Entrar</button>
         </form>
@@ -33,6 +33,6 @@
     </main>
     <noscript>Ative o JavaScript para entrar. Os documentos de <a href="/legal/privacidade">privacidade</a> estão disponíveis sem JavaScript.</noscript>
     <script src="assets/api.js"></script>
-    <script src="login.js"></script>
+    <script src="login.js?v=20261104-mobile2"></script>
 </body>
 </html>

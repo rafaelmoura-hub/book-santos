@@ -22,6 +22,12 @@ O backup em pasta/HD depende da API de diretórios do navegador; quando indispon
 
 Esta adaptação não exige nova migração de banco. A ativação de etiquetas continua dependendo da migração 21 já entregue.
 
+## Atualização do login e diagnóstico da publicação
+
+O login móvel foi ajustado à segunda referência: marca e título centralizados, campos sem cartão externo, ícones nos rótulos, controle de senha por ícone e versões clara/escura. Os arquivos móveis possuem identificador `20261104-mobile2` nas URLs para evitar reutilização da versão anterior depois de atualizar o HTML.
+
+Enviar o código ao GitHub não confirma que o serviço de hospedagem concluiu a implantação. Nesta versão, `/health` retorna `version: "20261104-mobile2"`. Para diagnosticar um site ainda com aparência anterior, compare esse endpoint e a presença de `/assets/mobile.css?v=20261104-mobile2` no HTML do endereço efetivamente usado no celular. Se a versão for anterior, confira o deploy da branch `main` na hospedagem. A URL de produção não está cadastrada no repositório; a confirmação online depende do endereço fornecido pelo responsável.
+
 ## Verificação
 
 Resultado desta revisão: 86 arquivos JavaScript verificados sintaticamente, 80 testes automatizados aprovados e 166 estados visuais inspecionados pelo teste de navegador, sem falhas detectadas de contraste, texto cortado ou imagens quebradas. Os cliques na barra inferior, a digitação na senha e as restrições de acesso foram exercitados no navegador.

@@ -1,5 +1,6 @@
 /* Phone layouts share the existing controls, forms and theme tokens. */
 .mobile-bottom,.mobile-profile,.mobile-more-heading,.mobile-more-tools,.client-mobile-home{display:none}
+.login-title-mobile,.login-field-icon{display:none}
 .mobile-icon{width:24px;height:24px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .mobile-account{width:min(420px,calc(100vw - 32px));box-sizing:border-box;border:1px solid var(--borda);border-radius:20px;padding:24px;background:var(--surface);color:var(--texto);max-height:85dvh;overflow:auto}
 .mobile-account::backdrop{background:#001b2b99}.mobile-account p{overflow-wrap:anywhere;color:var(--suave)}
@@ -93,3 +94,35 @@
 }
 @media(max-width:360px){body[data-screen]>header .brand-heading{font-size:14px;gap:6px}body[data-screen]>header .brand-logo{width:32px;height:32px}body[data-screen]>header{gap:5px!important;padding-left:10px!important;padding-right:10px!important}.mobile-bottom button{font-size:11px!important}.routine-filters,.filtros-card{grid-template-columns:1fr!important}}
 @media(prefers-reduced-motion:no-preference){.mobile-bottom button{transition:background-color .15s ease}}
+
+/* Login reference: centered identity, clear fields and teal primary action. */
+.password-reveal{display:grid;place-items:center;min-width:44px;width:44px!important}
+.password-reveal svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+@media(max-width:760px){
+ body.login-page{padding:64px 22px 24px;gap:20px;background:#f0f8fc}
+ body.login-page .login-box{width:100%;max-width:410px;margin:0 auto;padding:0}
+ body.login-page .brand-heading{position:static;width:auto;justify-content:center;margin:0 0 24px}
+ body.login-page .brand-logo{width:112px;height:112px;padding:0;border:0;border-radius:50%}
+ body.login-page .login-title-desktop{display:none}body.login-page .login-title-mobile{display:inline}
+ body.login-page .login-box h2{text-align:center;font-size:clamp(23px,6.4vw,28px);font-weight:750;letter-spacing:-.8px;line-height:1.25}
+ body.login-page .login-box>p{text-align:center;font-size:19px;margin:8px 0 32px;color:#365468}
+ body.login-page .login-box form{padding:0;border:0;background:transparent;border-radius:0}
+ body.login-page .login-box label{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:700;margin:22px 0 10px;color:#102b40}
+ body.login-page .login-box label:first-child{margin-top:0}
+ body.login-page .login-field-icon{display:inline-block;width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+ body.login-page .login-box input{min-height:54px;padding:14px 17px;border:1px solid #819dac;border-radius:12px;background:#fff;color:#183344;font-size:17px}
+ body.login-page .login-box input::placeholder{color:#526a7b;opacity:1}
+ body.login-page .login-box .password-reveal{background:transparent!important;color:#173344!important;right:7px;top:6px;bottom:6px;border-radius:8px}
+ body.login-page .login-box button[type="submit"]{margin-top:32px;min-height:55px;border-radius:12px;background:#007e89;font-size:20px;font-weight:750}
+ body.login-page #themeToggle{position:absolute;top:max(18px,env(safe-area-inset-top));right:22px;padding:10px;border-radius:12px;min-width:46px;min-height:46px;box-shadow:0 2px 8px #032d4010}
+ body.login-page #themeToggle .theme-label{display:none}
+ body.login-page .legal-footer{position:static;margin:14px auto 0;width:100%;font-size:11px;line-height:1.5}
+ html[data-theme="dark"]:has(body.login-page){background:#002c3d}
+ html[data-theme="dark"] body.login-page{background:#002c3d;--fundo:#002c3d;--surface:#002c3d;--texto:#f5fbff;--suave:#d8e8ef}
+ html[data-theme="dark"] body.login-page .brand-logo{border:2px solid #e2f1f7}
+ html[data-theme="dark"] body.login-page .login-box>p,html[data-theme="dark"] body.login-page .login-box label{color:#edf7fb}
+ html[data-theme="dark"] body.login-page .login-box input{background:#204d62;border-color:#80a5b7;color:#fff}
+ html[data-theme="dark"] body.login-page .login-box input::placeholder{color:#e0edf3}
+ html[data-theme="dark"] body.login-page .login-box .password-reveal{color:#fff!important}
+ html[data-theme="dark"] body.login-page #themeToggle{background:#006776;border-color:#12818d;color:#fff}
+}
