@@ -24,6 +24,11 @@ async function main() {
   records.set('chamados/101', { id:'101',version:1,owner_id:client.id,data:{id:101,hotel:'Be Urban',apartamento:'214',assunto:'Torneira',descricao:'Vazamento',categoria:'Hidráulica',status:'Aberto',criadaPor:client.nome,criadaPorLogin:client.login,data:'23/10/2026'} });
   const labelCatalog=[],cardLabelRows=new Map();
   const provider = {
+    async recoverPassword(){},
+    async verifyRecovery(){return {access_token:'recovery',user:{id:'recovery-test'}};},
+    async updatePassword(){},async logoutAll(){},
+    async mfaFactors(){return [];},async mfaEnroll(){return {id:'test-factor',totp:{secret:'SIMULATED-KEY'}};},
+
     async labels(token,input={}){if(input.name){if(labelCatalog.some(l=>l.name.toLowerCase()===input.name.toLowerCase()))throw Object.assign(Error('Duplicate'),{status:409});labelCatalog.push({id:require('node:crypto').randomUUID(),...input});}return labelCatalog;},
     async cardLabels(token,ids){return ids.filter(id=>records.has('ordensServico/'+id)).map(id=>cardLabelRows.get(id)||{id,version:0,labelIds:[]});},
     async assignLabels(token,input){const row=cardLabelRows.get(input.id)||{version:0};if(row.version!==input.version)throw Object.assign(Error('Conflict'),{status:409});const result={...input,version:row.version+1};cardLabelRows.set(input.id,result);return result;},
@@ -98,7 +103,7 @@ async function main() {
     async removeFiles(token,names) { names.forEach(name=>uploaded.delete(name)); },
     async file(token,name) { const file=uploaded.get(name); if(!file)throw Error('Arquivo inexistente');return new Response(file.bytes,{headers:{'Content-Type':file.type}}); }
   };
-  const server=createSupabaseApp(provider,{aiGenerate:async raw=>raw.messages.at(-1).content.includes('Abra um card de teste pela IA')?{calls:[{id:'prepare-card',name:'preparar_acao',args:{operation:'criar_card',id:'',data_json:JSON.stringify({hotel:'Be Urban',apartamento:'214',titulo:'Card criado pela IA',descricao:'Reparo descrito pelo usuário',prioridade:'Normal'})}}],state:{}}:{answer:'Resposta de IA simulada para teste.'}}); server.listen(0,'127.0.0.1'); await once(server,'listening');
+  const server=createSupabaseApp(provider,{recoveryEnabled:true,aiGenerate:async raw=>raw.messages.at(-1).content.includes('Abra um card de teste pela IA')?{calls:[{id:'prepare-card',name:'preparar_acao',args:{operation:'criar_card',id:'',data_json:JSON.stringify({hotel:'Be Urban',apartamento:'214',titulo:'Card criado pela IA',descricao:'Reparo descrito pelo usuário',prioridade:'Normal'})}}],state:{}}:{answer:'Resposta de IA simulada para teste.'}}); server.listen(0,'127.0.0.1'); await once(server,'listening');
   const base=`http://127.0.0.1:${server.address().port}`;
   const profile=fs.mkdtempSync(path.join(os.tmpdir(),'book-browser-'));
   const child=spawn(chrome,['--headless=new','--disable-gpu','--no-sandbox','--no-first-run','--no-default-browser-check','--remote-debugging-port=0',`--user-data-dir=${profile}`,'about:blank'],{windowsHide:true,stdio:'ignore'});
@@ -155,6 +160,11 @@ async function main() {
     await send('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
     await wait("location.origin === '"+base+"' && document.readyState === 'complete'");
     await capture('login-desktop');
+    await evaluate("document.querySelector('.account-recovery').click();const fields=document.querySelectorAll('.account-dialog input');fields[0].value='recover@example.com';document.querySelector('.account-dialog form button').click()");
+    await wait("document.querySelector('.account-dialog [role=status]').textContent.includes('instru')");
+    await evaluate("const resetFields=document.querySelectorAll('.account-dialog input');resetFields[1].value='123456';resetFields[2].value='new-password12';document.querySelector('.account-dialog form').requestSubmit()");
+    await wait("document.querySelector('.account-dialog [role=status]').textContent.includes('Senha atualizada')");
+    await capture('recuperacao-senha');await evaluate("document.querySelector('.account-dialog > button').click()");
     for(const width of [320,360,390]){await send('Emulation.setDeviceMetricsOverride',{width,height:844,deviceScaleFactor:1,mobile:true});await evaluate("if(document.documentElement.scrollWidth>innerWidth+1)throw Error('Login excede largura');document.getElementById('senha').value='private-test';document.querySelector('.password-reveal').click();if(document.getElementById('senha').type!=='text')throw Error('Senha nao visivel');document.querySelector('.password-reveal').click();document.getElementById('senha').value=''");await tap('#senha');await send('Input.insertText',{text:'input-test'});await evaluate("if(document.activeElement.id!=='senha'||document.getElementById('senha').value!=='input-test')throw Error('Campo de senha obstruido');document.getElementById('senha').value=''");await capture('login-mobile-'+width);}
     await send('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
     await wait("!!document.getElementById('themeToggle') && document.querySelector('.brand-logo').naturalWidth===256 && document.querySelector('.brand-heading').textContent.trim()==='' ");
@@ -184,6 +194,10 @@ async function main() {
     await wait("!!document.querySelector('.linha-chamado .card-open') && document.querySelectorAll('.legal-footer a').length===6");
     await evaluate(`(async()=>{const row=document.getElementById('listaChamados').firstElementChild;await BookStore.refresh();if(row!==document.getElementById('listaChamados').firstElementChild)throw Error('Uma resposta idêntica reconstruiu a lista');})()`);
     await capture('painel-desktop');
+    await evaluate("BookAccount.security()");await wait("document.querySelector('.account-dialog button')?.textContent.includes('Ativar')");await capture('seguranca-conta');
+    await evaluate("document.querySelector('.account-dialog button').click()");await evaluate("[...document.querySelectorAll('.account-dialog button')].find(b=>b.textContent.includes('Gerar chave')).click()");
+    await wait("document.querySelector('.account-secret').textContent==='SIMULATED-KEY'");await capture('configurar-autenticador');
+    await evaluate("[...document.querySelectorAll('.account-dialog button')].find(b=>b.textContent==='Cancelar').click()");await wait("!document.querySelector('.account-dialog[open]')");
     await evaluate("document.querySelector('.layout-search-button').click();document.querySelector('.layout-command input').value='estoque';document.querySelector('.layout-command input').dispatchEvent(new Event('input'));if(document.querySelectorAll('.layout-command-results button').length!==1)throw Error('Busca de abas não filtrou');document.querySelector('.layout-command-results button').click();if(document.getElementById('visaoEstoque').hidden||document.querySelector('.layout-command').open)throw Error('Busca não navegou');mostrarAba('chamados')");
     await evaluate("if(document.querySelectorAll('body > nav .nav-group').length!==5)throw Error('Agrupamentos do menu');if(document.getElementById('abaOS').closest('details').id!=='menu-operacao'||document.getElementById('abaEstoque').closest('details').id!=='menu-gestao'||document.getElementById('abaOnboarding').closest('details').id!=='menu-imoveis')throw Error('Abas em grupos incorretos');if(!document.getElementById('menu-atendimento').open)throw Error('Grupo ativo fechado');");
     await evaluate("if(['Reservas','Projetos','Compras'].some(name=>document.getElementById('aba'+name))||document.getElementById('onboardingHistory')||document.getElementById('routine-onboarding')||document.getElementById('flowPurchase'))throw Error('Abas ou ações removidas continuam presentes')");

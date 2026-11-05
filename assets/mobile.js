@@ -33,6 +33,7 @@ window.BookMobile=(()=>{
   for(const [target,label,glyph]of [['aiDialog','Assistente IA','cards'],['notesDialog','Minhas notas e lembretes','cards'],['supportDialog','Falar com o suporte','chat']]){
    const original=document.querySelector('.workspace-actions [data-workspace-target="'+target+'"]');if(original)tools.append(action(label,glyph,()=>{options.close();original.click();}));
   }
+  if(window.BookAccount)tools.append(action('Seguran\u00e7a da conta','user',()=>{options.close();BookAccount.security();}));
   tools.append(action('Ir para uma aba','more',()=>{options.close();document.querySelector('.layout-search-button').click();}),action('Minha conta','user',()=>{options.close();profileDialog.showModal();}));nav.append(tools);
   // Fixed navigation stays below all modal and editing surfaces.
   return {activate(tab){mark(activeKey(tab));},menu(open){bottom.querySelector('[data-mobile-tab="more"]').setAttribute('aria-expanded',String(open));if(open)mark('more');else{const selected=nav.querySelector('.aba.ativa');mark(activeKey(selected?.id==='abaDashboard'?'dashboard':selected?.id==='abaChamados'?'chamados':selected?.id==='abaOS'?'os':'other'));}},contains:node=>bottom.contains(node)};

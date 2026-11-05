@@ -1,6 +1,11 @@
 /* Phone layouts share the existing controls, forms and theme tokens. */
 .mobile-bottom,.mobile-profile,.mobile-more-heading,.mobile-more-tools,.client-mobile-home{display:none}
 .login-title-mobile,.login-field-icon{display:none}
+.account-dialog label{display:grid;gap:7px;margin:14px 0;font-size:14px;color:var(--texto)}
+.account-dialog input{width:100%;box-sizing:border-box;min-height:46px;padding:10px;border:1px solid var(--control-border);border-radius:8px;background:var(--control);color:var(--texto);font:inherit}
+.account-dialog .account-secret{font-family:monospace;overflow-wrap:anywhere;padding:12px;border:1px solid var(--borda);border-radius:8px;background:var(--surface-soft);user-select:all}
+.account-dialog .account-secret:empty{display:none}
+body.login-page .account-recovery{display:block;width:auto;margin:18px auto 0;padding:8px;background:transparent;color:var(--brand-link);font-size:14px;text-decoration:underline;min-height:44px}
 .mobile-icon{width:24px;height:24px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .mobile-account{width:min(420px,calc(100vw - 32px));box-sizing:border-box;border:1px solid var(--borda);border-radius:20px;padding:24px;background:var(--surface);color:var(--texto);max-height:85dvh;overflow:auto}
 .mobile-account::backdrop{background:#001b2b99}.mobile-account p{overflow-wrap:anywhere;color:var(--suave)}

@@ -21,10 +21,11 @@
  function csv(rows){return '\ufeff'+rows.map(row=>row.map(v=>{let s=String(v??'');if(/^[\s]*[=+@\-]/.test(s))s="'"+s;return '"'+s.replaceAll('"','""')+'"';}).join(';')).join('\r\n');}
  function nextInspection(value){if(!date(value))return null;const [y,m,d]=value.split('-').map(Number);const first=new Date(Date.UTC(y,m-1+3,1)),last=new Date(Date.UTC(first.getUTCFullYear(),first.getUTCMonth()+1,0)).getUTCDate();first.setUTCDate(Math.min(d,last));return first.toISOString().slice(0,10);}
  const urgencyLabel=value=>({Normal:'Baixa',Alta:'Média',Urgente:'Alta'}[value]||'Baixa');
+ const urgencyBadge=value=>({Normal:'🟢⚠️ Baixa',Alta:'🟡⚠️ Média',Urgente:'🔴⚠️ Alta'}[value]||'Não informada');
  function deadlineState(data,today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo'}).format(new Date())){
   if(data.status==='Finalizada')return 'done';
   if(data.status==='Recusada'||!date(data.vencimento))return 'future';
   return data.vencimento<today?'late':data.vencimento===today?'today':'future';
  }
- return {definitions,flowPhases,phaseLabel,servicePhase,orderStatusLabel,date,csv,nextInspection,urgencyLabel,deadlineState};
+ return {definitions,flowPhases,phaseLabel,servicePhase,orderStatusLabel,date,csv,nextInspection,urgencyLabel,urgencyBadge,deadlineState};
 });

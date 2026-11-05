@@ -13,6 +13,7 @@ async function entrar(event) {
             method: 'POST',
             body: JSON.stringify({ login: document.getElementById('login').value.trim(), senha: document.getElementById('senha').value })
         });
+        if(usuario.mfaRequired||usuario.mfaEnrollRequired){BookAccount.challenge(usuario);return;}
         // The server cookie is the session; browser storage is optional.
         try { localStorage.removeItem('usuariosBookSantos'); localStorage.removeItem('usuarioLogado'); } catch {}
         location.href = usuario.funcao === 'adm' ? '/adm/admin.html' : '/cliente/cliente.html';
@@ -33,3 +34,5 @@ const passwordWrap=document.createElement('div');passwordWrap.className='passwor
 passwordInput.before(passwordWrap);passwordWrap.append(passwordInput);
 const revealPassword=document.createElement('button');revealPassword.type='button';revealPassword.className='password-reveal';revealPassword.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';revealPassword.setAttribute('aria-label','Mostrar senha');revealPassword.setAttribute('aria-controls','senha');revealPassword.setAttribute('aria-pressed','false');
 revealPassword.onclick=()=>{const show=passwordInput.type==='password';passwordInput.type=show?'text':'password';revealPassword.title=show?'Ocultar senha':'Mostrar senha';revealPassword.setAttribute('aria-label',show?'Ocultar senha':'Mostrar senha');revealPassword.setAttribute('aria-pressed',String(show));};passwordWrap.append(revealPassword);
+
+if(typeof BookAccount!=='undefined')BookAccount.init();

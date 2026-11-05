@@ -1,0 +1,21 @@
+name: Availability alerts
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency: book-availability
+jobs:
+  check:
+    if: vars.BOOK_MONITOR_ENABLED != 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node scripts/monitor-site.js
+        env:
+          BOOK_MONITOR_URL: ${{ vars.BOOK_MONITOR_URL || 'https://book-santos-teste.onrender.com' }}

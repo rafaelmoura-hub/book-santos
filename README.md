@@ -69,7 +69,7 @@ Os arquivos SQLite `server/index.js`, `database.js`, `passwords.js` e `setup.js`
 
 ## Pontos ainda pendentes
 
-Não houve implantação nem execução remota do SQL nesta sessão. Backups agendados, alertas na hospedagem, recuperação de senha pela interface, importação dos dados antigos e testes com usuários no Supabase real ainda precisam ser concluídos. Totais e gráficos usam os registros carregados na tela; analítica global para grandes volumes não está implementada.
+As telas responsivas, etiquetas e consultas paginadas estão implementadas. Recuperação de senha por código, TOTP para administradores, monitoramento e homologação possuem código e testes; a ativação externa está descrita em [Segurança e operação](docs/SEGURANCA-OPERACAO-20261105.md). A migração 22 e o modelo de e-mail precisam ser configurados no Supabase. O backup automático aguarda um destino privado autorizado. Consultas globais dos painéis usam endpoints próprios; os gráficos antigos continuam limitados aos registros carregados.
 
 Os registros antigos do navegador são preservados, com opção de exportação. Antes de importar, é necessário mapear usuários e revisar duplicidades. Para colaborar pelo GitHub, use repositório privado e contas separadas; `.env`, `data/` e `node_modules/` são ignorados pelo Git. Use `npm.cmd ci` após baixar o projeto.
 

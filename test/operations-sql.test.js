@@ -672,4 +672,14 @@ test('PostgreSQL: RLS, concorrência, auditoria e consumo atômico', async t => 
     await actor(client);await assert.rejects(db.query("select public.book_service_page(0,'{}')"),e=>e.code==='42501');
     console.log(JSON.stringify({historyRowsVerified:fullPlan.cards.length,states:fullPlan.counts,lastPageRows:lastPage.rows.length}));
   }
+  await db.exec('reset role');
+  await db.exec("create table auth.mfa_factors(id uuid default gen_random_uuid(),user_id uuid,status text,factor_type text);create function auth.jwt() returns jsonb language sql stable as $$ select coalesce(nullif(current_setting('request.jwt.claims',true),''),'{}')::jsonb $$;grant execute on function auth.jwt() to authenticated;");
+  await db.exec(migration('202611040022_mfa.sql'));await db.exec(migration('202611040022_mfa.sql'));
+  await actor(master);await db.query("select set_config('request.jwt.claims',$1,false)",[JSON.stringify({aal:'aal1'})]);assert.equal((await db.query('select public.book_is_admin() allowed')).rows[0].allowed,true);
+  await db.exec('reset role');await db.query("insert into auth.mfa_factors(user_id,status,factor_type) values($1,'verified','totp')",[master]);await actor(master);
+  assert.equal((await db.query('select public.book_is_admin() allowed')).rows[0].allowed,false);assert.equal((await db.query("select public.book_can_tab('os') allowed")).rows[0].allowed,false);assert.equal((await db.query('select public.book_is_master() allowed')).rows[0].allowed,false);
+  await assert.rejects(db.query("select public.book_service_page(0,'{}')"),e=>e.code==='42501');assert.equal((await db.query('select id from public.book_profiles where id=$1',[master])).rows[0].id,master);
+  await db.query("select set_config('request.jwt.claims',$1,false)",[JSON.stringify({aal:'aal2'})]);assert.equal((await db.query('select public.book_is_admin() allowed')).rows[0].allowed,true);assert.equal((await db.query("select public.book_can_tab('os') allowed")).rows[0].allowed,true);
+  await actor(client);await db.query("select set_config('request.jwt.claims',$1,false)",[JSON.stringify({aal:'aal1'})]);assert.equal((await db.query('select public.book_mfa_allowed() allowed')).rows[0].allowed,true);
+
 });

@@ -10,7 +10,7 @@
     <link rel="icon" href="/assets/book-task-logo.png" type="image/png">
     <link rel="stylesheet" href="/assets/brand.css">
     <link rel="stylesheet" href="/assets/layout.css">
-    <link rel="stylesheet" href="/assets/mobile.css?v=20261104-mobile2">
+    <link rel="stylesheet" href="/assets/mobile.css?v=20261105-security1">
     <script src="../assets/accessibility.js" defer></script>
     <noscript><style>body[hidden]{display:block!important}body>header,body>nav,body>main,body>.modal{display:none!important}noscript{display:block;padding:24px}</style></noscript>
 <script src="../assets/events.js" defer></script>
@@ -184,7 +184,7 @@
                 <label>Assunto<input id="osTitulo" required></label>
                 <label>Descri&ccedil;&atilde;o<textarea id="osDescricao" required></textarea></label>
                 <label>Data de vencimento<input id="osVencimento" type="date" required></label>
-                <label>Urgência<select id="osPrioridade"><option value="Normal">Baixa</option><option value="Alta">Média</option><option value="Urgente">Alta</option></select></label>
+                <label>Urgência<select id="osPrioridade"><option value="Normal">🟢⚠️ Baixa</option><option value="Alta">🟡⚠️ Média</option><option value="Urgente">🔴⚠️ Alta</option></select><small>Escolhida pelo administrador e exibida no card.</small></label>
                 <label>Responsável<select id="osResponsavel" required></select></label>
                 <label>Fotos e arquivos relacionados<input id="osAnexos" type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,application/pdf"><small>Até 20 anexos, 5 MB por arquivo e 10 MB no total.</small></label>
                 <button type="submit">Criar Card</button>
@@ -269,8 +269,9 @@
     <script src="usuarios.js"></script>
     <script src="backup.js"></script>
     <script src="../assets/catalog.js"></script>
-    <script src="../assets/mobile.js?v=20261104-mobile2"></script>
+    <script src="../assets/mobile.js?v=20261105-security1"></script>
     <script src="../assets/api.js"></script>
+    <script src="../assets/auth.js"></script>
     <script src="../assets/session.js"></script>
 </body>
 </html>

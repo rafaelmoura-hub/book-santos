@@ -18,7 +18,7 @@ function sessionStore({ key, filename, clock = Date.now } = {}) {
     } catch { throw new Error('Não foi possível abrir as sessões persistidas. Confira a chave e o arquivo configurados.'); }
   }
   sessions.persist = () => {
-    const rows = [...sessions].filter(([,s])=>s.expires>clock()).map(([id,s])=>[id,{userId:s.userId,accessToken:s.accessToken,refreshToken:s.refreshToken,authExpires:s.authExpires,expires:s.expires}]);
+    const rows = [...sessions].filter(([,s])=>s.expires>clock()).map(([id,s])=>[id,{userId:s.userId,accessToken:s.accessToken,refreshToken:s.refreshToken,authExpires:s.authExpires,expires:s.expires,issuedAt:s.issuedAt,pendingMfa:s.pendingMfa===true,mfaVerified:s.mfaVerified===true,factorId:s.factorId,enrollment:s.enrollment}]);
     const iv = randomBytes(12), cipher = createCipheriv('aes-256-gcm', secret, iv);
     const encrypted = Buffer.concat([cipher.update(JSON.stringify(rows),'utf8'),cipher.final()]);
     fs.mkdirSync(path.dirname(filename), { recursive:true });

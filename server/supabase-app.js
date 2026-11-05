@@ -1,3 +1,5 @@
+const {createObservability}=require('./observability');
+const {createAuthSecurity}=require('./auth-security');
 const { hotels, filePath } = require('../assets/catalog');
 const http = require('node:http');
 const path = require('node:path');
@@ -36,16 +38,19 @@ async function readBody(req, limit = 15 * 1024 * 1024) {
   catch { throw fail(400, 'JSON inválido.'); }
 }
 
-function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Date.now, sessionKey, sessionFile, aiGenerate = generateAI, maxSessions = 5000, sessionsPerUser = 5 } = {}) {
+function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Date.now, sessionKey, sessionFile, aiGenerate = generateAI, requireAdminMfa=false, recoveryEnabled=false, maxSessions = 5000, sessionsPerUser = 5 } = {}) {
   if(!Number.isSafeInteger(maxSessions)||maxSessions<1||!Number.isSafeInteger(sessionsPerUser)||sessionsPerUser<1)throw new Error('Limites de sessão inválidos.');
   // Tokens stay on the server; optional encrypted storage preserves a single instance's sessions.
   const sessions = sessionStore({ key: sessionKey, filename: sessionFile, clock });
+  const authSecurity=createAuthSecurity({provider,sessions,clock,requireAdminMfa,recoveryEnabled,maxSessions,sessionsPerUser});
   const attempts = new Map();
   const writes = new Map();
+  const metrics=createObservability({clock});
   const agent = createAgent({clock});
   const inFlight=new Map();let readyCheck,readyUntil=0;
   const cookieName=secure?'__Host-book_session':'book_session';
   const server=http.createServer({maxHeaderSize:16384,requestTimeout:60000,headersTimeout:15000,keepAliveTimeout:5000},async (req, res) => {
+    metrics.track(req,res);
     const now = clock();
     const requestId = randomUUID();
     res.setHeader('X-Request-ID', requestId);
@@ -75,7 +80,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         if(!html)throw fail(404,'Documento não encontrado.');
         res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'}); return res.end(req.method==='HEAD'?undefined:html);
       }
-      if (route === '/health' && req.method === 'GET') return json(200, { status: 'ok', version:'20261104-mobile2' });
+      if (route === '/health' && req.method === 'GET') return json(200, { status: 'ok', version:'20261105-security1' });
       if (route === '/ready' && req.method === 'GET') {
         if(clock()>=readyUntil){
           if(!readyCheck)readyCheck=Promise.resolve().then(()=>provider.ready()).then(()=>{readyUntil=clock()+10000;}).finally(()=>{readyCheck=null;});
@@ -88,6 +93,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
       const token = new RegExp(`(?:^|;\\s*)${cookieName}=([a-f0-9]{64})(?:;|$)`).exec(req.headers.cookie || '')?.[1];
       const sessionId = token ? digest(token) : null;
       const session = sessions.get(sessionId);
+      if(route.startsWith('/api/auth/')){await authSecurity.handle({route,req,session,sessionId,readBody,cookie,json});return;}
       if (route === '/api/login' && req.method === 'POST') {
         // Socket limit is deliberately generous for a shared reverse proxy.
         // Account counters cannot be bypassed by spoofing forwarded headers.
@@ -105,13 +111,14 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         let user;
         try { user = validateProfile(await provider.profile(auth.access_token)); }
         catch (error) { await provider.logout(auth.access_token).catch(() => {}); throw error; }
+        const challenge=await authSecurity.login(auth,user,cookie,sessionId);if(challenge)return json(200,challenge);
         const freshToken = randomBytes(32).toString('hex');
         const lifetime = 8 * 3600;
         sessions.delete(sessionId);
         const previous=[...sessions].filter(([,value])=>value.userId===user.id).sort((a,b)=>a[1].expires-b[1].expires);
         while(previous.length>=sessionsPerUser)sessions.delete(previous.shift()[0]);
         if(sessions.size>=maxSessions){await provider.logout(auth.access_token).catch(()=>{});throw fail(503,'Capacidade de sessões atingida. Aguarde antes de entrar novamente.');}
-        sessions.set(digest(freshToken), { userId: user.id, accessToken: auth.access_token, refreshToken: auth.refresh_token, authExpires: now + (Number(auth.expires_in) || 3600) * 1000, expires: now + lifetime * 1000 });
+        sessions.set(digest(freshToken), { issuedAt:now,userId: user.id, accessToken: auth.access_token, refreshToken: auth.refresh_token, authExpires: now + (Number(auth.expires_in) || 3600) * 1000, expires: now + lifetime * 1000 });
         attempts.delete(account);
         cookie(freshToken, lifetime);
         return json(200, { ...user, provider: 'supabase' });
@@ -124,7 +131,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
       const protectedFile = /^\/(adm|hotel|cliente)\//.test(route) || route === '/assets/catalog.js';
       let user;
       if (route.startsWith('/api/') || protectedFile) {
-        if (session) {
+        if (session&&!session.pendingMfa) {
           if(route.startsWith('/api/')){
             const count=inFlight.get(sessionId)||0;if(count>=12)throw fail(429,'Há muitas solicitações em andamento. Aguarde alguns segundos.');
             inFlight.set(sessionId,count+1);let released=false;
@@ -141,6 +148,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
               await session.refreshing;
             }
             user = validateProfile(await provider.profile(session.accessToken));
+            if(user.mfaRequired||requireAdminMfa&&user.funcao==='adm'&&!session.mfaVerified)throw fail(401,'Confirme o c\u00f3digo do autenticador ao entrar novamente.');
             if(user.id!==session.userId||sessions.get(sessionId)!==session)throw fail(401,'A sessão mudou. Entre novamente para continuar.');
           }
           catch (error) {
@@ -153,6 +161,8 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
           throw fail(401, 'Entre novamente para continuar.');
         }
       }
+      const read=(key,fn)=>metrics.read(sessionId+':'+key,fn);
+      if(route==='/api/system/status'&&req.method==='GET'){if(!user.mestre||user.funcao!=='adm')throw fail(403,'Somente o mestre.');return json(200,metrics.snapshot());}
       if (route === '/api/session' && req.method === 'GET') return json(200, { ...user, provider: 'supabase' });
       if(route==='/api/decision/activity'&&req.method==='GET'){
         if(!canTab(user,'dashboard'))throw fail(403,'Sem acesso à visão geral.');
@@ -161,7 +171,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         try{Periods.range('dia',filters.start);Periods.range('dia',filters.end);}catch{throw fail(400,'Datas inválidas.');}
         if(filters.start>filters.end||(Date.parse(filters.end)-Date.parse(filters.start))/86400000>7300)throw fail(400,'Selecione um período de até 20 anos.');
         if(filters.hotel&&!(await visibleHotels(provider,session.accessToken,user)).includes(filters.hotel))throw fail(403,'Sem acesso ao condomínio.');
-        return json(200,await provider.activity(session.accessToken,filters));
+        return json(200,await read('activity:'+JSON.stringify(filters),()=>provider.activity(session.accessToken,filters)));
       }
       if(['/api/labels','/api/card-labels'].includes(route)){
         if(user.funcao!=='adm'||!canTab(user,'os'))throw fail(403,'Sem acesso aos cards.');
@@ -194,7 +204,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         if(!canTab(user,'dashboard'))throw fail(403,'Sem acesso à visão geral.');
         const hotel=url.searchParams.get('hotel');
         if(hotel && !(await visibleHotels(provider,session.accessToken,user)).includes(hotel))throw fail(403,'Sem acesso a este condomínio.');
-        try{return json(200,await provider.decision(session.accessToken,hotel));}
+        try{return json(200,await read('decision:'+hotel,()=>provider.decision(session.accessToken,hotel)));}
         catch(error){if(error.status===503)throw fail(503,'Painel SAD indisponível. Se ainda não aplicada, execute a migração 202610290015_decision.sql. As outras abas continuam disponíveis.');throw error;}
       }
       if(['/api/processes','/api/processes/services','/api/processes/flow','/api/processes/comment','/api/processes/service','/api/processes/receive'].includes(route)){
@@ -211,7 +221,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
           const tab=route.endsWith('/services')?'os':processDefinitions[kind]?.tab||kind;
           if(route==='/api/processes'&&!Object.hasOwn(processDefinitions,kind))throw fail(400,'Processo inválido.');
           if(!canTab(user,tab))throw fail(403,'Sem acesso a esta aba.');
-          return json(200,route.endsWith('/services')?await provider.servicePage(session.accessToken,offset,filters):await provider.processes(session.accessToken,kind,offset,filters));
+          return json(200,route.endsWith('/services')?await read('services:'+offset+JSON.stringify(filters),()=>provider.servicePage(session.accessToken,offset,filters)):await provider.processes(session.accessToken,kind,offset,filters));
         }
         if(req.method!=='POST')throw fail(405,'Método inválido.');
         const key='routine:'+user.id,quota=writes.get(key)||{count:0,until:now+60000};if(quota.count>=40)throw fail(429,'Aguarde antes de salvar novamente.');quota.count++;writes.set(key,quota);
@@ -379,7 +389,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         const result = await Promise.all(active.map(async key => {
           let cursor = null; const loaded = [];
           for (let page = 0; page < (pages[key] || 1); page++) {
-            const result = await provider.records(session.accessToken, key, cursor);
+            const result = await read('records:'+key+':'+cursor,()=>provider.records(session.accessToken,key,cursor));
             loaded.push(...result.rows); cursor = result.next;
             if (!cursor) break;
           }
@@ -438,7 +448,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
       if (!['GET', 'HEAD'].includes(req.method)) throw fail(405, 'Método não permitido.');
       if (/^\/hotel\/(hotel\.html)?$/.test(route)) { res.writeHead(302, { Location: '/adm/admin.html#condominios' }); return res.end(); }
       const file = route === '/' ? '/login.html' : route;
-      if (!/^\/(login\.(html|css|js)|assets\/(api|session|store|money|periods|catalog|events|notifications|processes|accessibility|legal|theme|mobile)\.js|assets\/(ui|legal|brand|layout|mobile)\.css|assets\/book-task-logo\.png|assets\/login-skyline\.svg|(adm|cliente|hotel)\/[a-z]+\.(html|css|js))$/.test(file)) throw fail(404, 'Arquivo não encontrado.');
+      if (!/^\/(login\.(html|css|js)|assets\/(api|session|store|money|periods|catalog|events|notifications|processes|accessibility|legal|theme|mobile|auth)\.js|assets\/(ui|legal|brand|layout|mobile)\.css|assets\/book-task-logo\.png|assets\/login-skyline\.svg|(adm|cliente|hotel)\/[a-z]+\.(html|css|js))$/.test(file)) throw fail(404, 'Arquivo não encontrado.');
       if (/^\/(adm|hotel)\//.test(file) && user?.funcao !== 'adm' || /^\/cliente\//.test(file) && user?.funcao !== 'cliente') {
         res.writeHead(302, { Location: '/login.html' }); return res.end();
       }

@@ -193,13 +193,24 @@ if (![14,15,16,17,18,19].includes(await request('/rest/v1/rpc/book_schema_versio
       if (!response.ok) throw failure(404, 'Anexo indisponível ou sem permissão de acesso.');
       return response;
     },
+    recoverPassword(email){return request('/auth/v1/recover',{method:'POST',body:{email}});},
+    verifyRecovery(email,token){return request('/auth/v1/verify',{method:'POST',body:{email,token,type:'recovery'}});},
+    updatePassword(token,password){return request('/auth/v1/user',{token,method:'PUT',body:{password}});},
+    logoutAll(token){return request('/auth/v1/logout?scope=global',{token,method:'POST'});},
+    async mfaFactors(token){const user=await request('/auth/v1/user',{token});return user.factors||[];},
+    async mfaEnroll(token){await request('/rest/v1/rpc/book_mfa_allowed',{token,method:'POST',body:{}});return request('/auth/v1/factors',{token,method:'POST',body:{factor_type:'totp',friendly_name:'BOOK TASK '+Date.now()}});},
+    mfaRemove(token,id){return request('/auth/v1/factors/'+encodeURIComponent(id),{token,method:'DELETE'});},
+    async mfaVerify(token,id,code){const challenge=await request('/auth/v1/factors/'+encodeURIComponent(id)+'/challenge',{token,method:'POST',body:{}});return request('/auth/v1/factors/'+encodeURIComponent(id)+'/verify',{token,method:'POST',body:{challenge_id:challenge.id,code}});},
     login(email, password) { return request('/auth/v1/token?grant_type=password', { method: 'POST', body: { email, password } }); },
     refresh(refreshToken) { return request('/auth/v1/token?grant_type=refresh_token', { method: 'POST', body: { refresh_token: refreshToken } }); },
     async profile(token) {
       const user = await request('/auth/v1/user', { token });
       const rows = await request(`/rest/v1/book_profiles?select=id,nome,login,funcao,mestre,tabs&id=eq.${encodeURIComponent(user.id)}`, { token });
       if (!rows?.[0]) throw failure(403, 'Seu acesso ainda não foi liberado. Peça ao administrador para cadastrar seu perfil.');
-      return rows[0];
+      const result=rows[0];
+      const factors=user.factors||[];let aal;try{aal=JSON.parse(Buffer.from(token.split('.')[1],'base64url')).aal;}catch{}
+      Object.defineProperty(result,'mfaRequired',{value:result.funcao==='adm'&&factors.some(f=>f.status==='verified'&&f.factor_type==='totp')&&aal!=='aal2'});
+      return result;
     },
     users(token) { return request('/rest/v1/book_profiles?select=id,nome,login,funcao,mestre&order=nome', { token }); },
     logout(token) { return request('/auth/v1/logout?scope=local', { token, method: 'POST' }); },
