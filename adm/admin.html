@@ -4,16 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Admin | BOOK TASK</title>
-    <link rel="stylesheet" href="admin.css">
-    <link rel="stylesheet" href="../assets/ui.css">
-    <script src="/assets/theme.js"></script>
+    <link rel="stylesheet" href="admin.css?v=20261105-operations2">
+    <link rel="stylesheet" href="../assets/ui.css?v=20261105-operations2">
+    <script src="/assets/theme.js?v=20261105-operations2"></script>
     <link rel="icon" href="/assets/book-task-logo.png" type="image/png">
-    <link rel="stylesheet" href="/assets/brand.css">
-    <link rel="stylesheet" href="/assets/layout.css">
-    <link rel="stylesheet" href="/assets/mobile.css?v=20261105-security1">
-    <script src="../assets/accessibility.js" defer></script>
+    <link rel="stylesheet" href="/assets/brand.css?v=20261105-operations2">
+    <link rel="stylesheet" href="/assets/layout.css?v=20261105-operations2">
+    <link rel="stylesheet" href="/assets/mobile.css?v=20261105-operations2">
+    <script src="../assets/accessibility.js?v=20261105-operations2" defer></script>
     <noscript><style>body[hidden]{display:block!important}body>header,body>nav,body>main,body>.modal{display:none!important}noscript{display:block;padding:24px}</style></noscript>
-<script src="../assets/events.js" defer></script>
+<script src="../assets/events.js?v=20261105-operations2" defer></script>
+<script src="../assets/dictation.js?v=20261105-operations2" defer></script>
 </head>
 <body hidden data-screen="admin.js">
     <header>
@@ -72,7 +73,7 @@
           <div class="filtros-card"><div><label class="filtro-apartamento" for="filtroApartamento">Filtrar por apartamento</label>
           <input id="filtroApartamento" type="search" maxlength="20" placeholder="Ex.: 214 ou 194A" data-on-input="mostrarOS()"></div><div>
           <label class="filtro-apartamento" for="filtroStatusOS">Filtrar por status</label>
-          <select id="filtroStatusOS" data-on-change="mostrarOS()"><option value="">Todos os status</option><option value="Aberta">Novo</option><option value="Em andamento">Andamento</option><option value="Recusada">Recusado</option><option value="Finalizada">Finalizado</option></select></div></div>
+          <select id="filtroStatusOS" data-on-change="BookRoutine.filterServicesFromList()"><option value="">Todos os status</option><option value="Aberta">Novo</option><option value="Em andamento">Andamento</option><option value="Recusada">Recusado</option><option value="Finalizada">Finalizado</option></select></div><div><label for="filtroUrgenciaOS">Filtrar por urgência</label><select id="filtroUrgenciaOS" data-on-change="BookRoutine.filterServicesFromList()"><option value="">Todas as urgências</option><option value="Urgente">🔴⚠️ Alta</option><option value="Alta">🟡⚠️ Média</option><option value="Normal">🟢⚠️ Baixa</option><option value="unknown">Não informada</option></select></div></div>
           <p id="resumoListaOS" aria-live="polite"></p>
           <div id="listaOS"></div>
         </section>
@@ -252,27 +253,28 @@
       </div>
     </div>
     <div id="avisoChat" class="aviso-chat" role="status" aria-live="polite" hidden></div>
-    <script src="../assets/money.js"></script>
-    <script src="../assets/periods.js"></script>
-    <script src="financeiro.js"></script>
-    <script src="condominios.js"></script>
-    <script src="../assets/notifications.js"></script>
-    <script src="../assets/processes.js"></script>
-    <script src="labels.js"></script>
-    <script src="routine.js"></script>
-    <script src="onboarding.js"></script>
-    <script src="decision.js"></script>
-    <script src="activity.js"></script>
-    <script src="navigation.js"></script>
-    <script src="collaboration.js"></script>
-    <script src="workspace.js"></script>
-    <script src="usuarios.js"></script>
-    <script src="backup.js"></script>
-    <script src="../assets/catalog.js"></script>
-    <script src="../assets/mobile.js?v=20261105-security1"></script>
-    <script src="../assets/api.js"></script>
-    <script src="../assets/auth.js"></script>
-    <script src="../assets/session.js"></script>
+    <script src="../assets/money.js?v=20261105-operations2"></script>
+    <script src="../assets/periods.js?v=20261105-operations2"></script>
+    <script src="financeiro.js?v=20261105-operations2"></script>
+    <script src="condominios.js?v=20261105-operations2"></script>
+    <script src="property.js?v=20261105-operations2"></script>
+    <script src="../assets/notifications.js?v=20261105-operations2"></script>
+    <script src="../assets/processes.js?v=20261105-operations2"></script>
+    <script src="labels.js?v=20261105-operations2"></script>
+    <script src="routine.js?v=20261105-operations2"></script>
+    <script src="onboarding.js?v=20261105-operations2"></script>
+    <script src="decision.js?v=20261105-operations2"></script>
+    <script src="activity.js?v=20261105-operations2"></script>
+    <script src="navigation.js?v=20261105-operations2"></script>
+    <script src="collaboration.js?v=20261105-operations2"></script>
+    <script src="workspace.js?v=20261105-operations2"></script>
+    <script src="usuarios.js?v=20261105-operations2"></script>
+    <script src="backup.js?v=20261105-operations2"></script>
+    <script src="../assets/catalog.js?v=20261105-operations2"></script>
+    <script src="../assets/mobile.js?v=20261105-operations2"></script>
+    <script src="../assets/api.js?v=20261105-operations2"></script>
+    <script src="../assets/auth.js?v=20261105-operations2"></script>
+    <script src="../assets/session.js?v=20261105-operations2"></script>
 </body>
 </html>
 

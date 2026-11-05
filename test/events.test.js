@@ -5,7 +5,7 @@ const { readFileSync } = require('node:fs');
 test('ações delegadas preservam argumentos e recusam código fora da lista permitida', async () => {
   const listeners={},calls=[],errors=[],timers=new Map();let nextTimer=0;
   const context={document:{addEventListener:(type,fn)=>listeners[type]=fn,getElementById:()=>({value:'123'})},console:{error:e=>errors.push(e.message)},setTimeout:fn=>{timers.set(++nextTimer,fn);return nextTimer;},clearTimeout:id=>timers.delete(id)};
-  context.window={mostrarAba:value=>calls.push(value),BookUsers:{save:()=>calls.push('salvo')}};
+  context.window={mostrarAba:value=>calls.push(value),BookUsers:{save:()=>calls.push('salvo')},BookRoutine:{filterServicesFromList:()=>calls.push('status-global')}};
   vm.runInNewContext(readFileSync('assets/events.js','utf8'),context);
   async function dispatch(type,action,extra={}) {
     const element={value:'214',getAttribute:()=>action};
@@ -15,6 +15,7 @@ test('ações delegadas preservam argumentos e recusam código fora da lista per
   await dispatch('click',"mostrarAba('backup')");assert.equal(calls.at(-1),'backup');
   await dispatch('submit','BookUsers.save(event)');assert.deepEqual(calls.slice(-2),['prevented','salvo']);
   await dispatch('click',"mostrarAba('texto;com vírgula, e parênteses()')");assert.equal(calls.at(-1),'texto;com vírgula, e parênteses()');
+  await dispatch('change','BookRoutine.filterServicesFromList()');assert.equal(calls.at(-1),'status-global');
   const before=calls.length;
   await dispatch('click',"BookAPI.request('/api/backup')");
   await dispatch('click',"constructor.constructor('alert(1)')()");

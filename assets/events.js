@@ -3,6 +3,7 @@
   const actions = new Set(['entrar','sair','mostrarAba','abrirFormularioOS','mostrarOS','ativarNotificacoesChat','enviarMensagemAdmin','adicionarColunaEstoque','adicionarLinhaEstoque','selecionarHotelVistoria','atualizarDashboard','mostrarUsuarios','fecharModal','salvarOS','abrirFechamentoOS','fecharVistoriaModal','salvarVistoria','salvarFechamentoOS','atualizarCustoTotal','atualizarCamposMaterial','adicionarMaterialOS','salvarRascunhoFechamentoOS','removerColunaEstoque','editarEstoque','removerLinhaEstoque','abrirChamado','alterarStatus','abrirOS','alterarStatusOS','atualizarMateriaisOS','selecionarApartamentoVistoria','abrirFormularioVistoria','abrirConversaChat','mostrarArquivo','alternarChatCliente','selecionarConversaCliente','enviarMensagemCliente','mostrarHistorico','selecionarApartamento','mostrarDadosApartamento','filtrarRegistrosHotel','BookCondominios.mostrarHistorico','BookCondominios.selecionarApartamento','BookCondominios.mostrarDadosApartamento','BookCondominios.filtrarRegistrosHotel','BookFinance.load','BookFinance.changePeriod','BookFinance.move','BookFinance.more','BookUsers.render','BookUsers.close','BookUsers.save']);
   actions.add('BookCondominios.filtrarLista');
   actions.add('BookRoutine.openFlow');
+  actions.add('BookRoutine.filterServicesFromList');
   function split(source, separator) {
     const parts=[];let start=0,depth=0,quote='',escaped=false;
     for(let i=0;i<source.length;i++){

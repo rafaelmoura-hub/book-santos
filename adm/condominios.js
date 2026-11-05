@@ -35,12 +35,15 @@ window.addEventListener('book:catalog',()=>{
 function mostrarHistorico(hotel) {
   hotelSelecionado = hotel; apartamentoSelecionado = ""; tipoSelecionado = "";
   document.querySelectorAll('#visaoCondominios .hotel').forEach(card=>{card.classList.toggle('layout-selected',card.dataset.hotel===hotel);card.setAttribute('aria-pressed',String(card.dataset.hotel===hotel));});
-  document.getElementById("historico").innerHTML = `<h2>${esc(hotel)} - Apartamentos</h2><div class="apartamentos">${BookStore.apartments(hotel).map(ap => `<button class="apartamento-opcao" data-on-click="BookCondominios.selecionarApartamento('${ap}')">Apartamento ${ap}</button>`).join("")}</div><div id="opcoesApartamento"><p>Selecione um apartamento para escolher o que deseja visualizar.</p></div>`;
+  document.getElementById("historico").innerHTML = `<h2>${esc(hotel)} - Apartamentos</h2><div id="condominioCardsActions"></div><div class="apartamentos">${BookStore.apartments(hotel).map(ap => `<button class="apartamento-opcao" data-on-click="BookCondominios.selecionarApartamento('${ap}')">Apartamento ${ap}</button>`).join("")}</div><div id="opcoesApartamento"><p>Selecione um apartamento para escolher o que deseja visualizar.</p></div>`;
+  const actions=document.getElementById('condominioCardsActions');if(actions&&BookWorkspace.can('os'))for(const [phase,label] of [['','Todos os cards e histórico'],['Resolvido','Finalizados'],['Recusa proprietário','Recusados']]){const b=document.createElement('button');b.type='button';b.className='botao-secundario';b.textContent=label;b.onclick=()=>BookRoutine.openServices({hotel:hotelSelecionado,phase});actions.append(b);}
 }
 function selecionarApartamento(ap) {
   tipoSelecionado = "";
   apartamentoSelecionado = ap;
   document.getElementById("opcoesApartamento").innerHTML = `<h3>Apartamento ${ap}</h3><div class="opcoes-dados"><button data-on-click="BookCondominios.mostrarDadosApartamento('chamados')">Chamados</button><button data-on-click="BookCondominios.mostrarDadosApartamento('os')">Cards</button></div><div id="dadosApartamento"><p>Selecione chamados ou cards.</p></div>`;
+  if(BookWorkspace.can('vistorias')){const inspection=document.createElement('button');inspection.type='button';inspection.textContent='Vistorias';inspection.onclick=()=>{mostrarAba('vistorias');selecionarHotelVistoria(hotelSelecionado);selecionarApartamentoVistoria(apartamentoSelecionado);};document.querySelector('#opcoesApartamento .opcoes-dados').append(inspection);}
+  if(window.BookProperty){const button=document.createElement('button');button.type='button';button.textContent='Informações';button.onclick=()=>BookProperty.openInfo(hotelSelecionado,apartamentoSelecionado);document.querySelector('#opcoesApartamento .opcoes-dados').append(button);}
 }
 function mostrarDadosApartamento(tipo) {
   tipoSelecionado = tipo;

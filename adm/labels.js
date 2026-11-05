@@ -12,7 +12,7 @@ window.BookLabels=(()=>{
  async function hydrate(parent){
   if(parent.id==='listaOS'&&!document.getElementById('filtroEtiquetaOS')){
    const toolbar=document.querySelector('#visaoOS .filtros-card');
-   filter(toolbar,'filtroEtiquetaOS',()=>{const select=document.getElementById('filtroEtiquetaOS');BookRoutine.openServices({label:select.value});select.value='';});
+   filter(toolbar,'filtroEtiquetaOS',()=>BookRoutine.filterServicesFromList());
   }
   const nodes=[...parent.querySelectorAll('[data-label-card]')],ids=[...new Set(nodes.map(n=>n.dataset.labelCard))];if(!ids.length)return;
   try{await refresh();for(let i=0;i<ids.length;i+=100){const rows=await request('/api/card-labels?ids='+ids.slice(i,i+100).join(','));rows.forEach(row=>assignments.set(row.id,row));}nodes.filter(n=>n.isConnected).forEach(paint);}

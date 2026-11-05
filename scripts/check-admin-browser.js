@@ -16,7 +16,7 @@ async function main() {
   const users = [master]; let writes = 0;
   const client = { id:'22222222-2222-4222-8222-222222222222',nome:'Cliente teste',login:'cliente@example.com',funcao:'cliente',mestre:false };
   const records = new Map();
-  const addedCatalog=new Map();
+  const addedCatalog=new Map(),removedHotels=new Set(),removedUnits=new Set(),apartmentInfoRows=new Map();
   const uploaded = new Map();
   const noteRows=new Map(),supportRows=new Map(),reminderRows=new Map(),feedbackRows=new Map(),evaluationRows=[],processRows=new Map(),flowMetas=new Map(),flowRows=[];
   let notificationState={chat:{count:0},support:{count:0}},dueReminderQueue=[];
@@ -37,7 +37,7 @@ async function main() {
       return {generatedAt:new Date().toISOString(),referenceDate:'2026-10-29',hotel:hotel||null,permissions:{stock:true,inspections:true},services:{total:150,open:150,overdue:12,today:4,urgent:2,unassigned:3,withoutDeadline:1},byHotel:[{hotel:hotel||'Be Urban',open:150,overdue:12,urgent:2}],byAssignee:[{id:master.id,name:master.nome,assignee:master.login,open:150,overdue:12}],byPhase:[{phase:'Novo',count:150}],queue:[],inspections:{units:126,missing:125,overdue:1,next30:0,items:[{hotel:'Be Urban',apartment:'214',last_date:null,next_due:null}]},stock:{global:true,alerts:alerts.length,unconfigured:stock.filter(i=>i.minimo==null).length,items:alerts.map(i=>({id:i.id,name:i.nome,quantity:i.quantidade,minimum:i.minimo??null}))}};
     },
     async processes(token,kind,offset,filters={}){let rows=[...processRows.values()].filter(p=>p.kind===kind&&(!filters.phase||p.phase===filters.phase)&&(!filters.assignee||p.data.responsavel===filters.assignee)&&(!filters.hotel||p.hotel===filters.hotel)&&(!filters.search||p.data.titulo.includes(filters.search)));const counts={};rows.forEach(r=>counts[r.phase]=(counts[r.phase]||0)+1);return {rows:rows.slice(offset,offset+50),total:rows.length,counts};},
-    async servicePage(token,offset,filters={}){let rows=[...records.entries()].filter(([k])=>k.startsWith('ordensServico/')).map(([,r])=>({...r,phase:Processes.servicePhase({...r,phase:flowMetas.get('ordensServico:'+r.id)?.phase})}));rows=rows.filter(r=>(!filters.phase||r.phase===filters.phase)&&(!filters.label||cardLabelRows.get(r.id)?.labelIds.includes(filters.label)));const counts={};rows.forEach(r=>counts[r.phase]=(counts[r.phase]||0)+1);return {rows:rows.slice(offset,offset+50),total:rows.length,counts};},
+    async servicePage(token,offset,filters={}){let rows=[...records.entries()].filter(([k])=>k.startsWith('ordensServico/')).map(([,r])=>({...r,phase:Processes.servicePhase({...r,phase:flowMetas.get('ordensServico:'+r.id)?.phase})}));rows=rows.filter(r=>(!filters.phase||r.phase===filters.phase)&&(!filters.label||cardLabelRows.get(r.id)?.labelIds.includes(filters.label))&&(!filters.urgency||(filters.urgency==='unknown'?(r.data.importacao?.parcial||!['Normal','Alta','Urgente'].includes(r.data.prioridade)):(!r.data.importacao?.parcial&&r.data.prioridade===filters.urgency))));const counts={};rows.forEach(r=>counts[r.phase]=(counts[r.phase]||0)+1);return {rows:rows.slice(offset,offset+50),total:rows.length,counts};},
     async saveProcess(token,input){const previous=processRows.get(input.id);if((previous?.version||0)!==input.version)throw Error('Conflito de processo');const row={...input,owner_id:identity(token).id,version:input.version+1,created_at:previous?.created_at||new Date().toISOString(),service_id:previous?.service_id,stock_receipt:previous?.stock_receipt};processRows.set(input.id,row);flowRows.push({id:String(flowRows.length+1),source:'process',record_id:row.id,actor_id:identity(token).id,actor_name:identity(token).nome,action:'Atualizado',body:'',current:{phase:row.phase},created_at:new Date().toISOString()});},
     async flowDetails(token,source,id,before){const row=source==='process'?processRows.get(id):source==='feedbacks'?feedbackRows.get(id):records.get(source+'/'+id);if(!row)throw Error('Registro não encontrado');return {record:row,recordVersion:row.version,meta:flowMetas.get(source+':'+id)||null,events:flowRows.filter(e=>e.source===source&&e.record_id===id&&(!before||Number(e.id)<Number(before))).reverse().slice(0,51)};},
     async saveFlow(token,input){const key=input.source+':'+input.id,previous=flowMetas.get(key),row=input.source==='feedbacks'?feedbackRows.get(input.id):records.get(input.source+'/'+input.id);if((previous?.version||0)!==input.version||row.version!==input.recordVersion)throw Error('Conflito de acompanhamento');flowMetas.set(key,{source:input.source,record_id:input.id,version:input.version+1,phase:input.phase,data:input.data});if(input.source==='ordensServico'&&row.data.status==='Aberta'&&input.phase==='Em andamento'){row.data.status='Em andamento';row.version++;}flowRows.push({id:String(flowRows.length+1),source:input.source,record_id:input.id,actor_name:identity(token).nome,action:'Acompanhamento atualizado',current:{phase:input.phase},created_at:new Date().toISOString()});},
@@ -62,6 +62,7 @@ async function main() {
     async saveNote(token,input){const old=noteRows.get(input.id);if((old?.version||0)!==input.version)throw Error('Conflito de nota');if(input.remove)noteRows.delete(input.id);else noteRows.set(input.id,{...input,owner_id:identity(token).id,version:input.version+1});},
     async support(token,id,offset=0,status){const rows=[...supportRows.values()].filter(row=>(identity(token).mestre||row.owner_id===identity(token).id)&&(!id||row.id===id)&&(!status||row.status===status));return rows.slice(offset,offset+51);},
     async sendSupport(token,input){let row=supportRows.get(input.id);if((row?.version||0)!==input.version)throw Error('Conflito de suporte');if(!row){row={id:input.id,subject:input.subject,status:'Aberto',owner_id:identity(token).id,owner_name:identity(token).nome,version:0,book_support_messages:[]};supportRows.set(input.id,row);}row.version++;if(input.status)row.status=input.status;if(input.body)row.book_support_messages.push({id:crypto.randomUUID(),author_id:identity(token).id,author_name:identity(token).nome,master:identity(token).mestre,body:input.body,created_at:new Date().toISOString()});},
+    async editOrder(token,input){const row=records.get('ordensServico/'+input.id);if(row.version!==input.version)throw Object.assign(Error('Conflito'),{status:409});row.data={...row.data,...input.document};row.version++;return structuredClone(row);},
     async reopenOrder(token,input){const row=records.get('ordensServico/'+input.id);if(row.version!==input.version)throw Error('Conflito');row.data={...row.data,status:'Em andamento',motivoReabertura:input.reason};row.version++;},
     canCreateUsers: true,
     async login(email) { return { access_token:email===client.login?'client-token':email==='pessoa@example.com'?'limited-token':'mock-token' }; },
@@ -83,14 +84,17 @@ async function main() {
       if(input.id) Object.assign(users.find(user=>user.id===input.id),{nome:input.nome,funcao:input.funcao,tabs:input.tabs,version:2,book_hotel_access:input.hotels.map(hotel=>({hotel}))});
       else users.push({id:'55555555-5555-4555-8555-555555555555',nome:input.nome,login:input.login,funcao:input.funcao,version:1,mestre:false,book_hotel_access:input.hotels.map(hotel=>({hotel}))});
     },
-    async condominiums(token){return [...Catalog.hotels,...addedCatalog.keys()].filter(h=>identity(token).mestre||['Be Urban','Lume Alto da Boa Vista'].includes(h)).map(name=>({name}));},
+    async apartmentInfo(token,input){const key=input.hotel+'/'+input.apartment,old=apartmentInfoRows.get(key)||{hotel:input.hotel,apartment:input.apartment,version:0,fields:{}};if(input.fields){if(old.version!==input.version)throw Object.assign(Error('Conflito'),{status:409});const next={...old,fields:input.fields,version:old.version+1};apartmentInfoRows.set(key,next);return next;}return old;},
+    async removeCatalog(token,input){if(input.apartment)removedUnits.add(input.hotel+'/'+input.apartment);else removedHotels.add(input.hotel);return {removed:true};},
+    async inspectionCoverage(token){const today=new Date().toISOString().slice(0,10),apartments=await provider.apartments(token),rows=apartments.map(a=>{const last=[...records.values()].filter(r=>r.data.hotel===a.hotel&&r.data.apartamento===a.apartment&&r.data.checklist).map(r=>r.data.data).sort().at(-1)||null,due=Processes.nextInspection(last);return {...a,last_date:last,due_date:due,status:!last?'missing':due<today?'overdue':'current'};}),counts={total:rows.length,missing:0,overdue:0,current:0};rows.forEach(r=>counts[r.status]++);return {referenceDate:today,rows,counts};},
+    async condominiums(token){return [...Catalog.hotels,...addedCatalog.keys()].filter(h=>!removedHotels.has(h)).filter(h=>identity(token).mestre||['Be Urban','Lume Alto da Boa Vista'].includes(h)).map(name=>({name}));},
     async saveCatalog(token,input){
       if(input.kind==='condominium'){if(Catalog.hotels.includes(input.hotel)||addedCatalog.has(input.hotel))throw Object.assign(Error('Condomínio já cadastrado'),{status:409});addedCatalog.set(input.hotel,[]);}
       const existing=addedCatalog.get(input.hotel)||[];
       if(input.apartments.some(a=>existing.includes(a)||(Catalog.apartments[input.hotel]||[]).includes(a)))throw Object.assign(Error('Apartamento já cadastrado'),{status:409});
       addedCatalog.set(input.hotel,[...existing,...input.apartments]);return {hotel:input.hotel,created:input.apartments.length};
     },
-    async apartments(token) { return [...new Set([...Catalog.hotels,...addedCatalog.keys()])].filter(h=>identity(token).mestre || ['Be Urban','Lume Alto da Boa Vista'].includes(h)).flatMap(hotel=>[...(Catalog.apartments[hotel]||[]),...(addedCatalog.get(hotel)||[])].map(apartment=>({hotel,apartment}))); },
+    async apartments(token) { return [...new Set([...Catalog.hotels,...addedCatalog.keys()])].filter(h=>!removedHotels.has(h)).filter(h=>identity(token).mestre || ['Be Urban','Lume Alto da Boa Vista'].includes(h)).flatMap(hotel=>[...(Catalog.apartments[hotel]||[]),...(addedCatalog.get(hotel)||[])].filter(apartment=>!removedUnits.has(hotel+'/'+apartment)).map(apartment=>({hotel,apartment}))); },
     async records(token,collection) { return {rows:[...records.entries()].filter(([key,row])=>key.startsWith(collection+'/') && (identity(token).mestre || row.owner_id===client.id)).map(([,row])=>row),next:null}; },
     async commit(token,changes) {
       for(const change of changes) {
@@ -121,6 +125,7 @@ async function main() {
     await send('Log.enable');
     socket.addEventListener('message',event=>{const message=JSON.parse(event.data);if(message.method==='Runtime.consoleAPICalled'&&message.params.type==='error')errors.push(message.params.args.map(arg=>arg.description||arg.value).join(' '));if(message.method==='Log.entryAdded'&&message.params.entry.source==='security'&&message.params.entry.level==='error')errors.push(message.params.entry.text);});
     await send('Page.enable');
+    await send('Page.addScriptToEvaluateOnNewDocument',{source:"window.SpeechRecognition=class{start(){window.__testDictation=this;}stop(){this.onend?.();}abort(){this.onend?.();}};"});
     const dialogs=[];
     socket.addEventListener('message',event=>{const message=JSON.parse(event.data);if(message.method==='Page.javascriptDialogOpening'){dialogs.push(message.params.message);send('Page.handleJavaScriptDialog',{accept:true}).catch(()=>{});}});
     const evaluate=async expression=>{const result=await send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(result.exceptionDetails)throw new Error(expression.slice(0,300)+'\n'+JSON.stringify(result.exceptionDetails));return result.result.value;};
@@ -246,6 +251,15 @@ async function main() {
     await evaluate("[...document.querySelectorAll('#decisionContent button')].find(b=>b.textContent==='Ver serviços vencidos').click()");
     await wait("!document.getElementById('visaoOS').hidden && !document.getElementById('routine-services').hidden && document.getElementById('routine-services-period').value==='late' && document.getElementById('routine-services-hotel').value==='Be Urban'");
     await evaluate("BookRoutine.openServices({},'board');document.querySelector('#visaoOS > .botao-secundario').click()");
+    // Add records after the initial list loaded: status must query the server, not cached rows.
+    for(const [id,status] of [['903001','Finalizada'],['903002','Recusada']])records.set('ordensServico/'+id,{id,version:1,owner_id:master.id,data:{id,hotel:'Be Urban',apartamento:'214',titulo:'Filtro remoto '+status,status,prioridade:'Normal'}});
+    for(const [status,phase] of [['Finalizada','Resolvido'],['Recusada','Recusa proprietário'],['Aberta','Novo'],['Em andamento','Em andamento'],['','']]){
+      await evaluate(`document.getElementById('filtroStatusOS').value=${JSON.stringify(status)};document.getElementById('filtroStatusOS').dispatchEvent(new Event('change',{bubbles:true}))`);
+      await wait(`!document.getElementById('routine-services').hidden && document.getElementById('routine-services-phase').value===${JSON.stringify(phase)} && !document.getElementById('routine-services-summary').textContent.startsWith('Carregando')`);
+      if(['Finalizada','Recusada'].includes(status))await wait(`document.getElementById('routine-services-area').textContent.includes(${JSON.stringify('Filtro remoto '+status)})`);
+      await evaluate("document.querySelector('#visaoOS > .botao-secundario').click()");
+    }
+    records.delete('ordensServico/903001');records.delete('ordensServico/903002');
     await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
     await evaluate("mostrarAba('dashboard');if(document.documentElement.scrollWidth>document.documentElement.clientWidth+1)throw Error('SAD excede largura do celular')");
     await capture('sad-mobile');
@@ -280,9 +294,9 @@ async function main() {
     await wait("document.querySelectorAll('#notesList button').length===2");
     await evaluate("document.getElementById('notesDialog').querySelector('.workspace-heading button').click();BookWorkspace.openSupport()");
     await evaluate("document.getElementById('supportSubject').value='Problema no sistema';document.getElementById('supportBody').value='Preciso de ajuda';document.getElementById('supportForm').requestSubmit()");
-    await wait("document.querySelectorAll('#supportThread .mensagem-chat').length===1");
+    await wait("document.querySelectorAll('#supportThread .mensagem-chat').length===1 && document.getElementById('supportDialog').getAttribute('aria-busy')!=='true'");
     await evaluate("document.getElementById('supportBody').value='Resposta do mestre';document.getElementById('supportForm').requestSubmit()");
-    await wait("document.querySelectorAll('#supportThread .mensagem-chat').length===2");
+    await wait("document.querySelectorAll('#supportThread .mensagem-chat').length===2 && document.getElementById('supportDialog').getAttribute('aria-busy')!=='true'");
     await capture('suporte-desktop');
     await evaluate("mostrarAba('suporte')");
     await wait("document.getElementById('supportOpen').textContent==='1' && !!document.querySelector('#masterSupportList select') && document.getElementById('masterSupportList').getAttribute('aria-busy')!=='true'");
@@ -329,8 +343,15 @@ async function main() {
     }
     if(processRows.size!==2)throw Error('Novos processos não foram persistidos');
     await evaluate("mostrarAba('os');BookRoutine.openServices({})");
-    await wait("document.querySelector('#routine-services-area .routine-card')");
+    await wait("!document.getElementById('routine-services-summary').textContent.startsWith('Carregando') && document.getElementById('routine-services-area').textContent.includes('Feedback do hóspede')");
     await evaluate("document.querySelector('#routine-services-area .routine-card button').click()");
+    const originalEditTitle=await evaluate("document.querySelector('#osDetalhes h2').textContent");
+    for(const title of ['Card corrigido uma vez','Card corrigido duas vezes',originalEditTitle]){
+      await evaluate("document.getElementById('botaoEditarOS').click()");
+      await wait("document.getElementById('editarCardDialog').open");
+      await evaluate(`document.querySelector('#editarCardDialog [name=titulo]').value=${JSON.stringify(title)};document.querySelector('#editarCardDialog form').requestSubmit()`);
+      await wait(`!document.getElementById('editarCardDialog').open && document.querySelector('#osDetalhes h2').textContent===${JSON.stringify(title)}`);
+    }
     await evaluate("BookLabels.open(document.getElementById('fechamentoIdOS').value)");
     await wait("document.getElementById('labelsDialog').getAttribute('aria-busy')==='false'");
     await evaluate("document.getElementById('labelName').value='Retorno proprietario';document.getElementById('labelColor').value='purple';document.getElementById('labelCreate').requestSubmit()");
@@ -339,11 +360,22 @@ async function main() {
     await wait("!document.getElementById('labelsDialog').open && document.querySelector('#osDetalhes .label-chip')?.textContent==='Retorno proprietario'");
     await evaluate("document.getElementById('osDetalhesModal').style.display='none';const select=document.getElementById('routine-services-label');select.value=select.options[1].value;select.dispatchEvent(new Event('change',{bubbles:true}))");
     await wait("document.querySelectorAll('#routine-services-area .routine-card').length===1 && document.querySelector('#routine-services-area .label-chip')?.textContent==='Retorno proprietario'");
+    await evaluate("(() => {const select=document.getElementById('routine-services-urgency');select.value='invalid';select.value='unknown';select.dispatchEvent(new Event('change',{bubbles:true}));})()");
+    await wait("document.getElementById('routine-services-summary').textContent==='Nenhum registro encontrado.'");
+    await evaluate("(() => {const select=document.getElementById('routine-services-urgency');select.value='';select.dispatchEvent(new Event('change',{bubbles:true}));})()");
+    await wait("document.querySelectorAll('#routine-services-area .routine-card').length===1");
     await evaluate("(() => {const select=document.getElementById('routine-services-label');select.value='';select.dispatchEvent(new Event('change',{bubbles:true}));})()");
     await evaluate("BookRoutine.openServices({},'board');document.querySelector('#visaoOS .titulo-secao').nextElementSibling.click()");
     const damage=[...processRows.values()].find(r=>r.kind==='danos');
     await evaluate(`BookRoutine.openFlow('process',${JSON.stringify(damage.id)})`);
     await wait("document.getElementById('flowDialog').open");
+    await wait("document.querySelector('#flowCommentBody + .dictation-button')");
+    await evaluate("document.querySelector('#flowCommentBody + .dictation-button').click()");
+    await wait("window.__testDictation?.lang==='pt-BR'");
+    if(!dialogs.at(-1)?.startsWith('Para ditar, permita o microfone.'))throw Error('Aviso de privacidade do ditado ausente');dialogs.pop();
+    await evaluate("window.__testDictation.onresult({resultIndex:0,results:[Object.assign([{transcript:'Comentario por voz'}],{isFinal:true})]})");
+    await wait("document.getElementById('flowCommentBody').value==='Comentario por voz' && document.getElementById('flowDialog').open");
+    await evaluate("document.querySelector('#flowCommentBody + .dictation-button').click()");
     await evaluate("document.getElementById('flowCommentBody').value='Comentário da rotina <img src=x>';document.getElementById('flowComment').requestSubmit()");
     await wait("document.getElementById('flowHistory').textContent.includes('Comentário da rotina')");
     await evaluate("if(document.querySelector('#flowHistory img'))throw Error('Comentário de rotina executou HTML');document.getElementById('flowClose').click();mostrarAba('os');document.querySelector('#visaoOS > .botao-secundario').click()");
@@ -382,6 +414,29 @@ async function main() {
     await evaluate("document.getElementById('onboardingKind').value='apartments';document.getElementById('onboardingKind').dispatchEvent(new Event('change'));document.getElementById('onboardingExisting').value='Condomínio Teste Novo';document.getElementById('onboardingApartments').value='102';document.getElementById('onboardingCatalog').requestSubmit()");
     await wait("BookStore.apartments('Condomínio Teste Novo').length===3 && document.getElementById('onboardingCatalog').getAttribute('aria-busy')==='false'");
     await evaluate("mostrarAba('condominios');BookCondominios.mostrarHistorico('Condomínio Teste Novo');if(document.querySelectorAll('#historico .apartamento-opcao').length!==3)throw Error('Onboarding não atualizou Condomínios');if(!document.getElementById('usuarioCondomínio Teste Novo'))throw Error('Cadastro ausente nas permissões');selecionarHotelVistoria('Condomínio Teste Novo');if(document.querySelectorAll('#areaVistorias .apartamentos-vistoria button').length!==3)throw Error('Vistorias sem novo catálogo');abrirFormularioOS('','Condomínio Teste Novo','194A');if(document.getElementById('osApartamento').value!=='194A')throw Error('Card sem apartamento novo');document.getElementById('osModal').style.display='none'");
+
+    await evaluate("BookCondominios.mostrarHistorico('Condomínio Teste Novo');BookCondominios.selecionarApartamento('101');[...document.querySelectorAll('#opcoesApartamento button')].find(b=>b.textContent==='Informações').click()");
+    await wait("document.querySelector('#apartmentInfoDialog form')");
+    await evaluate("(() => {const form=document.querySelector('#apartmentInfoDialog form');if(!form.elements.lockPassword.readOnly||form.elements.lockPassword.type!=='password')throw Error('Senha exposta');[...form.querySelectorAll('button')].find(b=>b.textContent==='Editar informações').click();form.elements.lockPassword.value='000123';form.elements.wifiName.value='Rede simulada';form.requestSubmit();})()");
+    await wait("document.getElementById('apartmentInfoDialog').textContent.includes('Informações salvas.')");
+    await capture('apartamento-informacoes');
+    await evaluate("document.getElementById('apartmentInfoDialog').close()");
+    await wait("!document.querySelector('#apartmentInfoDialog input')");
+    await evaluate("BookProperty.openInfo('Condomínio Teste Novo','101')");
+    await wait("document.querySelector('#apartmentInfoDialog [name=lockPassword]')?.value==='000123'");
+    await evaluate("document.getElementById('apartmentInfoDialog').close();mostrarAba('vistorias');BookProperty.openOverview()");
+    await wait("document.querySelector('#inspectionOverviewTable tbody tr')");
+    await evaluate("document.getElementById('inspectionOverviewHotel').value='Condomínio Teste Novo';document.getElementById('inspectionOverviewHotel').dispatchEvent(new Event('change'))");
+    await wait("document.querySelectorAll('#inspectionOverviewTable tbody tr').length===3");
+    await capture('vistorias-visao-geral');
+    await evaluate("document.getElementById('inspectionOverviewDialog').close();selecionarHotelVistoria('Condomínio Teste Novo')");
+    await wait("document.querySelectorAll('#areaVistorias .inspection-unit-late').length===3");
+    await evaluate("mostrarAba('onboarding');document.getElementById('removePropertyHotel').value='Condomínio Teste Novo';document.getElementById('removePropertyHotel').dispatchEvent(new Event('change'));document.getElementById('removePropertyUnit').value='102';document.getElementById('removePropertyForm').requestSubmit()");
+    await wait("BookStore.apartments('Condomínio Teste Novo').length===2 && !document.querySelector('#removePropertyForm [type=submit]').disabled");
+    if(!dialogs.at(-1)?.startsWith('Remover '))throw Error('Confirmacao de remocao ausente');dialogs.pop();
+    await evaluate("document.getElementById('removePropertyKind').value='condominium';document.getElementById('removePropertyKind').dispatchEvent(new Event('change'));document.getElementById('removePropertyForm').requestSubmit()");
+    await wait("!BookCatalog.hotels.includes('Condomínio Teste Novo')");
+    if(!dialogs.at(-1)?.startsWith('Remover '))throw Error('Confirmacao de remocao ausente');dialogs.pop();
     await evaluate(`(async()=>{
       mostrarAba('os');abrirFormularioOS('','Be Urban','214');
       document.getElementById('osTitulo').value='Card de teste';document.getElementById('osDescricao').value='Teste de fluxo';

@@ -192,7 +192,7 @@ function mostrarOS() {
   area.innerHTML = items.length ? items.map(o => {
     const finalizada = o.status === "Finalizada", status = o.status || "Aberta";
     const vencida = BookProcesses.deadlineState(o,BookPeriods.today()) === 'late';
-    return `<article class="chamado card-os ${finalizada ? "finalizado" : ""}" data-on-click="abrirOS(${Number(o.id)})" role="button" tabindex="0" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();abrirOS(${Number(o.id)})}"><div class="os-topo"><strong>Card #${escapar(o.id)}</strong><span class="selo-status ${finalizada ? "selo-finalizado" : ""}">${escapar(BookProcesses.orderStatusLabel(status))}</span></div><p>${escapar(o.hotel)} - Apartamento ${escapar(o.apartamento)}</p><h3>${escapar(o.titulo)}</h3><div class="label-chips" data-label-card="${escapar(o.id)}"></div><p>Urgência: ${escapar(o.importacao?.parcial?'Não informada':BookProcesses.urgencyBadge(o.prioridade))} &middot; Respons&aacute;vel: ${escapar(o.responsavelLogin || "A definir")}</p><p>${escapar(o.descricao)}</p><p class="vencimento deadline deadline-${BookProcesses.deadlineState(o,BookPeriods.today())}"><strong>Vencimento:</strong> ${formatarData(o.vencimento)}${vencida ? " - Vencida" : ""}</p>${o.chamadoId ? `<small>Vinculada ao chamado #${escapar(o.chamadoId)}</small>` : "<small>Card independente</small>"}<label class="status-os" data-on-click="event.stopPropagation()">Status do card<select ${o.importacao?.parcial?'disabled':''} data-on-change="alterarStatusOS(${Number(o.id)},this.value)">${opcoesStatusOS(status)}</select></label></article>`;
+    return `<article class="chamado card-os ${finalizada ? "finalizado" : ""}" data-on-click="abrirOS(${Number(o.id)})" role="button" tabindex="0" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();abrirOS(${Number(o.id)})}"><div class="os-topo"><strong>Card #${escapar(o.id)}</strong><span class="selo-status ${finalizada ? "selo-finalizado" : ""}">${escapar(BookProcesses.orderStatusLabel(status))}</span></div><p>${escapar(o.hotel)} - Apartamento ${escapar(o.apartamento)}</p><h3>${escapar(o.titulo)}</h3><div class="label-chips" data-label-card="${escapar(o.id)}"></div><p>Urgência: ${escapar(o.importacao?.parcial&&!o.prioridadeDefinidaPeloAdmin?'Não informada':BookProcesses.urgencyBadge(o.prioridade))} &middot; Respons&aacute;vel: ${escapar(o.responsavelLogin || "A definir")}</p><p>${escapar(o.descricao)}</p><p class="vencimento deadline deadline-${BookProcesses.deadlineState(o,BookPeriods.today())}"><strong>Vencimento:</strong> ${formatarData(o.vencimento)}${vencida ? " - Vencida" : ""}</p>${o.chamadoId ? `<small>Vinculada ao chamado #${escapar(o.chamadoId)}</small>` : "<small>Card independente</small>"}<label class="status-os" data-on-click="event.stopPropagation()">Status do card<select ${o.importacao?.parcial?'disabled':''} data-on-change="alterarStatusOS(${Number(o.id)},this.value)">${opcoesStatusOS(status)}</select></label></article>`;
   }).join("") : "<p class=\"vazio\">Nenhum card encontrado para esse apartamento.</p>";
   BookLabels.hydrate(area);
 }
@@ -212,7 +212,10 @@ function abrirOS(id) {
   }).join("") : "<p>Nenhum anexo neste card</p>";
   const fotosFechamento = (o.fechamento?.fotos || []).map(f => `<figure><img decoding="async" loading="lazy" src="${f.dados}" alt="${escapar(f.nome)}"><figcaption>${escapar(f.nome)}</figcaption></figure>`).join("");
   const fechamento = o.fechamento ? `<h3>Dados do fechamento</h3><p><b>Data de fechamento:</b> ${formatarData(o.fechamento.data)}</p><p><b>Serviço executado por terceiro:</b> ${escapar(o.fechamento.terceiro)}</p><p><b>Valor do serviço:</b> ${formatarMoeda(o.fechamento.valorServico)}</p><p><b>Tipo de material:</b> ${escapar(o.fechamento.tipoMaterial)}</p><p><b>Valor do material:</b> ${formatarMoeda(o.fechamento.valorMaterial)}</p><p><b>Descrição do material:</b> ${escapar(o.fechamento.descricaoMaterial || "Não informado")}</p><p><b>Responsável pelo pagamento:</b> ${escapar(o.fechamento.responsavelPagamento)}</p><p><b>Quem executou:</b> ${escapar(o.fechamento.executadoPor)}</p><p><b>Custo total:</b> ${formatarMoeda(o.fechamento.custoTotal)}</p><p><b>Observações:</b> ${escapar(o.fechamento.observacao || "Nenhuma")}</p><h4>Fotos do serviço concluído</h4>${fotosFechamento || "<p>Nenhuma foto anexada.</p>"}` : `<p>${o.status === "Finalizada" ? "Sem dados de fechamento registrados para este card." : "Este card ainda não foi finalizado."}</p>`;
-  document.getElementById("osDetalhes").innerHTML = `<h2>${escapar(o.titulo || "Card")}</h2><p><b>Card #:</b> ${escapar(o.id)}</p><p><b>Hotel:</b> ${escapar(o.hotel)}</p><p><b>Apartamento:</b> ${escapar(o.apartamento)}</p><p><b>Descrição:</b> ${escapar(o.descricao)}</p><label>Status do card<select id="osDetalheStatus" data-on-change="alterarStatusOS(${Number(o.id)},this.value)" ${BookWorkspace.can('os')&&!o.importacao?.parcial?'':'disabled'}>${opcoesStatusOS(o.status||'Aberta')}</select></label>${o.motivoRecusa?`<p><b>${o.status==='Recusada'?'Motivo da recusa':'Último motivo de recusa'}:</b> ${escapar(o.motivoRecusa)}</p>`:''}<p><b>Abertura:</b> ${escapar(o.data)}</p><p class="deadline deadline-${BookProcesses.deadlineState(o,BookPeriods.today())}"><b>Vencimento:</b> ${formatarData(o.vencimento)}</p><p><b>Urgência:</b> ${escapar(o.importacao?.parcial?'Não informada':BookProcesses.urgencyBadge(o.prioridade))}</p>${vinculo}<h3>Anexos e arquivos</h3>${anexos}${fechamento}`;
+  document.getElementById("osDetalhes").innerHTML = `<h2>${escapar(o.titulo || "Card")}</h2><p><b>Card #:</b> ${escapar(o.id)}</p><p><b>Hotel:</b> ${escapar(o.hotel)}</p><p><b>Apartamento:</b> ${escapar(o.apartamento)}</p><p><b>Descrição:</b> ${escapar(o.descricao)}</p><label>Status do card<select id="osDetalheStatus" data-on-change="alterarStatusOS(${Number(o.id)},this.value)" ${BookWorkspace.can('os')&&!o.importacao?.parcial?'':'disabled'}>${opcoesStatusOS(o.status||'Aberta')}</select></label>${o.motivoRecusa?`<p><b>${o.status==='Recusada'?'Motivo da recusa':'Último motivo de recusa'}:</b> ${escapar(o.motivoRecusa)}</p>`:''}<p><b>Abertura:</b> ${escapar(o.data)}</p><p class="deadline deadline-${BookProcesses.deadlineState(o,BookPeriods.today())}"><b>Vencimento:</b> ${formatarData(o.vencimento)}</p><p><b>Urgência:</b> ${escapar(o.importacao?.parcial&&!o.prioridadeDefinidaPeloAdmin?'Não informada':BookProcesses.urgencyBadge(o.prioridade))}</p>${vinculo}<h3>Anexos e arquivos</h3>${anexos}${fechamento}`;
+  let editButton=document.getElementById('botaoEditarOS');
+  if(!editButton){editButton=document.createElement('button');editButton.id='botaoEditarOS';editButton.type='button';editButton.className='acao-principal';editButton.textContent='Editar card';document.getElementById('osDetalhes').after(editButton);}
+  editButton.hidden=!BookWorkspace.can('os');editButton.onclick=()=>editarDadosOS(String(o.id));
   BookLabels.mountDetails(String(o.id));
   const botaoFechamento = document.getElementById("botaoFinalizarOS");
   botaoFechamento.hidden = o.status === "Finalizada";
@@ -399,6 +402,7 @@ const gruposChecklistVistoria = {
 let vistoriaHotel = "", vistoriaApartamento = "";
 const vistorias = () => ler("vistorias");
 function atualizarTotaisVistorias() {
+  window.BookProperty?.refreshInspections();
   const itens = vistorias();
   BookCatalog.hotels.forEach(hotel => {
     const total = itens.filter(item => item.hotel === hotel).length;
@@ -408,6 +412,7 @@ function atualizarTotaisVistorias() {
 function selecionarHotelVistoria(hotel) {
   vistoriaHotel = hotel;
   document.getElementById("areaVistorias").innerHTML = `<h3>${escapar(hotel)} - Apartamentos</h3><div class="apartamentos-vistoria">${apartamentos(hotel).map(ap => `<button type="button" data-on-click="selecionarApartamentoVistoria('${ap}')">Apartamento ${ap}</button>`).join("")}</div><div id="detalheApartamentoVistoria"><p class="vazio">Selecione um apartamento.</p></div>`;
+  window.BookProperty?.decorateInspections(hotel);
 }
 function selecionarApartamentoVistoria(apartamento) {
   vistoriaApartamento = apartamento;
@@ -585,6 +590,7 @@ BookAccount.init();
 BookCollaboration.init(sessao);
 BookRoutine.init(sessao);
 BookOnboarding.init();
+BookProperty.init(sessao);
 window.addEventListener('book:catalog',()=>{if(vistoriaHotel)selecionarHotelVistoria(vistoriaHotel);});
 BookDecision.init();
 BookActivity.init();
@@ -613,3 +619,14 @@ window.addEventListener('book:data', () => {
 });
 
 BookMoney.bind(document);
+
+function editarDadosOS(id){
+ const order=osList().find(item=>String(item.id)===String(id));if(!order||!BookWorkspace.can('os'))return;
+ let dialog=document.getElementById('editarCardDialog');if(!dialog){dialog=document.createElement('dialog');dialog.id='editarCardDialog';dialog.className='workspace-dialog';document.body.append(dialog);}
+ dialog.innerHTML='<form><h2>Editar card</h2><p>Status e histórico de origem são preservados.</p><label>Título<input name="titulo" required maxlength="200"></label><label>Descrição<textarea name="descricao" maxlength="10000"></textarea></label><label>Urgência<select name="prioridade"><option value="">Não informada</option><option value="Urgente">🔴⚠️ Alta</option><option value="Alta">🟡⚠️ Média</option><option value="Normal">🟢⚠️ Baixa</option></select></label><label>Vencimento<input name="vencimento" type="date"></label><p role="status"></p><button type="button">Cancelar</button><button type="submit">Salvar alterações</button></form>';
+ const form=dialog.querySelector('form');for(const key of ['titulo','descricao','prioridade','vencimento'])form.elements[key].value=order[key]||'';
+ form.querySelector('[type=button]').onclick=()=>dialog.close();
+ form.onsubmit=async event=>{event.preventDefault();const submit=form.querySelector('[type=submit]');if(submit.disabled)return;submit.disabled=true;const document={titulo:form.elements.titulo.value.trim(),descricao:form.elements.descricao.value.trim(),vencimento:form.elements.vencimento.value};if(form.elements.prioridade.value)document.prioridade=form.elements.prioridade.value;
+ try{const row=await BookAPI.request('/api/orders/edit',{method:'POST',body:JSON.stringify({id:String(order.id),version:order.__bookVersion,document})});BookStore.includeRecord('ordensServico',row);dialog.close();atualizarPainel();abrirOS(id);}catch(error){form.querySelector('[role=status]').textContent=error.message;}finally{submit.disabled=false;}};
+ dialog.showModal();
+}

@@ -9,7 +9,7 @@ window.BookRoutine=(()=>{
  function staffOptions(select,value=''){select.replaceChildren(new Option('A definir',''));for(const p of people)select.append(new Option(p.nome,p.id));select.value=value;}
  function name(id){return people.find(p=>p.id===id)?.nome||'A definir';}
  function addSelect(label,id,options,parent){const wrap=document.createElement('label');wrap.textContent=label;const select=document.createElement('select');select.id=id;for(const [value,title]of options)select.append(new Option(title,value));wrap.append(select);parent.append(wrap);return select;}
- function filters(kind){const prefix='routine-'+kind;return {search:el(prefix+'-search').value.trim(),phase:el(prefix+'-phase').value,hotel:el(prefix+'-hotel').value,assignee:el(prefix+'-assignee').value,period:el(prefix+'-period').value,...(kind==='services'?{label:el(prefix+'-label').value}:{})};}
+ function filters(kind){const prefix='routine-'+kind;return {search:el(prefix+'-search').value.trim(),phase:el(prefix+'-phase').value,hotel:el(prefix+'-hotel').value,assignee:el(prefix+'-assignee').value,period:el(prefix+'-period').value,...(kind==='services'?{label:el(prefix+'-label').value,urgency:el(prefix+'-urgency').value}:{})};}
  function surface(kind,parent){
   const def=kind==='services'?{label:'Quadro de serviços',phases:phases.ordensServico}:defs[kind];
   const prefix='routine-'+kind,node=document.createElement('div');node.className='routine-surface';node.id=prefix;
@@ -19,7 +19,7 @@ window.BookRoutine=(()=>{
   addSelect('Condomínio',prefix+'-hotel',[['','Todos'],...BookCatalog.hotels.map(h=>[h,h])],toolbar);
   const assignee=addSelect('Responsável',prefix+'-assignee',[['','Todos']],toolbar);staffOptions(assignee);assignee.options[0].text='Todos';
   addSelect('Prazo',prefix+'-period',[['all','Todos'],['today','Hoje'],['week','Esta semana'],['late','Vencidas']],toolbar);
-  if(kind==='services')BookLabels.filter(toolbar,prefix+'-label');
+  if(kind==='services'){addSelect('Urgência',prefix+'-urgency',[['','Todas as urgências'],['Urgente','🔴⚠️ Alta'],['Alta','🟡⚠️ Média'],['Normal','🟢⚠️ Baixa'],['unknown','Não informada']],toolbar);BookLabels.filter(toolbar,prefix+'-label');}
   const modes=document.createElement('div');modes.className='routine-actions';
   for(const [view,label]of [['board','Quadro'],['list','Lista'],['agenda','Agenda']]){const b=button(label,()=>{states.get(kind).view=view;render(kind);});b.dataset.view=view;modes.append(b);}
   modes.append(button('Minhas demandas',()=>{el(prefix+'-assignee').value=user.id;states.get(kind).offset=0;load(kind);}));modes.append(button('Atualizar',()=>load(kind)));modes.append(button('Exportar página',()=>exportPage(kind)));
@@ -43,7 +43,7 @@ window.BookRoutine=(()=>{
   const title=document.createElement('h3');title.textContent=data.titulo;const unit=document.createElement('p');unit.textContent=(isService?data.hotel:row.hotel)||'Equipe / geral';unit.textContent+=((isService?data.apartamento:row.apartment)?' · Apto '+(isService?data.apartamento:row.apartment):'');
   const detail=document.createElement('p');detail.textContent=isService?(people.find(p=>p.login===data.responsavelLogin)?.nome||data.responsavelLogin||'A definir'):name(data.responsavel);
   const due=document.createElement('p'),date=isService?data.vencimento:data.prazo;due.textContent=(date?'Prazo: '+formatarData(date):'Sem prazo')+' · '+data.prioridade;
-  const today=BookPeriods.today();if(isService){due.className='deadline deadline-'+BookProcesses.deadlineState(data,today);due.textContent=(date?'Prazo: '+formatarData(date):'Sem prazo')+' · Urgência '+(data.importacao?.parcial?'Não informada':BookProcesses.urgencyBadge(data.prioridade));}else if(date&&date<today&&!defs[kind].terminal.includes(phase))due.className='routine-overdue';
+  const today=BookPeriods.today();if(isService){due.className='deadline deadline-'+BookProcesses.deadlineState(data,today);due.textContent=(date?'Prazo: '+formatarData(date):'Sem prazo')+' · Urgência '+(data.importacao?.parcial&&!data.prioridadeDefinidaPeloAdmin?'Não informada':BookProcesses.urgencyBadge(data.prioridade));}else if(date&&date<today&&!defs[kind].terminal.includes(phase))due.className='routine-overdue';
   article.append(title,unit,detail,due);if(isService)BookLabels.chips(article,row.id);
   const open=button(isService?'Abrir card':'Abrir registro',()=>{if(isService){BookStore.includeRecord('ordensServico',row);abrirOS(String(row.id));}else edit(kind,row);});article.append(open);
   if(row.service_id){const link=document.createElement('small');link.textContent='Serviço #'+row.service_id;article.append(link);}return article;
@@ -148,7 +148,7 @@ window.BookRoutine=(()=>{
  }
  function openServices(query={},view='list'){
   if(!BookWorkspace.can('os'))return;
-  for(const key of ['search','phase','hotel','assignee','period','label']){
+  for(const key of ['search','phase','hotel','assignee','period','label','urgency']){
    const input=el('routine-services-'+key),value=query[key]||(key==='period'?'all':'');
    if(key==='assignee'&&value&&![...input.options].some(o=>o.value===value))input.append(new Option('Responsável selecionado',value));
    input.value=value;
@@ -158,5 +158,6 @@ window.BookRoutine=(()=>{
   el('visaoOS').querySelector('.titulo-secao').nextElementSibling.textContent='Voltar à lista de cards';
   mostrarAba('os');
  }
- return {init,activate,openFlow,orderOpened,load,openServices};
+ function filterServicesFromList(){openServices({search:el('filtroApartamento').value.trim(),phase:({'Aberta':'Novo','Em andamento':'Em andamento','Recusada':'Recusa proprietário','Finalizada':'Resolvido'})[el('filtroStatusOS').value]||'',label:el('filtroEtiquetaOS')?.value||'',urgency:el('filtroUrgenciaOS').value});}
+ return {filterServicesFromList,init,activate,openFlow,orderOpened,load,openServices};
 })();

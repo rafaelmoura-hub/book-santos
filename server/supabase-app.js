@@ -65,7 +65,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('Referrer-Policy', 'same-origin');
     res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
-    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(self), geolocation=()');
     res.setHeader('Cross-Origin-Resource-Policy','same-origin');
     res.setHeader('Cross-Origin-Opener-Policy','same-origin');
     res.setHeader('X-Permitted-Cross-Domain-Policies','none');
@@ -80,7 +80,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         if(!html)throw fail(404,'Documento não encontrado.');
         res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'}); return res.end(req.method==='HEAD'?undefined:html);
       }
-      if (route === '/health' && req.method === 'GET') return json(200, { status: 'ok', version:'20261105-security1' });
+      if (route === '/health' && req.method === 'GET') return json(200, { status: 'ok', version:'20261105-operations2' });
       if (route === '/ready' && req.method === 'GET') {
         if(clock()>=readyUntil){
           if(!readyCheck)readyCheck=Promise.resolve().then(()=>provider.ready()).then(()=>{readyUntil=clock()+10000;}).finally(()=>{readyCheck=null;});
@@ -217,7 +217,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
           const kind=url.searchParams.get('kind'),offset=Number(url.searchParams.get('offset')||0);let filters;
           if(route==='/api/processes'&&['reservas','projetos','compras','onboarding'].includes(kind))throw fail(410,'Este processo foi removido. Onboarding está disponível apenas para cadastro de imóveis.');
           try{filters=JSON.parse(url.searchParams.get('filters')||'{}');}catch{throw fail(400,'Filtros inválidos.');}
-          if(!Number.isSafeInteger(offset)||offset<0||offset>100000||!filters||typeof filters!=='object'||Array.isArray(filters)||Object.keys(filters).some(k=>!['search','phase','assignee','hotel','period','label'].includes(k))||Object.values(filters).some(v=>typeof v!=='string'||v.length>200)||filters.label&&(!route.endsWith('/services')||!uuid(filters.label))||filters.assignee&&!uuid(filters.assignee)||filters.period&&!['all','today','week','late'].includes(filters.period))throw fail(400,'Filtros inválidos.');
+          if(!Number.isSafeInteger(offset)||offset<0||offset>100000||!filters||typeof filters!=='object'||Array.isArray(filters)||Object.keys(filters).some(k=>!['search','phase','assignee','hotel','period','label','urgency'].includes(k))||Object.values(filters).some(v=>typeof v!=='string'||v.length>200)||filters.label&&(!route.endsWith('/services')||!uuid(filters.label))||filters.urgency&&(!route.endsWith('/services')||!['Normal','Alta','Urgente','unknown'].includes(filters.urgency))||filters.assignee&&!uuid(filters.assignee)||filters.period&&!['all','today','week','late'].includes(filters.period))throw fail(400,'Filtros inválidos.');
           const tab=route.endsWith('/services')?'os':processDefinitions[kind]?.tab||kind;
           if(route==='/api/processes'&&!Object.hasOwn(processDefinitions,kind))throw fail(400,'Processo inválido.');
           if(!canTab(user,tab))throw fail(403,'Sem acesso a esta aba.');
@@ -300,6 +300,13 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         }
         return json(200,await agent.run(await readBody(req,150000),context,aiGenerate));
       }
+      if(route==='/api/orders/edit'){
+        if(user.funcao!=='adm'||!canTab(user,'os'))throw fail(403,'Sem acesso para editar cards.');
+        if(req.method!=='POST')throw fail(405,'Método inválido.');
+        const input=await readBody(req,25000);
+        if(typeof input.id!=='string'||!/^\d{1,16}$/.test(input.id)||!Number.isSafeInteger(input.version)||input.version<1||!input.document||Array.isArray(input.document)||typeof input.document!=='object'||Object.entries(input.document).some(([k,v])=>!['titulo','descricao','prioridade','vencimento'].includes(k)||typeof v!=='string'||v.length>10000)||input.document.prioridade&&!['Normal','Alta','Urgente'].includes(input.document.prioridade))throw fail(400,'Edição inválida.');
+        return json(200,await provider.editOrder(session.accessToken,input));
+      }
       if (route === '/api/orders/reopen' || route === '/api/workspace/notes' || route === '/api/workspace/support') {
         if (user.funcao !== 'adm') throw fail(403, 'Disponível somente para administradores.');
         if (route === '/api/orders/reopen' && !canTab(user, 'os')) throw fail(403, 'Sem permissão para reabrir cards.');
@@ -361,6 +368,18 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         await provider.saveUser(session.accessToken, input);
         if (input.id) for (const [key, value] of sessions) if (value.userId === input.id) sessions.delete(key);
         return json(200, { ok: true });
+      }
+      if(['/api/apartment-info','/api/onboarding/remove','/api/inspections/coverage'].includes(route)){
+        const tab=route==='/api/apartment-info'?'condominios':route==='/api/onboarding/remove'?'onboarding':'vistorias';
+        if(user.funcao!=='adm'||!canTab(user,tab))throw fail(403,'Sem acesso a esta operação.');
+        if(route==='/api/inspections/coverage'){if(req.method!=='GET')throw fail(405,'Método inválido.');return json(200,await provider.inspectionCoverage(session.accessToken));}
+        if(!['GET','POST'].includes(req.method)||route==='/api/onboarding/remove'&&req.method!=='POST')throw fail(405,'Método inválido.');
+        const input=req.method==='GET'?{hotel:url.searchParams.get('hotel'),apartment:url.searchParams.get('apartment')}:await readBody(req,12000);
+        if(typeof input.hotel!=='string'||input.hotel.length>100||!input.hotel||input.apartment!=null&&(typeof input.apartment!=='string'||!/^[A-Za-z0-9 -]{1,20}$/.test(input.apartment))||route==='/api/apartment-info'&&!input.apartment)throw fail(400,'Imóvel inválido.');
+        if(!(await visibleHotels(provider,session.accessToken,user)).includes(input.hotel))throw fail(403,'Sem acesso ao condomínio.');
+        if(route==='/api/onboarding/remove'){if(input.confirm!==input.hotel+(input.apartment?' / '+input.apartment:''))throw fail(400,'Confirme o imóvel que deseja remover.');return json(200,await provider.removeCatalog(session.accessToken,input));}
+        if(req.method==='POST'&&(!Number.isSafeInteger(input.version)||input.version<0||!input.fields||typeof input.fields!=='object'||Array.isArray(input.fields)||Object.entries(input.fields).some(([k,v])=>!['lockPassword','safePassword','wifiName','wifiPassword'].includes(k)||typeof v!=='string'||v.length>256)))throw fail(400,'Informações inválidas.');
+        return json(200,await provider.apartmentInfo(session.accessToken,req.method==='GET'?{hotel:input.hotel,apartment:input.apartment}:input));
       }
       if (route === '/api/apartments' && req.method === 'GET') return json(200, await provider.apartments(session.accessToken));
       if (route === '/api/access' && req.method === 'GET') return json(200,await visibleHotels(provider,session.accessToken,user));
@@ -448,7 +467,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
       if (!['GET', 'HEAD'].includes(req.method)) throw fail(405, 'Método não permitido.');
       if (/^\/hotel\/(hotel\.html)?$/.test(route)) { res.writeHead(302, { Location: '/adm/admin.html#condominios' }); return res.end(); }
       const file = route === '/' ? '/login.html' : route;
-      if (!/^\/(login\.(html|css|js)|assets\/(api|session|store|money|periods|catalog|events|notifications|processes|accessibility|legal|theme|mobile|auth)\.js|assets\/(ui|legal|brand|layout|mobile)\.css|assets\/book-task-logo\.png|assets\/login-skyline\.svg|(adm|cliente|hotel)\/[a-z]+\.(html|css|js))$/.test(file)) throw fail(404, 'Arquivo não encontrado.');
+      if (!/^\/(login\.(html|css|js)|assets\/(api|session|store|money|periods|catalog|events|notifications|processes|accessibility|legal|theme|mobile|auth|dictation)\.js|assets\/(ui|legal|brand|layout|mobile)\.css|assets\/book-task-logo\.png|assets\/login-skyline\.svg|(adm|cliente|hotel)\/[a-z]+\.(html|css|js))$/.test(file)) throw fail(404, 'Arquivo não encontrado.');
       if (/^\/(adm|hotel)\//.test(file) && user?.funcao !== 'adm' || /^\/cliente\//.test(file) && user?.funcao !== 'cliente') {
         res.writeHead(302, { Location: '/login.html' }); return res.end();
       }

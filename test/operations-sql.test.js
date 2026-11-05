@@ -604,6 +604,10 @@ test('PostgreSQL: RLS, concorrência, auditoria e consumo atômico', async t => 
   await assert.rejects(db.query('select public.book_labels_assign($1,1,$2::uuid[])',[historyId,['99999999-9999-4999-8999-999999999999']]),e=>e.code==='22023');
   assert.deepEqual((await db.query("select data,version from public.book_records where collection='ordensServico' and id=$1",[historyId])).rows[0],beforeLabels,'Tagging preserves imported data and version');
   const filteredLabels=(await db.query('select public.book_service_page(0,$1::jsonb) value',[JSON.stringify({label:labelId})])).rows[0].value;
+  await db.exec('reset role');await db.exec(migration('202611050023_urgency_filter.sql'));await db.exec(migration('202611050023_urgency_filter.sql'));await actor(master);
+  for(const urgency of ['Normal','Alta','Urgente'])assert.equal((await db.query('select public.book_service_page(0,$1::jsonb) value',[JSON.stringify({urgency})])).rows[0].value.total,0);
+  const unknownUrgency=(await db.query('select public.book_service_page(0,$1::jsonb) value',[JSON.stringify({urgency:'unknown',label:labelId})])).rows[0].value;assert.equal(unknownUrgency.total,1);assert.equal(unknownUrgency.rows[0].id,historyId);assert.equal(Object.values(unknownUrgency.counts).reduce((a,b)=>a+b,0),1);
+  await assert.rejects(db.query('select public.book_service_page(0,$1::jsonb)',[JSON.stringify({urgency:'invalid'})]),e=>e.code==='22023');
   assert.equal(filteredLabels.total,1);assert.equal(filteredLabels.rows[0].id,historyId);assert.equal(Object.values(filteredLabels.counts).reduce((a,b)=>a+b,0),1);
   assert.equal((await db.query('select public.book_labels_read($1::text[]) value',[[historyId]])).rows[0].value[0].version,1);
   await assert.rejects(db.query("update public.book_card_labels set label_ids='{}'"),e=>e.code==='42501');
@@ -674,6 +678,13 @@ test('PostgreSQL: RLS, concorrência, auditoria e consumo atômico', async t => 
   }
   await db.exec('reset role');
   await db.exec("create table auth.mfa_factors(id uuid default gen_random_uuid(),user_id uuid,status text,factor_type text);create function auth.jwt() returns jsonb language sql stable as $$ select coalesce(nullif(current_setting('request.jwt.claims',true),''),'{}')::jsonb $$;grant execute on function auth.jwt() to authenticated;");
+  await db.exec(migration('202611050024_card_edit.sql'));await db.exec(migration('202611050024_card_edit.sql'));await actor(master);
+  const editable=(await db.query("select * from public.book_records where collection='ordensServico' limit 1")).rows[0];
+  let corrected=editable;
+  for(const titulo of ['Correção primeira','Correção segunda']){corrected=(await db.query('select public.book_order_edit($1,$2,$3::jsonb) value',[editable.id,Number(corrected.version),JSON.stringify({titulo})])).rows[0].value;assert.equal(corrected.data.titulo,titulo);assert.equal(corrected.data.status,editable.data.status);assert.deepEqual(corrected.data.importacao,editable.data.importacao);assert.deepEqual(corrected.data.fechamento,editable.data.fechamento);}
+  await assert.rejects(db.query('select public.book_order_edit($1,$2,$3::jsonb)',[editable.id,Number(editable.version),JSON.stringify({titulo:'Stale'})]),e=>e.code==='PT409');
+  await assert.rejects(db.query('select public.book_order_edit($1,$2,$3::jsonb)',[editable.id,Number(corrected.version),JSON.stringify({status:'Aberta'})]),e=>e.code==='22023');
+  await actor(client);await assert.rejects(db.query('select public.book_order_edit($1,$2,$3::jsonb)',[editable.id,Number(corrected.version),JSON.stringify({titulo:'Forbidden'})]),e=>e.code==='42501');await db.exec('reset role');
   await db.exec(migration('202611040022_mfa.sql'));await db.exec(migration('202611040022_mfa.sql'));
   await actor(master);await db.query("select set_config('request.jwt.claims',$1,false)",[JSON.stringify({aal:'aal1'})]);assert.equal((await db.query('select public.book_is_admin() allowed')).rows[0].allowed,true);
   await db.exec('reset role');await db.query("insert into auth.mfa_factors(user_id,status,factor_type) values($1,'verified','totp')",[master]);await actor(master);
@@ -681,5 +692,22 @@ test('PostgreSQL: RLS, concorrência, auditoria e consumo atômico', async t => 
   await assert.rejects(db.query("select public.book_service_page(0,'{}')"),e=>e.code==='42501');assert.equal((await db.query('select id from public.book_profiles where id=$1',[master])).rows[0].id,master);
   await db.query("select set_config('request.jwt.claims',$1,false)",[JSON.stringify({aal:'aal2'})]);assert.equal((await db.query('select public.book_is_admin() allowed')).rows[0].allowed,true);assert.equal((await db.query("select public.book_can_tab('os') allowed")).rows[0].allowed,true);
   await actor(client);await db.query("select set_config('request.jwt.claims',$1,false)",[JSON.stringify({aal:'aal1'})]);assert.equal((await db.query('select public.book_mfa_allowed() allowed')).rows[0].allowed,true);
+
+  await db.exec('reset role');await db.exec(migration('202611050025_apartment_details.sql'));await db.exec(migration('202611050025_apartment_details.sql'));await actor(master);await db.query("select set_config('request.jwt.claims',$1,false)",[JSON.stringify({aal:'aal2'})]);
+  await db.query("select public.book_catalog_add('condominium','Teste Cobertura',array['101','102','103','104'])");
+  const infoFields={lockPassword:'000123',safePassword:'0012',wifiName:'Rede teste',wifiPassword:' senha com espaco '};
+  const savedInfo=(await db.query('select public.book_apartment_info($1,$2,0,$3::jsonb) value',['Teste Cobertura','101',JSON.stringify(infoFields)])).rows[0].value;assert.equal(savedInfo.version,1);assert.deepEqual(savedInfo.fields,infoFields);
+  assert.deepEqual((await db.query("select public.book_apartment_info('Teste Cobertura','101') value")).rows[0].value.fields,infoFields);
+  await assert.rejects(db.query('select public.book_apartment_info($1,$2,0,$3::jsonb)',['Teste Cobertura','101','{}']),e=>e.code==='PT409');
+  await assert.rejects(db.query("select * from public.book_apartment_details"),e=>e.code==='42501');
+  const cleared=(await db.query("select public.book_apartment_info('Teste Cobertura','101',1,'{}') value")).rows[0].value;assert.equal(cleared.version,2);assert.deepEqual(cleared.fields,{});
+  for(const [id,unit,offset] of [['925001','101','4 months'],['925002','102','0 months'],['925003','103','3 months']]){const date=(await db.query("select ((now() at time zone 'America/Sao_Paulo')::date-$1::interval)::date::text value",[offset])).rows[0].value;await commit([change('vistorias',id,{...inspection,id,hotel:'Teste Cobertura',apartamento:unit,data:date})]);}
+  const covered=(await db.query('select public.book_inspection_coverage() value')).rows[0].value;const coverageRows=covered.rows.filter(r=>r.hotel==='Teste Cobertura');assert.equal(coverageRows.length,4);assert.equal(coverageRows.find(r=>r.apartment==='101').status,'overdue');assert.equal(coverageRows.find(r=>r.apartment==='102').status,'current');assert.equal(coverageRows.find(r=>r.apartment==='103').status,'current');assert.equal(coverageRows.find(r=>r.apartment==='104').status,'missing');assert.equal(covered.counts.total,covered.counts.current+covered.counts.overdue+covered.counts.missing);
+  await actor(client);await assert.rejects(db.query("select public.book_apartment_info('Teste Cobertura','101')"),e=>e.code==='42501');await assert.rejects(db.query('select public.book_inspection_coverage()'),e=>e.code==='42501');await assert.rejects(db.query("select public.book_catalog_remove('Teste Cobertura','101')"),e=>e.code==='42501');
+  await actor(admin);await assert.rejects(db.query("select public.book_apartment_info('Teste Cobertura','101')"),e=>e.code==='42501');
+  await actor(master);await db.query("select set_config('request.jwt.claims',$1,false)",[JSON.stringify({aal:'aal2'})]);
+  await db.query("select public.book_catalog_remove('Teste Cobertura','101')");assert.equal((await db.query("select * from public.book_apartments where hotel='Teste Cobertura' and apartment='101'")).rows.length,0);assert.equal((await db.query("select count(*)::integer n from public.book_records where hotel='Teste Cobertura'")).rows[0].n,3);
+  await assert.rejects(db.query("select public.book_apartment_info('Teste Cobertura','101')"),e=>e.code==='22023');
+  await db.query("select public.book_catalog_remove('Teste Cobertura')");assert.equal((await db.query("select * from public.book_condominiums where name='Teste Cobertura'")).rows.length,0);assert.equal((await db.query("select * from public.book_apartments where hotel='Teste Cobertura'")).rows.length,0);assert.equal((await db.query("select count(*)::integer n from public.book_records where hotel='Teste Cobertura'")).rows[0].n,3);
 
 });

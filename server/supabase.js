@@ -113,6 +113,7 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
       return request(`/rest/v1/book_support_tickets?${query}`, { token });
     },
     sendSupport(token, input) { return request('/rest/v1/rpc/book_support_send', { token, method:'POST',body:{ticket_id:input.id,subject:input.subject || '',body:input.body || '',expected_version:input.version,new_status:input.status || null} }); },
+    editOrder(token,input){return request('/rest/v1/rpc/book_order_edit',{token,method:'POST',body:{target_id:input.id,expected_version:input.version,document:input.document}});},
     reopenOrder(token, input) { return request('/rest/v1/rpc/book_reopen_order', { token, method:'POST',body:{record_id:input.id,expected_version:input.version,reason:input.reason} }); },
     backup(token, selected) { return request('/rest/v1/rpc/book_backup', { token, method: 'POST', body: { selected }, timeoutMs: 120000 }); },
     async finance(token, payer, cursor, start, end) {
@@ -160,6 +161,9 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
       if(version<16)return [...new Set((await this.apartments(token)).map(r=>r.hotel))].map(name=>({name}));
       return request('/rest/v1/book_condominiums?select=name&name=neq.Unique&order=name&limit=10000',{token});
     },
+    apartmentInfo(token,input){return request('/rest/v1/rpc/book_apartment_info',{token,method:'POST',body:{site:input.hotel,unit:input.apartment,expected_version:input.version??null,fields:input.fields??null}});},
+    removeCatalog(token,input){return request('/rest/v1/rpc/book_catalog_remove',{token,method:'POST',body:{site:input.hotel,unit:input.apartment||null}});},
+    inspectionCoverage(token){return request('/rest/v1/rpc/book_inspection_coverage',{token,method:'POST',body:{},timeoutMs:30000});},
     async saveCatalog(token,input){
       if(await request('/rest/v1/rpc/book_schema_version',{token,method:'POST',body:{}})<16)throw failure(503,'Aplique a migração 202610290016_onboarding_catalog.sql no Supabase para habilitar o cadastro.');
       return request('/rest/v1/rpc/book_catalog_add',{token,method:'POST',body:{entry_kind:input.kind,site_name:input.hotel,units:input.apartments}});
