@@ -8,8 +8,8 @@ Acesso restrito a administradores com aba Condomínios e permissão para o imóv
 
 Onboarding > Remover imóvel da operação: escolha condomínio e apartamento ou condomínio inteiro e confirme. A remoção é arquivamento do catálogo ativo, preservando cards, vistorias, informações e arquivos anteriores. Não apaga usuários nem histórico. Dados arquivados não aparecem no catálogo ativo. Recadastrar o mesmo nome permanece sujeito à regra de duplicidade; restauração ainda não possui botão na interface.
 
-Vistorias: referência trimestral, três meses de calendário após a data mais recente válida. No dia do vencimento ainda está no prazo. Sem registro válido = Sem vistoria. Bolinha vermelha soma vencidos e sem vistoria; verde mostra a quantidade no prazo quando não há pendências. Apartamentos pendentes recebem fundo vermelho suave.
+Vistorias: sem bolinhas ou contadores nos condomínios. Pendências aparecem apenas com fundo vermelho suave no apartamento. Com a migração 26 e a carga da planilha, a regra é Próxima Vistoria anterior a hoje, respeitando as datas explícitas e os controles separados de vistoria e governança. Veja DATAS-VISTORIAS-20261105.md.
 
 Visão geral das vistorias: totais gerais, filtros por condomínio/situação, tabela paginada de 100 apartamentos e download CSV com todos os resultados filtrados. A consulta considera o banco completo e somente os imóveis ativos autorizados, sem depender dos registros carregados na tela.
 
-A planilha de vistorias e as informações reais ainda não foram recebidas/importadas.
+A planilha de vistorias foi recebida e a carga privada foi preparada. A execução no banco depende da migração 26 e do SQL gerado em artifacts, fora do Git. As senhas reais não foram importadas.

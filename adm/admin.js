@@ -420,8 +420,7 @@ function selecionarApartamentoVistoria(apartamento) {
     .sort((a, b) => String(b.data || "").localeCompare(String(a.data || "")));
   const ultima = itens[0];
   document.getElementById("detalheApartamentoVistoria").innerHTML = `<div class="vistoria-resumo"><div><h3>Apartamento ${escapar(apartamento)}</h3><p><strong>Total de vistorias:</strong> ${itens.length}</p><p><strong>Última vistoria:</strong> ${ultima ? `${formatarData(ultima.data)} — ${escapar(ultima.responsavel)}` : "Ainda não há vistorias"}</p></div><button class="acao-principal" data-on-click="abrirFormularioVistoria()">+ Começar vistoria</button></div><button type="button" class="botao-secundario" data-on-click="abrirFormularioOS('', '${escapar(vistoriaHotel)}', '${escapar(apartamento)}')">Abrir Card para este apartamento</button><div class="historico-vistorias"><h4>Histórico de vistorias</h4>${itens.length ? itens.map(renderizarVistoria).join("") : '<p class="vazio">Nenhuma vistoria registrada neste apartamento.</p>'}</div>`;
-  const proxima=window.BookProcesses?.nextInspection(ultima?.data);
-  if(proxima){const aviso=document.createElement('p');aviso.textContent='Próxima vistoria trimestral: '+formatarData(proxima);if(proxima<dataLocalHoje()){aviso.textContent+=' · Vencida';aviso.className='routine-overdue';}document.querySelector('#detalheApartamentoVistoria .vistoria-resumo > div')?.append(aviso);}
+  window.BookProperty?.decorateDetail(vistoriaHotel,apartamento);
 }
 function renderizarVistoria(item) {
   const checklist = Object.entries(item.checklist || {}).map(([grupo, respostas]) => `<h5>${escapar(grupo)}</h5><ul>${Object.entries(respostas).map(([nome, estado]) => `<li><strong>${escapar(nome)}:</strong> ${escapar(estado)}</li>`).join("")}</ul>`).join("");
@@ -471,7 +470,7 @@ async function salvarVistoria(event) {
     });
     const item = { id: BookStore.id(), hotel: vistoriaHotel, apartamento: vistoriaApartamento,
       data: document.getElementById("vistoriaData").value, responsavel: responsavel.nome, responsavelLogin: responsavel.login,
-      tipo: document.getElementById("vistoriaTipo").value, checklist,
+      tipo: document.getElementById("vistoriaTipo").value, inspectionTrack: document.getElementById("vistoriaTrack").value, checklist,
       observacoes: document.getElementById("vistoriaObservacoes").value.trim(), fotos };
     const itens = vistorias(); itens.push(item);
     try { await BookStore.setItem("vistorias", JSON.stringify(itens)); }

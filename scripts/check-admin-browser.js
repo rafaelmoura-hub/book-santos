@@ -431,6 +431,7 @@ async function main() {
     await capture('vistorias-visao-geral');
     await evaluate("document.getElementById('inspectionOverviewDialog').close();selecionarHotelVistoria('Condomínio Teste Novo')");
     await wait("document.querySelectorAll('#areaVistorias .inspection-unit-late').length===3");
+    await evaluate("if(document.querySelector('#visaoVistorias .inspection-badge'))throw Error('Contador de vistoria deve estar removido')");
     await evaluate("mostrarAba('onboarding');document.getElementById('removePropertyHotel').value='Condomínio Teste Novo';document.getElementById('removePropertyHotel').dispatchEvent(new Event('change'));document.getElementById('removePropertyUnit').value='102';document.getElementById('removePropertyForm').requestSubmit()");
     await wait("BookStore.apartments('Condomínio Teste Novo').length===2 && !document.querySelector('#removePropertyForm [type=submit]').disabled");
     if(!dialogs.at(-1)?.startsWith('Remover '))throw Error('Confirmacao de remocao ausente');dialogs.pop();

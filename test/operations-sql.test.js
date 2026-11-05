@@ -710,4 +710,15 @@ test('PostgreSQL: RLS, concorrência, auditoria e consumo atômico', async t => 
   await assert.rejects(db.query("select public.book_apartment_info('Teste Cobertura','101')"),e=>e.code==='22023');
   await db.query("select public.book_catalog_remove('Teste Cobertura')");assert.equal((await db.query("select * from public.book_condominiums where name='Teste Cobertura'")).rows.length,0);assert.equal((await db.query("select * from public.book_apartments where hotel='Teste Cobertura'")).rows.length,0);assert.equal((await db.query("select count(*)::integer n from public.book_records where hotel='Teste Cobertura'")).rows[0].n,3);
 
+  await db.exec('reset role');await db.exec(migration('202611050026_inspection_dates.sql'));await db.exec(migration('202611050026_inspection_dates.sql'));await actor(master);await db.query("select set_config('request.jwt.claims',$1,false)",[JSON.stringify({aal:'aal2'})]);
+  await db.query("select public.book_catalog_add('condominium','Datas Planilha',array['101','102'])");await db.exec('reset role');
+  const {prepare:prepareInspection}=require('../scripts/prepare-inspection-import');const serial=date=>String(Math.round((Date.parse(date+'T00:00:00Z')-Date.UTC(1899,11,30))/86400000));
+  const reference=(await db.query("select (now() at time zone 'America/Sao_Paulo')::date::text value")).rows[0].value;
+  const baseSerial=Number(serial(reference));
+  const dateSource={sha256:'b'.repeat(64),sourceFile:'Datas teste.xlsx',sheets:[{name:'VISTORIAS',rows:[{line:2,values:{A:'101.0',B:'Datas Planilha',C:String(baseSerial-90),G:String(baseSerial),D:"O'Connor"}},{line:3,values:{A:'102',B:'Datas Planilha',C:String(baseSerial+1),G:String(baseSerial+91)}}]},{name:'GOV UNIQUE',rows:[{line:2,values:{A:'101',B:'Datas Planilha',C:String(baseSerial-46),G:String(baseSerial-1)}}]}]};
+  const inspectionPlan=prepareInspection(dateSource);await db.exec(inspectionPlan.sql);await db.exec(inspectionPlan.sql);assert.equal((await db.query("select count(*)::integer n from public.book_inspection_controls where hotel='Datas Planilha'")).rows[0].n,3);
+  await actor(master);const datesCoverage=(await db.query('select public.book_inspection_coverage() value')).rows[0].value.rows.filter(r=>r.hotel==='Datas Planilha');
+  assert.equal(datesCoverage.find(r=>r.apartment==='101').status,'overdue');assert.equal(datesCoverage.find(r=>r.apartment==='101').checks.find(c=>c.track==='general').status,'current');assert.equal(datesCoverage.find(r=>r.apartment==='101').checks.find(c=>c.track==='governance').status,'overdue');assert.equal(datesCoverage.find(r=>r.apartment==='102').status,'current');
+  await actor(client);assert.equal((await db.query("select * from public.book_inspection_controls where hotel='Datas Planilha'")).rows.length,0);await assert.rejects(db.query("update public.book_inspection_controls set next_date=current_date"),e=>e.code==='42501');
+
 });
