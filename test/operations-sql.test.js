@@ -721,4 +721,11 @@ test('PostgreSQL: RLS, concorrência, auditoria e consumo atômico', async t => 
   assert.equal(datesCoverage.find(r=>r.apartment==='101').status,'overdue');assert.equal(datesCoverage.find(r=>r.apartment==='101').checks.find(c=>c.track==='general').status,'current');assert.equal(datesCoverage.find(r=>r.apartment==='101').checks.find(c=>c.track==='governance').status,'overdue');assert.equal(datesCoverage.find(r=>r.apartment==='102').status,'current');
   await actor(client);assert.equal((await db.query("select * from public.book_inspection_controls where hotel='Datas Planilha'")).rows.length,0);await assert.rejects(db.query("update public.book_inspection_controls set next_date=current_date"),e=>e.code==='42501');
 
+  await actor(master);await db.query("select set_config('request.jwt.claims',$1,false)",[JSON.stringify({aal:'aal2'})]);
+  await commit([change('vistorias','926001',{...inspection,id:'926001',hotel:'Datas Planilha',apartamento:'101',data:reference,inspectionTrack:'general'})]);
+  let recalculated=(await db.query('select public.book_inspection_coverage() value')).rows[0].value.rows.find(r=>r.hotel==='Datas Planilha'&&r.apartment==='101');
+  assert.equal(recalculated.checks.find(c=>c.track==='general').last_date,reference);assert.equal(recalculated.checks.find(c=>c.track==='general').due_date,require('../scripts/prepare-inspection-import').excelDate(baseSerial+90));assert.equal(recalculated.status,'overdue');
+  await commit([change('vistorias','926002',{...inspection,id:'926002',hotel:'Datas Planilha',apartamento:'101',data:reference,inspectionTrack:'governance'})]);
+  recalculated=(await db.query('select public.book_inspection_coverage() value')).rows[0].value.rows.find(r=>r.hotel==='Datas Planilha'&&r.apartment==='101');assert.equal(recalculated.checks.find(c=>c.track==='governance').due_date,require('../scripts/prepare-inspection-import').excelDate(baseSerial+45));assert.equal(recalculated.status,'current');
+
 });

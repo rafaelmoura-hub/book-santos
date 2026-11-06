@@ -2,7 +2,7 @@ window.BookProperty=(()=>{
  const el=id=>document.getElementById(id),esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const request=(url,body)=>BookAPI.request(url,body?{method:'POST',body:JSON.stringify(body)}:{});
  const labels={missing:'Sem vistoria',overdue:'Vencida',current:'No prazo'};
- let coverage=null,timer,busy=false,generation=0,selectedHotel='',overviewPage=0,infoGeneration=0,selectedDetail=null;
+ let coverage=null,timer,busy=false,generation=0,selectedHotel='',overviewPage=0,infoGeneration=0,selectedDetail=null,selectedCondo=null;
  function dialog(id,title){let node=el(id);if(!node){node=document.createElement('dialog');node.id=id;node.className='workspace-dialog property-dialog';document.body.append(node);}node.replaceChildren();const header=document.createElement('div');header.className='workspace-heading';const h=document.createElement('h2');h.textContent=title;const close=document.createElement('button');close.type='button';close.textContent='Fechar';close.onclick=()=>node.close();header.append(h,close);node.append(header);return node;}
  async function openInfo(hotel,apartment){
   const infoRequest=++infoGeneration;const node=dialog('apartmentInfoDialog',hotel+' · Apartamento '+apartment),status=document.createElement('p');status.setAttribute('role','status');status.textContent='Carregando informações…';node.append(status);node.showModal();
@@ -36,16 +36,27 @@ window.BookProperty=(()=>{
    const apartment=button.textContent.replace(/^Apartamento\s+/,'').trim(),row=coverage.rows.find(r=>r.hotel===selectedHotel&&r.apartment===apartment);button.classList.toggle('inspection-unit-late',!!row&&row.status!=='current');button.title=row?labels[row.status]+(row.due_date?' · Próxima vistoria: '+row.due_date:''):'';
   });
  }
- function decorateDetail(hotel,apartment){
-  selectedDetail={hotel,apartment};const host=document.querySelector('#detalheApartamentoVistoria .vistoria-resumo > div');if(!host||!coverage)return;
-  host.querySelector('.inspection-control-dates')?.remove();const row=coverage.rows.find(r=>r.hotel===hotel&&r.apartment===apartment);if(!row)return;
+ const displayDate=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)?value.slice(8,10)+'/'+value.slice(5,7)+'/'+value.slice(0,4):'Não informada';
+ function renderApartmentDates(hotel,apartment,host){
+  if(!host||!coverage)return;host.querySelector('.inspection-control-dates')?.remove();host.querySelector('#vistoriaDatesLoading')?.remove();
+  const row=coverage.rows.find(r=>r.hotel===hotel&&r.apartment===apartment);if(!row)return;
   const box=document.createElement('div');box.className='inspection-control-dates';const checks=row.checks||[{track:'general',last_date:row.last_date,due_date:row.due_date,status:row.status}];
-  for(const check of checks){const p=document.createElement('p');p.textContent=(check.track==='governance'?'Governança':'Vistoria')+': '+labels[check.status]+(check.due_date?' · Próxima: '+check.due_date:'')+(check.scheduled_date?' · Programada: '+check.scheduled_date:'');if(check.status!=='current')p.className='inspection-unit-late';box.append(p);}host.append(box);
+  for(const check of checks){
+   const section=document.createElement('section');section.className='inspection-date-card';const heading=document.createElement('h4');heading.textContent=check.track==='governance'?'Governança':'Vistoria do imóvel';
+   const last=document.createElement('p');last.className='inspection-last-date';last.textContent=(check.last_date&&check.last_date>coverage.referenceDate?'Data informada na planilha: ':'Última vistoria: ')+(check.last_date?displayDate(check.last_date):'Sem vistoria registrada');
+   const next=document.createElement('p');next.className='inspection-next-date';next.textContent='Próxima vistoria: '+(check.due_date?displayDate(check.due_date):'A definir após a primeira vistoria');
+   const state=document.createElement('p');state.className='inspection-date-status';state.textContent='Situação: '+labels[check.status];if(check.status!=='current')section.classList.add('inspection-unit-late');section.append(heading,last,next,state);
+   if(check.scheduled_date){const scheduled=document.createElement('p');scheduled.textContent='Programada para: '+displayDate(check.scheduled_date);section.append(scheduled);}box.append(section);
+  }host.append(box);
+ }
+ function decorateDetail(hotel,apartment){selectedDetail={hotel,apartment};renderApartmentDates(hotel,apartment,document.querySelector('#detalheApartamentoVistoria .vistoria-resumo > div'));}
+ function decorateCondominiumDates(hotel,apartment){
+  if(!BookWorkspace.can('vistorias'))return;const root=el('opcoesApartamento');if(!root)return;let host=el('condominiumInspectionDates');if(!host){host=document.createElement('div');host.id='condominiumInspectionDates';root.querySelector('h3').after(host);}selectedCondo={hotel,apartment,host};renderApartmentDates(hotel,apartment,host);
  }
  function refreshInspections(){clearTimeout(timer);timer=setTimeout(loadInspections,180);}
  async function loadInspections(){
   if(!BookWorkspace.can('vistorias'))return;if(busy)return;busy=true;const current=++generation;
-  try{const data=await request('/api/inspections/coverage');if(current!==generation)return;coverage=data;decorateInspections();if(selectedDetail)decorateDetail(selectedDetail.hotel,selectedDetail.apartment);if(el('inspectionOverviewDialog')?.open)renderOverview();if(el('inspectionCoverageStatus'))el('inspectionCoverageStatus').textContent='';}
+  try{const data=await request('/api/inspections/coverage');if(current!==generation)return;coverage=data;decorateInspections();if(selectedDetail)decorateDetail(selectedDetail.hotel,selectedDetail.apartment);if(selectedCondo?.host.isConnected)renderApartmentDates(selectedCondo.hotel,selectedCondo.apartment,selectedCondo.host);if(el('inspectionOverviewDialog')?.open)renderOverview();if(el('inspectionCoverageStatus'))el('inspectionCoverageStatus').textContent='';}
   catch(error){if(el('inspectionOverviewDialog')?.open&&el('inspectionOverviewTable'))el('inspectionOverviewTable').textContent='Não foi possível carregar o resumo: '+error.message;if(el('inspectionCoverageStatus'))el('inspectionCoverageStatus').textContent='Resumo das vistorias indisponível: '+error.message;}
   finally{busy=false;}
  }
@@ -67,5 +78,5 @@ window.BookProperty=(()=>{
   if(BookWorkspace.can('onboarding'))removeForm();
   if(BookWorkspace.can('vistorias')){const section=el('visaoVistorias'),button=document.createElement('button');button.type='button';button.className='acao-principal';button.textContent='Visão geral das vistorias';button.onclick=openOverview;section.querySelector('.titulo-secao').after(button);const status=document.createElement('p');status.id='inspectionCoverageStatus';status.setAttribute('role','status');button.after(status);refreshInspections();window.addEventListener('book:data',refreshInspections);window.addEventListener('book:catalog',refreshInspections);}
  }
- return {init,openInfo,refreshInspections,decorateInspections,decorateDetail,openOverview};
+ return {init,openInfo,refreshInspections,decorateInspections,decorateDetail,decorateCondominiumDates,openOverview};
 })();

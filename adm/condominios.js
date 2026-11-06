@@ -42,6 +42,7 @@ function selecionarApartamento(ap) {
   tipoSelecionado = "";
   apartamentoSelecionado = ap;
   document.getElementById("opcoesApartamento").innerHTML = `<h3>Apartamento ${ap}</h3><div class="opcoes-dados"><button data-on-click="BookCondominios.mostrarDadosApartamento('chamados')">Chamados</button><button data-on-click="BookCondominios.mostrarDadosApartamento('os')">Cards</button></div><div id="dadosApartamento"><p>Selecione chamados ou cards.</p></div>`;
+  window.BookProperty?.decorateCondominiumDates(hotelSelecionado,apartamentoSelecionado);
   if(BookWorkspace.can('vistorias')){const inspection=document.createElement('button');inspection.type='button';inspection.textContent='Vistorias';inspection.onclick=()=>{mostrarAba('vistorias');selecionarHotelVistoria(hotelSelecionado);selecionarApartamentoVistoria(apartamentoSelecionado);};document.querySelector('#opcoesApartamento .opcoes-dados').append(inspection);}
   if(window.BookProperty){const button=document.createElement('button');button.type='button';button.textContent='Informações';button.onclick=()=>BookProperty.openInfo(hotelSelecionado,apartamentoSelecionado);document.querySelector('#opcoesApartamento .opcoes-dados').append(button);}
 }

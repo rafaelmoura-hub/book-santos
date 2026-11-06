@@ -492,6 +492,14 @@ async function main() {
       mostrarAba('estoque');await adicionarLinhaEstoque();if(JSON.parse(BookStore.getItem('estoqueBookSantos')).itens.length!==1)throw Error('Adicionar estoque');
       mostrarAba('dashboard');atualizarDashboard();
     })()`);
+
+    await evaluate("mostrarAba('vistorias');selecionarHotelVistoria('Lume Alto da Boa Vista');selecionarApartamentoVistoria('194A');BookProperty.refreshInspections()");
+    await wait("document.querySelector('#detalheApartamentoVistoria .inspection-last-date')?.textContent.includes(BookPeriods.today().split('-').reverse().join('/'))");
+    await wait("document.querySelector('#detalheApartamentoVistoria .inspection-next-date')?.textContent.includes(BookProcesses.nextInspection(BookPeriods.today()).split('-').reverse().join('/'))");
+    await evaluate("mostrarAba('condominios');BookCondominios.mostrarHistorico('Lume Alto da Boa Vista');BookCondominios.selecionarApartamento('194A')");
+    await wait("document.querySelector('#condominiumInspectionDates .inspection-next-date')?.textContent.startsWith('Próxima vistoria: ')");
+    await capture('apartamento-ultima-proxima');
+    await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});await capture('apartamento-ultima-proxima-mobile');await send('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
     await evaluate("mostrarAba('estoque');const minimum=document.querySelector('#tabelaEstoque input[aria-label^=\"Estoque mínimo\"]');minimum.value='3';minimum.dispatchEvent(new Event('change'))");
     await wait("JSON.parse(BookStore.getItem('estoqueBookSantos')).itens[0].minimo===3 && !BookStore.pending");
     await evaluate("BookFinance.load()");
