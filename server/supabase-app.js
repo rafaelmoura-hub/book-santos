@@ -80,7 +80,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         if(!html)throw fail(404,'Documento não encontrado.');
         res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'}); return res.end(req.method==='HEAD'?undefined:html);
       }
-      if (route === '/health' && req.method === 'GET') return json(200, { status: 'ok', version:'20261106-inspectiondates4' });
+      if (route === '/health' && req.method === 'GET') return json(200, { status: 'ok', version:'20261106-access5' });
       if (route === '/ready' && req.method === 'GET') {
         if(clock()>=readyUntil){
           if(!readyCheck)readyCheck=Promise.resolve().then(()=>provider.ready()).then(()=>{readyUntil=clock()+10000;}).finally(()=>{readyCheck=null;});
@@ -374,11 +374,11 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         if(user.funcao!=='adm'||!canTab(user,tab))throw fail(403,'Sem acesso a esta operação.');
         if(route==='/api/inspections/coverage'){if(req.method!=='GET')throw fail(405,'Método inválido.');return json(200,await provider.inspectionCoverage(session.accessToken));}
         if(!['GET','POST'].includes(req.method)||route==='/api/onboarding/remove'&&req.method!=='POST')throw fail(405,'Método inválido.');
-        const input=req.method==='GET'?{hotel:url.searchParams.get('hotel'),apartment:url.searchParams.get('apartment')}:await readBody(req,12000);
+        const input=req.method==='GET'?{hotel:url.searchParams.get('hotel'),apartment:url.searchParams.get('apartment')}:await readBody(req,45000);
         if(typeof input.hotel!=='string'||input.hotel.length>100||!input.hotel||input.apartment!=null&&(typeof input.apartment!=='string'||!/^[A-Za-z0-9 -]{1,20}$/.test(input.apartment))||route==='/api/apartment-info'&&!input.apartment)throw fail(400,'Imóvel inválido.');
         if(!(await visibleHotels(provider,session.accessToken,user)).includes(input.hotel))throw fail(403,'Sem acesso ao condomínio.');
         if(route==='/api/onboarding/remove'){if(input.confirm!==input.hotel+(input.apartment?' / '+input.apartment:''))throw fail(400,'Confirme o imóvel que deseja remover.');return json(200,await provider.removeCatalog(session.accessToken,input));}
-        if(req.method==='POST'&&(!Number.isSafeInteger(input.version)||input.version<0||!input.fields||typeof input.fields!=='object'||Array.isArray(input.fields)||Object.entries(input.fields).some(([k,v])=>!['lockPassword','safePassword','wifiName','wifiPassword'].includes(k)||typeof v!=='string'||v.length>256)))throw fail(400,'Informações inválidas.');
+        if(req.method==='POST'&&(!Number.isSafeInteger(input.version)||input.version<0||!input.fields||typeof input.fields!=='object'||Array.isArray(input.fields)||Object.entries(input.fields).some(([k,v])=>!['lockPassword','safePassword','wifiName','wifiPassword','masterPassword','cleaningPassword','governancePassword','propertyPassword','adminPassword','accessNotes'].includes(k)||typeof v!=='string'||v.length>(k==='accessNotes'?6000:256))))throw fail(400,'Informações inválidas.');
         return json(200,await provider.apartmentInfo(session.accessToken,req.method==='GET'?{hotel:input.hotel,apartment:input.apartment}:input));
       }
       if (route === '/api/apartments' && req.method === 'GET') return json(200, await provider.apartments(session.accessToken));

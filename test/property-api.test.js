@@ -11,6 +11,8 @@ test('informacoes e cobertura exigem permissao; senhas nao entram na URL; remoca
  const post=(url,body)=>fetch(base+url,{method:'POST',headers,body:JSON.stringify(body)});
  const input={hotel:'Be Urban',apartment:'214',version:0,fields:{lockPassword:'0001',wifiPassword:' espacos preservados '}};
  assert.equal((await post('/api/apartment-info',input)).status,200);assert.deepEqual(received,input);
+ assert.equal((await post('/api/apartment-info',{...input,fields:{masterPassword:'fake-0001#',governancePassword:'fake-0002#',accessNotes:'a'.repeat(6000)}})).status,200);
+ assert.equal((await post('/api/apartment-info',{...input,fields:{accessNotes:'a'.repeat(6001)}})).status,400);
  assert.equal((await post('/api/apartment-info',{...input,fields:{unknown:'x'}})).status,400);
  assert.equal((await post('/api/apartment-info',{...input,fields:{wifiPassword:'x'.repeat(257)}})).status,400);
  assert.equal((await fetch(base+'/api/apartment-info?hotel=Restrito&apartment=214',{headers})).status,403);

@@ -417,7 +417,7 @@ async function main() {
 
     await evaluate("BookCondominios.mostrarHistorico('Condomínio Teste Novo');BookCondominios.selecionarApartamento('101');[...document.querySelectorAll('#opcoesApartamento button')].find(b=>b.textContent==='Informações').click()");
     await wait("document.querySelector('#apartmentInfoDialog form')");
-    await evaluate("(() => {const form=document.querySelector('#apartmentInfoDialog form');if(!form.elements.lockPassword.readOnly||form.elements.lockPassword.type!=='password')throw Error('Senha exposta');[...form.querySelectorAll('button')].find(b=>b.textContent==='Editar informações').click();form.elements.lockPassword.value='000123';form.elements.wifiName.value='Rede simulada';form.requestSubmit();})()");
+    await evaluate("(() => {const form=document.querySelector('#apartmentInfoDialog form');if(!form.elements.lockPassword.readOnly||form.elements.lockPassword.type!=='password'||getComputedStyle(form.elements.accessNotes).display!=='none')throw Error('Senha exposta');[...form.querySelectorAll('button')].find(b=>b.textContent==='Editar informações').click();form.elements.lockPassword.value='000123';form.elements.wifiName.value='Rede simulada';form.requestSubmit();})()");
     await wait("document.getElementById('apartmentInfoDialog').textContent.includes('Informações salvas.')");
     await capture('apartamento-informacoes');
     await evaluate("document.getElementById('apartmentInfoDialog').close()");

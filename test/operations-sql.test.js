@@ -728,4 +728,13 @@ test('PostgreSQL: RLS, concorrência, auditoria e consumo atômico', async t => 
   await commit([change('vistorias','926002',{...inspection,id:'926002',hotel:'Datas Planilha',apartamento:'101',data:reference,inspectionTrack:'governance'})]);
   recalculated=(await db.query('select public.book_inspection_coverage() value')).rows[0].value.rows.find(r=>r.hotel==='Datas Planilha'&&r.apartment==='101');assert.equal(recalculated.checks.find(c=>c.track==='governance').due_date,require('../scripts/prepare-inspection-import').excelDate(baseSerial+45));assert.equal(recalculated.status,'current');
 
+  await db.exec('reset role');await db.exec(migration('202611060027_apartment_access_fields.sql'));await db.exec(migration('202611060027_apartment_access_fields.sql'));await actor(master);
+  const privateText="*Type*\n*54* - 000042#\nSenha mestra: 000007#\nWiFi: Rede teste\nSenha: teste#'com-simbolos";
+  const privateImport=require('../scripts/prepare-apartment-info-import').prepare(privateText);
+  await db.exec('reset role');await db.exec(privateImport.sql);await actor(master);
+  const importedPrivate=(await db.query("select public.book_apartment_info('Type','54') value")).rows[0].value;assert.equal(importedPrivate.fields.lockPassword,'000042#');assert.equal(importedPrivate.fields.masterPassword,'000007#');assert.equal(importedPrivate.fields.wifiPassword,"teste#'com-simbolos");
+  const manualPrivate=(await db.query('select public.book_apartment_info($1,$2,$3,$4::jsonb) value',['Type','54',importedPrivate.version,JSON.stringify({...importedPrivate.fields,lockPassword:'manual-0001#'})])).rows[0].value;
+  await db.exec('reset role');await db.exec(privateImport.sql);await actor(master);const preservedPrivate=(await db.query("select public.book_apartment_info('Type','54') value")).rows[0].value;assert.equal(preservedPrivate.fields.lockPassword,'manual-0001#');assert.equal(preservedPrivate.version,manualPrivate.version);
+  await assert.rejects(db.query("select * from public.book_apartment_info_imports"),e=>e.code==='42501');
+
 });

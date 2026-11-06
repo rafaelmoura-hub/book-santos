@@ -394,3 +394,5 @@ body[data-screen] > .legal-footer { order:4; }
 
 
 .inspection-control-dates{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:12px;margin:12px 0}.inspection-date-card{padding:14px;border:1px solid var(--borda);border-radius:12px;background:var(--surface,var(--fundo))}.inspection-date-card h4{margin:0 0 10px}.inspection-date-card p{margin:6px 0;overflow-wrap:anywhere}.inspection-next-date{font-weight:700}
+
+.property-dialog [hidden]{display:none!important}
