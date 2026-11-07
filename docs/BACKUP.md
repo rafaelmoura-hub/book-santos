@@ -1,5 +1,7 @@
 # Backup no HD externo
 
+Atualizacao de 07/11/2026: aplicar a migracao 28 apos 25 a 27 para incluir informacoes privadas dos apartamentos em Cadastros, datas de controle em Vistorias e auditoria dos acessos em Auditoria. A copia pode conter senhas de fechadura, cofre e Wi-Fi; deve ficar em destino privado protegido. O teste de recuperacao local usa dados ficticios e nao substitui restauracao completa em ambiente separado. Consulte `LANCAMENTO-20261107.md`.
+
 ## Ativação
 
 Antes de publicar a nova versão no Render, aplique pelo SQL Editor do Supabase, nesta ordem:
@@ -35,7 +37,7 @@ Com a migração 14, o grupo Colaboração inclui também Reservas, Onboarding, 
 
 A migração 13 acrescenta a opção **Feedbacks, avaliações, suporte e minhas notas/lembretes**. Ela inclui feedbacks e vínculos a cards, comentários da equipe, chamados e mensagens de suporte, além das notas e lembretes do próprio mestre. Notas privadas de outros usuários continuam fora dessa exportação. Ao selecionar também Anexos, os arquivos dos feedbacks são incluídos. Para preservar todas as notas privadas, mantenha também o backup completo do banco, com acesso restrito aos responsáveis pela infraestrutura.
 
-Esta é uma exportação dos dados e dos arquivos do aplicativo, não um dump SQL completo do Supabase. Não contém senhas, tokens, sessões, políticas de infraestrutura, contas completas de Auth ou chaves do ambiente. As definições das tabelas e regras ficam nas migrações deste repositório.
+Esta é uma exportação dos dados e dos arquivos do aplicativo, não um dump SQL completo do Supabase. Não contém senhas de login, tokens, sessões, políticas de infraestrutura, contas completas de Auth ou chaves do ambiente. Com a migração 28, Cadastros inclui as senhas operacionais dos apartamentos. As definições das tabelas e regras ficam nas migrações deste repositório.
 
 Não há botão de restauração que sobrescreva o ambiente online. Para recuperar, primeiro confira a integridade, preserve a cópia original, prepare um ambiente separado com as migrações, reconstitua as contas de Auth e seus vínculos de UUID e importe os registros respeitando as chaves e referências. Os anexos devem voltar às referências registradas no manifesto. Em seguida, valide login, permissões, chamados, vistorias e financeiro antes de mudar o ambiente em uso. Esse procedimento exige uma ferramenta de importação e teste supervisionado; a conferência de hashes não é um teste de restauração do aplicativo.
 

@@ -80,7 +80,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         if(!html)throw fail(404,'Documento não encontrado.');
         res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'}); return res.end(req.method==='HEAD'?undefined:html);
       }
-      if (route === '/health' && req.method === 'GET') return json(200, { status: 'ok', version:'20261106-infofix6' });
+      if (route === '/health' && req.method === 'GET') return json(200, { status: 'ok', version:'20261107-launch7' });
       if (route === '/ready' && req.method === 'GET') {
         if(clock()>=readyUntil){
           if(!readyCheck)readyCheck=Promise.resolve().then(()=>provider.ready()).then(()=>{readyUntil=clock()+10000;}).finally(()=>{readyCheck=null;});

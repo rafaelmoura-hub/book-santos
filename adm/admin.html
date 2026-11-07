@@ -4,17 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Admin | BOOK TASK</title>
-    <link rel="stylesheet" href="admin.css?v=20261106-infofix6">
-    <link rel="stylesheet" href="../assets/ui.css?v=20261106-infofix6">
-    <script src="/assets/theme.js?v=20261106-infofix6"></script>
+    <link rel="stylesheet" href="admin.css?v=20261107-launch7">
+    <link rel="stylesheet" href="../assets/ui.css?v=20261107-launch7">
+    <script src="/assets/theme.js?v=20261107-launch7"></script>
     <link rel="icon" href="/assets/book-task-logo.png" type="image/png">
-    <link rel="stylesheet" href="/assets/brand.css?v=20261106-infofix6">
-    <link rel="stylesheet" href="/assets/layout.css?v=20261106-infofix6">
-    <link rel="stylesheet" href="/assets/mobile.css?v=20261106-infofix6">
-    <script src="../assets/accessibility.js?v=20261106-infofix6" defer></script>
+    <link rel="stylesheet" href="/assets/brand.css?v=20261107-launch7">
+    <link rel="stylesheet" href="/assets/layout.css?v=20261107-launch7">
+    <link rel="stylesheet" href="/assets/mobile.css?v=20261107-launch7">
+    <script src="../assets/accessibility.js?v=20261107-launch7" defer></script>
     <noscript><style>body[hidden]{display:block!important}body>header,body>nav,body>main,body>.modal{display:none!important}noscript{display:block;padding:24px}</style></noscript>
-<script src="../assets/events.js?v=20261106-infofix6" defer></script>
-<script src="../assets/dictation.js?v=20261106-infofix6" defer></script>
+<script src="../assets/events.js?v=20261107-launch7" defer></script>
+<script src="../assets/dictation.js?v=20261107-launch7" defer></script>
 </head>
 <body hidden data-screen="admin.js">
     <header>
@@ -46,7 +46,7 @@
             <label><input type="checkbox" value="vistorias" checked> Vistorias</label>
             <label><input type="checkbox" value="estoqueBookSantos" checked> Estoque</label>
             <label><input type="checkbox" value="conversasSuporte" checked> Conversas</label>
-            <label><input type="checkbox" value="cadastros" checked> Usuários, permissões, condomínios e apartamentos</label>
+            <label><input type="checkbox" value="cadastros" checked> Usuários, permissões, condomínios, apartamentos e acessos privados</label>
             <label><input type="checkbox" value="auditoria" checked> Histórico de alterações</label>
             <label><input type="checkbox" value="colaboracao" checked> Feedbacks, avaliações, suporte e minhas notas/lembretes</label>
             <label><input type="checkbox" value="anexos" checked> Fotos, vídeos e arquivos vinculados aos dados selecionados</label>
@@ -56,7 +56,7 @@
           <button id="backupVerificar" type="button" class="botao-secundario">Conferir backup existente</button>
           <button id="backupCancelar" type="button" class="botao-secundario" hidden>Cancelar</button>
           <p id="backupStatus" role="status" aria-live="polite">Escolha uma pasta no HD para iniciar.</p>
-          <details class="help-panel"><summary>O que está incluído e como guardar a cópia</summary><p>Inclui todos os registros selecionados do servidor, mesmo os que ainda não foram carregados na tela. Cadastros não incluem senhas nem sessões. Esta é uma exportação dos dados do aplicativo; não substitui um backup SQL completo do projeto Supabase.</p><p>Mantenha o computador ligado, o site aberto e o HD conectado até terminar. O botão não agenda cópias diárias. Proteja o HD, pois a cópia contém informações privadas.</p></details>
+          <details class="help-panel"><summary>O que está incluído e como guardar a cópia</summary><p>Inclui todos os registros selecionados do servidor, mesmo os que ainda não foram carregados na tela. Com a migração 28, Cadastros inclui os acessos privados dos apartamentos (fechadura, cofre e Wi-Fi). Não inclui senhas de login nem sessões. Esta é uma exportação dos dados do aplicativo; não substitui um backup SQL completo do projeto Supabase.</p><p>Mantenha o computador ligado, o site aberto e o HD conectado até terminar. O botão não agenda cópias diárias. Proteja o HD, pois a cópia contém informações privadas.</p></details>
         </section>
         <section id="visaoChamados">
           <div class="cards">
@@ -254,28 +254,28 @@
       </div>
     </div>
     <div id="avisoChat" class="aviso-chat" role="status" aria-live="polite" hidden></div>
-    <script src="../assets/money.js?v=20261106-infofix6"></script>
-    <script src="../assets/periods.js?v=20261106-infofix6"></script>
-    <script src="financeiro.js?v=20261106-infofix6"></script>
-    <script src="condominios.js?v=20261106-infofix6"></script>
-    <script src="property.js?v=20261106-infofix6"></script>
-    <script src="../assets/notifications.js?v=20261106-infofix6"></script>
-    <script src="../assets/processes.js?v=20261106-infofix6"></script>
-    <script src="labels.js?v=20261106-infofix6"></script>
-    <script src="routine.js?v=20261106-infofix6"></script>
-    <script src="onboarding.js?v=20261106-infofix6"></script>
-    <script src="decision.js?v=20261106-infofix6"></script>
-    <script src="activity.js?v=20261106-infofix6"></script>
-    <script src="navigation.js?v=20261106-infofix6"></script>
-    <script src="collaboration.js?v=20261106-infofix6"></script>
-    <script src="workspace.js?v=20261106-infofix6"></script>
-    <script src="usuarios.js?v=20261106-infofix6"></script>
-    <script src="backup.js?v=20261106-infofix6"></script>
-    <script src="../assets/catalog.js?v=20261106-infofix6"></script>
-    <script src="../assets/mobile.js?v=20261106-infofix6"></script>
-    <script src="../assets/api.js?v=20261106-infofix6"></script>
-    <script src="../assets/auth.js?v=20261106-infofix6"></script>
-    <script src="../assets/session.js?v=20261106-infofix6"></script>
+    <script src="../assets/money.js?v=20261107-launch7"></script>
+    <script src="../assets/periods.js?v=20261107-launch7"></script>
+    <script src="financeiro.js?v=20261107-launch7"></script>
+    <script src="condominios.js?v=20261107-launch7"></script>
+    <script src="property.js?v=20261107-launch7"></script>
+    <script src="../assets/notifications.js?v=20261107-launch7"></script>
+    <script src="../assets/processes.js?v=20261107-launch7"></script>
+    <script src="labels.js?v=20261107-launch7"></script>
+    <script src="routine.js?v=20261107-launch7"></script>
+    <script src="onboarding.js?v=20261107-launch7"></script>
+    <script src="decision.js?v=20261107-launch7"></script>
+    <script src="activity.js?v=20261107-launch7"></script>
+    <script src="navigation.js?v=20261107-launch7"></script>
+    <script src="collaboration.js?v=20261107-launch7"></script>
+    <script src="workspace.js?v=20261107-launch7"></script>
+    <script src="usuarios.js?v=20261107-launch7"></script>
+    <script src="backup.js?v=20261107-launch7"></script>
+    <script src="../assets/catalog.js?v=20261107-launch7"></script>
+    <script src="../assets/mobile.js?v=20261107-launch7"></script>
+    <script src="../assets/api.js?v=20261107-launch7"></script>
+    <script src="../assets/auth.js?v=20261107-launch7"></script>
+    <script src="../assets/session.js?v=20261107-launch7"></script>
 </body>
 </html>
 

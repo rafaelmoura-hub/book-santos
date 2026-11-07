@@ -737,4 +737,20 @@ test('PostgreSQL: RLS, concorrência, auditoria e consumo atômico', async t => 
   await db.exec('reset role');await db.exec(privateImport.sql);await actor(master);const preservedPrivate=(await db.query("select public.book_apartment_info('Type','54') value")).rows[0].value;assert.equal(preservedPrivate.fields.lockPassword,'manual-0001#');assert.equal(preservedPrivate.version,manualPrivate.version);
   await assert.rejects(db.query("select * from public.book_apartment_info_imports"),e=>e.code==='42501');
 
+  await db.exec('reset role');await db.exec(migration('202611070028_backup_property.sql'));await db.exec(migration('202611070028_backup_property.sql'));await actor(master);
+  const recovery=(await db.query("select public.book_backup(array['cadastros','vistorias','auditoria']) value")).rows[0].value;
+  assert.ok(recovery.apartment_details.some(r=>r.hotel==='Type'&&r.apartment==='54'));
+  assert.ok(recovery.inspection_controls.some(r=>r.hotel==='Datas Planilha'));
+  assert.ok(recovery.apartment_details_audit.length>0);
+  const excluded=(await db.query("select public.book_backup(array['chamados']) value")).rows[0].value;assert.equal(excluded.apartment_details,undefined);assert.equal(excluded.inspection_controls,undefined);
+  await db.exec('reset role');await db.exec('begin');
+  try {
+    await db.exec("delete from public.book_apartment_details where hotel='Type' and apartment='54';delete from public.book_inspection_controls where hotel='Datas Planilha'");
+    await db.query("insert into public.book_apartment_details select * from jsonb_populate_recordset(null::public.book_apartment_details,$1::jsonb)",[JSON.stringify(recovery.apartment_details.filter(r=>r.hotel==='Type'&&r.apartment==='54'))]);
+    await db.query("insert into public.book_inspection_controls select * from jsonb_populate_recordset(null::public.book_inspection_controls,$1::jsonb)",[JSON.stringify(recovery.inspection_controls.filter(r=>r.hotel==='Datas Planilha'))]);
+    assert.deepEqual((await db.query("select document from public.book_apartment_details where hotel='Type' and apartment='54'")).rows[0].document,preservedPrivate.fields);
+    assert.equal((await db.query("select count(*)::integer n from public.book_inspection_controls where hotel='Datas Planilha'")).rows[0].n,recovery.inspection_controls.filter(r=>r.hotel==='Datas Planilha').length);
+  } finally {await db.exec('rollback');}
+  await actor(client);await assert.rejects(db.query("select public.book_backup(array['cadastros'])"),e=>e.code==='42501');
+
 });
