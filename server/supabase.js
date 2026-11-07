@@ -168,9 +168,13 @@ function createSupabase({ url, key, secretKey, fetchImpl = fetch }) {
       if(await request('/rest/v1/rpc/book_schema_version',{token,method:'POST',body:{}})<16)throw failure(503,'Aplique a migração 202610290016_onboarding_catalog.sql no Supabase para habilitar o cadastro.');
       return request('/rest/v1/rpc/book_catalog_add',{token,method:'POST',body:{entry_kind:input.kind,site_name:input.hotel,units:input.apartments}});
     },
-    async ready() {
+    async ready({release=false}={}) {
       await request('/auth/v1/settings');
 if (![14,15,16,17,18,19].includes(await request('/rest/v1/rpc/book_schema_version', { method: 'POST', body: {} }))) throw failure(503, 'Aplique as migrações até 202610280014_routine.sql antes de publicar esta versão. O painel SAD utiliza também a migração 15.');
+      if(release){
+        const state=await request('/rest/v1/rpc/book_release_status',{method:'POST',body:{}});
+        if(state?.release!==29||state.ready!==true)throw failure(503,'Recursos recentes incompletos. Confira as migrações 19 a 29 no Supabase.');
+      }
       return { ok: true };
     },
     async commit(token, changes) {

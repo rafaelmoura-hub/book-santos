@@ -753,4 +753,9 @@ test('PostgreSQL: RLS, concorrência, auditoria e consumo atômico', async t => 
   } finally {await db.exec('rollback');}
   await actor(client);await assert.rejects(db.query("select public.book_backup(array['cadastros'])"),e=>e.code==='42501');
 
+  await db.exec('reset role');await db.exec(migration('202611070029_release_readiness.sql'));await db.exec(migration('202611070029_release_readiness.sql'));
+  await db.exec('set role anon');assert.deepEqual((await db.query('select public.book_release_status() value')).rows[0].value,{release:29,ready:true});
+  await db.exec('reset role');await db.exec('begin');
+  try {await db.exec('alter function public.book_backup_v27(text[]) rename to book_backup_unavailable');assert.equal((await db.query('select public.book_release_status() value')).rows[0].value.ready,false);}finally{await db.exec('rollback');}
+
 });

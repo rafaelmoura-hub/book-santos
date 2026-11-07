@@ -33,6 +33,9 @@ test('HTTP: JSON obrigatório, cookie seguro, identidade e limite de sessões',a
  assert.equal((await fetch(base+'/api/session',{headers:{Cookie:cookie2}})).status,401);
  const readiness=await Promise.all(Array.from({length:8},()=>fetch(base+'/ready')));
  assert.ok(readiness.every(r=>r.status===200));assert.equal(readyCalls,1);
+ const releaseReadiness=await Promise.all(Array.from({length:8},()=>fetch(base+'/ready/release')));
+ assert.ok(releaseReadiness.every(r=>r.status===200));assert.equal(readyCalls,2,'A verificacao recente nao reutiliza o resultado basico, mas compartilha chamadas simultaneas.');
+ assert.equal((await releaseReadiness[0].json()).scope,'release');
  assert.equal(server.requestTimeout,60000);assert.equal(server.maxHeadersCount,64);
  assert.throws(()=>createSupabaseApp(provider,{sessionsPerUser:0}));
 });

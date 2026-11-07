@@ -19,6 +19,19 @@ test('cliente Supabase envia chave pública e valida usuário antes do perfil', 
   assert.throws(() => createSupabase({ url: 'http://example.com', key: 'sb_publishable_test' }));
 });
 
+test('prontidao de lancamento recusa recursos ausentes sem confundir conectividade com release',async()=>{
+ let state={release:29,ready:false};
+ const client=createSupabase({url:'https://example.supabase.co',key:'sb_publishable_test',fetchImpl:async url=>{
+  if(url.pathname.endsWith('book_schema_version'))return Response.json(19);
+  if(url.pathname.endsWith('book_release_status'))return Response.json(state);
+  return Response.json({});
+ }});
+ assert.deepEqual(await client.ready(),{ok:true});
+ await assert.rejects(client.ready({release:true}),e=>e.status===503);
+ state={release:29,ready:true};assert.deepEqual(await client.ready({release:true}),{ok:true});
+ state={release:28,ready:true};await assert.rejects(client.ready({release:true}),e=>e.status===503);
+});
+
 test('erros de rede e migração pendente têm mensagens claras', async () => {
   const config = { url: 'https://example.supabase.co', key: 'sb_publishable_test' };
   const offline = createSupabase({ ...config, fetchImpl: async () => { throw new Error('network'); } });

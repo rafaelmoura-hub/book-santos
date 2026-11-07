@@ -236,8 +236,11 @@ window.BookStore = (() => {
         document.querySelectorAll('#hotel, #osHotel').forEach(select => {
             [...select.options].filter(option => option.value).sort((a, b) => compare(a.textContent, b.textContent)).forEach(option => select.appendChild(option));
         });
-        setInterval(() => refresh(), 15000);
-        document.addEventListener?.('visibilitychange', () => { if (!document.hidden) refresh(); });
+        // Hidden/offline tabs must not keep polling the server.
+        const backgroundRefresh=()=>{if(!document.hidden&&window.navigator?.onLine!==false)return refresh();};
+        setInterval(backgroundRefresh, 15000);
+        window.addEventListener('online', backgroundRefresh);
+        document.addEventListener?.('visibilitychange', backgroundRefresh);
         window.addEventListener('unhandledrejection', event => { event.preventDefault(); message(event.reason?.message || 'Falha na operação.', true); });
     }
     function validateFiles(files) {

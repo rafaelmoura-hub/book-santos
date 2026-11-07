@@ -29,10 +29,11 @@ test('tela aguarda confirmação e preserva versão lida para impedir sobrescrit
     }
     return {ok:true};
   }};
+  let poll;
   const context={
     document:{body:new Element(),createElement:()=>new Element(),querySelector:()=>null,querySelectorAll:()=>[],activeElement:{tagName:'DIV'},hidden:false},
     localStorage:{getItem:key=>local.get(key)||null},BookAPI:api,BookCatalog:{hotels:[],apartments:{}},crypto:webcrypto,Event,Blob,URL,console,
-    setInterval:()=>{},setTimeout:()=>{},alert:()=>{},
+    setInterval:fn=>{poll=fn;},setTimeout:()=>{},alert:()=>{},
     dispatchEvent:events.dispatchEvent.bind(events),addEventListener:events.addEventListener.bind(events)
   };
   context.window=context;
@@ -77,4 +78,9 @@ test('tela aguarda confirmação e preserva versão lida para impedir sobrescrit
   assert.equal(JSON.parse(store.getItem('chamados'))[0].__bookVersion,4);
   api.request=async()=>({chamados:{loaded:[],cursor:null}});await store.refresh(true);
   assert.equal(JSON.parse(store.getItem('chamados')).length,0,'Registros ausentes do escopo autorizado não são preservados.');
+  let pollRequests=0;api.request=async()=>{pollRequests++;return {chamados:{loaded:[],cursor:null}};};
+  context.navigator={onLine:false};await poll();assert.equal(pollRequests,0);
+  context.navigator.onLine=true;context.document.hidden=true;await poll();assert.equal(pollRequests,0);
+  context.document.hidden=false;await poll();assert.ok(pollRequests>0);
+
 });

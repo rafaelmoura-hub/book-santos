@@ -47,7 +47,7 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
   const writes = new Map();
   const metrics=createObservability({clock});
   const agent = createAgent({clock});
-  const inFlight=new Map();let readyCheck,readyUntil=0;
+  const inFlight=new Map();let readyCheck,readyUntil=0,releaseCheck,releaseUntil=0;
   const cookieName=secure?'__Host-book_session':'book_session';
   const server=http.createServer({maxHeaderSize:16384,requestTimeout:60000,headersTimeout:15000,keepAliveTimeout:5000},async (req, res) => {
     metrics.track(req,res);
@@ -80,13 +80,20 @@ function createSupabaseApp(provider, { secure = false, publicOrigin, clock = Dat
         if(!html)throw fail(404,'Documento não encontrado.');
         res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'}); return res.end(req.method==='HEAD'?undefined:html);
       }
-      if (route === '/health' && req.method === 'GET') return json(200, { status: 'ok', version:'20261107-launch7' });
+      if (route === '/health' && req.method === 'GET') return json(200, { status: 'ok', version:'20261107-ready8' });
+      if (route === '/ready/release' && req.method === 'GET') {
+        if(clock()>=releaseUntil){
+          if(!releaseCheck)releaseCheck=Promise.resolve().then(()=>provider.ready({release:true})).then(()=>{releaseUntil=clock()+10000;}).finally(()=>{releaseCheck=null;});
+          await releaseCheck;
+        }
+        return json(200,{status:'ok',scope:'release',release:29});
+      }
       if (route === '/ready' && req.method === 'GET') {
         if(clock()>=readyUntil){
           if(!readyCheck)readyCheck=Promise.resolve().then(()=>provider.ready()).then(()=>{readyUntil=clock()+10000;}).finally(()=>{readyCheck=null;});
           await readyCheck;
         }
-        return json(200, { status: 'ok' });
+        return json(200, { status: 'ok', scope:'connectivity' });
       }
       if (!['GET', 'HEAD'].includes(req.method) && (req.headers['sec-fetch-site'] === 'cross-site' || req.headers.origin && req.headers.origin !== (publicOrigin || `${secure ? 'https' : 'http'}://${req.headers.host}`))) throw fail(403, 'Origem não permitida.');
       if(route.startsWith('/api/')&&!['GET','HEAD'].includes(req.method))requireJSON(req);
