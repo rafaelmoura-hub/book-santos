@@ -37,12 +37,16 @@ test('cards: mudar condomínio preenche apartamentos e remove a seleção anteri
     chamados: () => [{ id: 101, hotel: 'Be Urban', apartamento: '214' }],
     usuariosQueFinalizam: () => [],
   };
-  const source = readFileSync('adm/admin.js', 'utf8');
+  const source = readFileSync('adm/cards.js', 'utf8');
+  const listener =
+    "document.getElementById('osHotel').addEventListener('change', preencherApartamentos);";
+  const screen = readFileSync('adm/admin.js', 'utf8');
+  assert.ok(screen.includes(listener), 'admin.js registra a troca de condomínio');
   vm.runInNewContext(
     source.slice(
       source.indexOf('function preencherApartamentos()'),
       source.indexOf('async function salvarOS('),
-    ),
+    ) + listener,
     context,
   );
   context.abrirFormularioOS();

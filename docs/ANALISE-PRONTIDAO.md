@@ -22,7 +22,7 @@ Foram revisados as quatro interfaces HTML/CSS/JS, os clientes compartilhados, o 
 
 ### 1. Alta — HTML não escapado na formatação de datas
 
-Locais: `adm/admin.js`, função `formatarData`, e `hotel/hotel.js`, função de mesmo nome. O resultado é interpolado em `innerHTML`.
+Locais: `adm/utilidades.js` (antes em `adm/admin.js`), função `formatarData`, e `hotel/hotel.js`, função de mesmo nome. O resultado é interpolado em `innerHTML`.
 
 Quando o texto contém exatamente três partes separadas por hífen, a função devolve as partes sem escape. A migração operacional não valida o formato de vencimento, data de vistoria e data de fechamento como datas reais. Uma gravação manipulada por uma conta administrativa pode persistir conteúdo que execute ao ser exibido para outro administrador. A reprodução confirmou a saída insegura da função; não foi executado ataque em navegador ou no banco remoto.
 

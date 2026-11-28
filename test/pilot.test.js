@@ -45,7 +45,7 @@ test('publicação recusa configuração sem HTTPS e valida porta/origem', () =>
 });
 
 test('datas manipuladas nunca retornam tags HTML nas duas telas', () => {
-  for (const file of ['adm/admin.js', 'hotel/hotel.js']) {
+  for (const file of ['adm/utilidades.js', 'hotel/hotel.js']) {
     const source = readFileSync(file, 'utf8').match(
       /function formatarData\(data\) \{[\s\S]*?\n\}/,
     )[0];
