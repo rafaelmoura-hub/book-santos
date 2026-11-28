@@ -1,76 +1,99 @@
 # BOOK TASK
 
-Logo oficial, paleta azul petróleo, modo noturno e rodapé centralizado: [identidade e tema](docs/IDENTIDADE-TEMA.md). O botão fica no topo, também no login e nas páginas legais. Não exige SQL.
+Sistema de gestão operacional dos apartamentos da Book Santos: cards de serviço, chamados, vistorias, quebras, estoque, onboarding, financeiro, suporte e avaliações. Substitui a parte operacional que a equipe fazia no Pipefy.
 
-Menu organizado por rotinas, com grupos expansíveis e permissões preservadas: [mapa da navegação](docs/NAVEGACAO.md). Não requer migração do banco.
+## Como funciona
 
-Visão geral com apoio à decisão, preventivas trimestrais e mínimos de estoque: [comparação e uso](docs/SAD-REFERENCIAS.md). Os novos indicadores precisam de `supabase/migrations/202610290015_decision.sql` após a 14. O restante da aplicação continua compatível com banco na versão 14. CNPJ informado: **08.941.697/0001-07**; demais dados legais aguardam confirmação.
+- **Servidor:** Node.js 24, módulo `http` puro, sem framework e sem etapa de build.
+- **Telas:** HTML, CSS e JavaScript puros, carregados direto pelo navegador.
+- **Dados e login:** Supabase (Auth, Postgres com RLS e Storage privado). O servidor guarda a sessão em cookie HttpOnly e fala com o Supabase; o navegador nunca recebe a chave secreta.
+- **Banco:** a estrutura está em `supabase/migrations/`, numeradas. O servidor confere a versão do banco em `/ready` e os recursos recentes em `/ready/release` (hoje espera a migração 29).
 
-Revisão de abertura, privacidade, acessibilidade e desempenho: [orientações e pendências](docs/PRIVACIDADE-ACESSIBILIDADE.md). Documentos públicos em `/legal/privacidade`, `/legal/termos`, `/legal/cookies`, `/legal/reembolso`, `/legal/lgpd` e `/legal/empresa`. Sem migração nova. Dados legais da empresa aguardam confirmação; configure `BOOK_COMPANY_NAME`, `BOOK_COMPANY_CNPJ`, `BOOK_COMPANY_ADDRESS` e `BOOK_PRIVACY_EMAIL` no servidor.
+## Rodar na máquina
 
-Rotina adaptada à demonstração da equipe: Reservas, Onboarding, Projetos, Compras e Danos, com melhorias em Cards, Vistorias, Feedbacks e Avaliações. Veja [análise e uso](docs/ROTINA-BOOK-TESK.md). Esta versão requer as migrações **13 e 14**, em ordem, após a versão 12; não publique o servidor antes de confirmar a versão 14 no banco.
-
-Suporte com contadores e notificações, lembretes em notas, Feedbacks e Avaliações da equipe: veja [ativação e uso](docs/COLABORACAO.md). Esta versão exige `supabase/migrations/202610280013_collaboration.sql` após as migrações anteriores, antes de publicar o servidor.
-
-Permissões por aba, notas privadas, suporte ao mestre e assistente de IA com ações revisáveis: veja [ativação e uso](docs/ABAS-SUPORTE-NOTAS-IA.md). Antes do deploy, aplique em ordem as migrações `202610280010_permissions.sql`, `202610280011_notes_support.sql` e `202610280012_security.sql`. Veja também a [revisão de segurança](docs/SEGURANCA-20261028.md).
-
-Interface simplificada e melhorias de fluidez: veja [visual e desempenho](docs/VISUAL-DESEMPENHO.md). Esta atualização preserva as funções existentes e não exige migração nova do banco.
-
-Backup no HD externo, proteção do catálogo e melhorias de segurança: aplique as migrações `202610230008_backup.sql` e `202610230009_hardening.sql`, nessa ordem, **antes de publicar esta versão**. Veja [como usar o backup](docs/BACKUP.md) e [configuração de segurança e sessões persistidas](docs/MELHORIAS-SEGURANCA.md).
-
-Histórico financeiro por dia, semana, mês ou ano: aplique `202610220006_finance_history.sql` após a migração financeira anterior. Os filtros usam horário de São Paulo e abrangem tanto os cards quanto os totais por responsável.
-
-Financeiro: resumo por responsável pelo pagamento, com valores monetários de duas casas decimais. Ative a migração `202610220005_finance.sql` e consulte [docs/FINANCEIRO.md](docs/FINANCEIRO.md).
-
-Gestão de usuários pelo site e navegação unificada: veja [docs/USUARIOS-NO-SITE.md](docs/USUARIOS-NO-SITE.md). A ativação requer a migração `202610220004_user_management.sql` e, para criar novas contas, `SUPABASE_SECRET_KEY` configurada somente no servidor. As instruções antigas abaixo sobre gestão exclusiva pelo painel foram substituídas por esse fluxo.
-
-## Piloto com publicação
-
-Para testar com três pessoas sem comprar domínio, siga [docs/TESTE-RENDER.md](docs/TESTE-RENDER.md). O `render.yaml` prepara um serviço de testes com URL HTTPS fornecida pelo Render e mantém o Supabase atual.
-
-O pacote de publicação com Docker e HTTPS está em [docs/PUBLICACAO.md](docs/PUBLICACAO.md). Antes de usar esta versão, aplique também `supabase/migrations/202610220003_pilot.sql` após as duas migrações anteriores. Ela adiciona o cadastro de apartamentos e validações no banco; as telas consultam esse cadastro. O pacote ainda precisa ser instalado e validado em uma hospedagem real.
-
-`npm.cmd run check:supabase` agora confere Auth e a versão da migração. `/health` verifica o processo; `/ready` consulta Auth e versão do banco. As instruções antigas abaixo sobre checar somente Auth foram substituídas por esse comportamento.
-
-Sistema de chamados, ordens de serviço, estoque, vistorias e suporte com Supabase Auth, banco e Storage privado. O código da etapa operacional está preparado; é necessário aplicar a migração no Supabase e validar o piloto antes do uso na empresa.
-
-## Ativação
-
-O login do administrador já foi configurado. Para ativar os dados compartilhados, execute no SQL Editor o conteúdo de `supabase/migrations/202610170002_operations.sql`. Veja os passos e permissões em [docs/OPERACAO.md](docs/OPERACAO.md).
-
-Não é necessário recriar o administrador. A migração é repetível e não apaga registros. Contas novas continuam sendo provisionadas no painel do Supabase.
-
-## Executar
-
-Requer Node.js 24.14 ou superior da série 24. Copie `.env.example` para `.env` se ainda não existir. As configurações fornecidas contêm somente a URL e a chave pública do projeto; nunca coloque segredos em arquivos públicos.
+Requer Node.js 24.14 ou superior da série 24.
 
 ```powershell
 npm.cmd ci
+copy .env.example .env   # só se ainda não existir
 npm.cmd test
 npm.cmd start
 ```
 
-Abra <http://localhost:3000>. Não use Live Server nem abra o HTML diretamente. Para reiniciar após uma alteração no servidor, Ctrl+C e `npm.cmd start`. `npm.cmd run check:supabase` verifica a conexão com Auth e a versão esperada das migrações. Permissões e fluxos devem ser conferidos também com contas de teste.
+Abra <http://localhost:3000>. Não abra os HTML direto nem use Live Server: as telas dependem da API do servidor. No VS Code, **F5** em **BOOK TASK - abrir servidor local** sobe o servidor ou reaproveita o que já estiver na porta.
 
-No VS Code, pressione **F5** e selecione **BOOK TASK - abrir servidor local**. A tarefa inicia o servidor quando necessário ou reutiliza o que já estiver na porta 3000. O navegador abre `http://127.0.0.1:3000`; a configuração anterior de porta 8080 foi substituída. Se mudar `PORT` no ambiente, ajuste também a URL em `.vscode/launch.json`.
+O `.env.example` traz só a URL e a chave pública do Supabase. A `SUPABASE_SECRET_KEY` (cadastro de usuários pelo site) fica apenas no servidor, nunca em arquivo do repositório.
 
-O único pacote de desenvolvimento é PostgreSQL embutido para testes; o servidor não depende dele para iniciar. Os testes usam dados locais e respostas simuladas, sem escrever no projeto Supabase real.
+## Comandos
 
-## Organização
+| Comando | O que faz |
+|---|---|
+| `npm.cmd start` | Sobe o servidor (`server/start.js`). |
+| `npm.cmd test` | Testes automáticos com banco Postgres embutido (PGlite) e respostas simuladas. Não toca no Supabase real. |
+| `npm.cmd run test:browser` | Abre as telas no Chrome com dados simulados e confere erros e contraste. Precisa do Chrome instalado (ou `CHROME_BIN`). |
+| `npm.cmd run check:supabase` | Confere Auth e versão das migrações no Supabase configurado no `.env`. |
+| `npm.cmd run format` | Formata o código com Prettier. |
+| `npm.cmd run format:check` | Só confere a formatação, sem alterar nada. |
 
-- `server/start.js`, `supabase.js`, `supabase-app.js`, `operations.js`: servidor atual, autenticação, API, validação e anexos.
-- `assets/`: cliente da API, sessão e sincronização das telas.
-- `adm/`, `cliente/`, `hotel/`: interfaces existentes adaptadas ao banco.
-- `supabase/migrations/`: estrutura, permissões e função transacional.
-- `test/`: testes de SQL, API, sessão e estado das telas.
-- `docs/OPERACAO.md`: ativação, acesso por hotel, limites, piloto e operação.
+## Onde fica cada coisa
 
-Os arquivos SQLite `server/index.js`, `database.js`, `passwords.js` e `setup.js` foram preservados como implementação anterior e não são usados por `npm start`. Não execute o servidor antigo para usar as telas atuais.
+```
+server/
+  start.js            entrada: lê a configuração e sobe o servidor
+  supabase-app.js     monta o servidor e define a ordem das etapas de cada requisição
+  app/                peças comuns: respostas HTTP, cabeçalhos de segurança, autenticação
+  routes/             uma rota por assunto: sessão, cards, processos, colaboração,
+                      catálogo, dados, financeiro, backup, IA, usuários, páginas públicas
+                      e arquivos estáticos
+  supabase.js         cliente do Supabase (Auth, banco, Storage)
+  operations.js, processes.js, permissions.js, security.js ...
+                      validação e regras de negócio usadas pelas rotas
+adm/                  tela de administração; admin.js inicia a tela e os demais
+                      arquivos trazem cada parte (cards, fechamento, vistorias, chat...)
+cliente/              tela do cliente
+hotel/                tela de condomínios (só administradores)
+assets/               código comum das telas: API, sessão, catálogo, tema, celular
+login.html            entrada do sistema
+supabase/migrations/  estrutura do banco, em ordem
+scripts/              verificações e preparo de importações (planilha, feedbacks, acessos)
+test/                 testes automáticos
+docs/                 documentação de cada recurso
+deploy/, Dockerfile, compose.yaml, render*.yaml
+                      publicação (Docker com Caddy, ou Render)
+```
 
-## Pontos ainda pendentes
+Regras ao mexer nas telas: os arquivos de `adm/`, `cliente/` e `hotel/` precisam ter nome só com letras minúsculas (o servidor recusa outros nomes) e entram como `<script>` no HTML da tela. Arquivo novo em `assets/` só é servido depois de entrar na lista permitida em `server/routes/static.js`.
 
-As telas responsivas, etiquetas e consultas paginadas estão implementadas. Recuperação de senha por código, TOTP para administradores, monitoramento e homologação possuem código e testes; a ativação externa está descrita em [Segurança e operação](docs/SEGURANCA-OPERACAO-20261105.md). A migração 22 e o modelo de e-mail precisam ser configurados no Supabase. O backup automático aguarda um destino privado autorizado. Consultas globais dos painéis usam endpoints próprios; os gráficos antigos continuam limitados aos registros carregados.
+## Mudanças no banco
 
-Os registros antigos do navegador são preservados, com opção de exportação. Antes de importar, é necessário mapear usuários e revisar duplicidades. Para colaborar pelo GitHub, use repositório privado e contas separadas; `.env`, `data/` e `node_modules/` são ignorados pelo Git. Use `npm.cmd ci` após baixar o projeto.
+1. Crie a migração nova em `supabase/migrations/` com o próximo número.
+2. Rode `npm.cmd test`: os testes aplicam as migrações num Postgres local.
+3. Aplique no Supabase **antes** de publicar o servidor que depende dela.
+4. Confira com `npm.cmd run check:supabase` e com `/ready/release` no site publicado.
 
-Referências técnicas: [funções transacionais](https://supabase.com/docs/guides/database/functions), [RLS](https://supabase.com/docs/guides/database/postgres/row-level-security) e [Storage privado](https://supabase.com/docs/guides/storage/security/access-control).
+Nunca edite uma migração que já foi aplicada; crie outra.
+
+## Publicar
+
+- Teste por URL no Render: [docs/TESTE-RENDER.md](docs/TESTE-RENDER.md).
+- Servidor próprio com Docker e HTTPS: [docs/PUBLICACAO.md](docs/PUBLICACAO.md).
+- Segurança, MFA, recuperação de senha e monitoramento: [docs/SEGURANCA-OPERACAO-20261105.md](docs/SEGURANCA-OPERACAO-20261105.md).
+
+## Documentação por assunto
+
+- Ativação do banco e acesso por condomínio: [OPERACAO](docs/OPERACAO.md)
+- Navegação e menu: [NAVEGACAO](docs/NAVEGACAO.md)
+- Cards, quadro e agenda: [CARDS-AGENDA](docs/CARDS-AGENDA.md), [EDICAO-CARDS](docs/EDICAO-CARDS-20261105.md), [ETIQUETAS](docs/ETIQUETAS.md), [FILTRO-URGENCIA](docs/FILTRO-URGENCIA.md)
+- Vistorias e apartamentos: [IMOVEIS-VISTORIAS](docs/IMOVEIS-VISTORIAS-20261105.md), [DATAS-VISTORIAS](docs/DATAS-VISTORIAS-20261105.md), [CATALOGO](docs/CATALOGO.md), [ONBOARDING-CATALOGO](docs/ONBOARDING-CATALOGO.md)
+- Financeiro: [FINANCEIRO](docs/FINANCEIRO.md)
+- Usuários e permissões: [USUARIOS-NO-SITE](docs/USUARIOS-NO-SITE.md), [ABAS-SUPORTE-NOTAS-IA](docs/ABAS-SUPORTE-NOTAS-IA.md)
+- Suporte e colaboração: [COLABORACAO](docs/COLABORACAO.md)
+- Backup: [BACKUP](docs/BACKUP.md)
+- Importações: [IMPORTACAO-HISTORICO](docs/IMPORTACAO-HISTORICO.md), [IMPORTACAO-FEEDBACKS](docs/IMPORTACAO-FEEDBACKS.md), [IMPORTACAO-ACESSOS](docs/IMPORTACAO-ACESSOS-20261106.md)
+- Privacidade e textos legais: [PRIVACIDADE-ACESSIBILIDADE](docs/PRIVACIDADE-ACESSIBILIDADE.md), [THIRD-PARTY](docs/THIRD-PARTY.md)
+- Histórico de versões e migrações exigidas por cada uma: [HISTORICO-VERSOES](docs/HISTORICO-VERSOES.md)
+
+## Cuidados
+
+- `.env`, `data/` e `node_modules/` ficam fora do Git. Não salve exportações ou bases reais dentro do repositório.
+- Testes nunca escrevem no Supabase real. Para conferir permissões de verdade, use contas de teste.
