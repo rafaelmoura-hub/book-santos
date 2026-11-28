@@ -747,6 +747,8 @@ async function main() {
     chrome,
     [
       '--headless=new',
+      // Começa sempre no tema claro, sem herdar o modo escuro do Windows.
+      '--blink-settings=preferredColorScheme=1',
       '--disable-gpu',
       '--no-sandbox',
       '--no-first-run',
@@ -896,6 +898,11 @@ async function main() {
           await evaluate("document.getElementById('themeToggle').click()");
         await evaluate(
           'new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))',
+        );
+        // Espera as transições de cor da troca de tema terminarem; medir no meio
+        // delas mistura a cor nova do texto com o fundo antigo.
+        await evaluate(
+          'Promise.race([Promise.all(document.getAnimations().map(a=>a.finished.catch(()=>{}))),new Promise(r=>setTimeout(r,1000))])',
         );
         const audit = {
           state: name,
