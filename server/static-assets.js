@@ -3,13 +3,15 @@ const { createHash } = require('node:crypto');
 const { gzip } = require('node:zlib');
 const { promisify } = require('node:util');
 const compress = promisify(gzip);
+// Arquivos servidos ficam em memória; o limite cobre todos os da lista permitida com folga.
+const CACHE_LIMIT = 128;
 const cache = new Map();
 async function asset(filename) {
   const info = await stat(filename),
     stamp = `${info.mtimeMs}:${info.size}`;
   let entry = cache.get(filename);
   if (!entry || entry.stamp !== stamp) {
-    if (cache.size >= 64) cache.delete(cache.keys().next().value);
+    if (cache.size >= CACHE_LIMIT) cache.delete(cache.keys().next().value);
     entry = {
       stamp,
       value: readFile(filename).then(async (bytes) => ({
