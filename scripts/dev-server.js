@@ -22,19 +22,35 @@ async function main() {
     }
     throw new Error(`Já existe outro serviço na porta ${port}.`);
   } catch (error) {
-    if (!['ECONNREFUSED', 'UND_ERR_CONNECT_TIMEOUT'].includes(error.cause?.code) && error.name !== 'TimeoutError') throw error;
+    if (
+      !['ECONNREFUSED', 'UND_ERR_CONNECT_TIMEOUT'].includes(error.cause?.code) &&
+      error.name !== 'TimeoutError'
+    )
+      throw error;
   }
-  const child = spawn(process.execPath, ['server/start.js'], { cwd: root, windowsHide: true, stdio: ['inherit', 'pipe', 'inherit'] });
+  const child = spawn(process.execPath, ['server/start.js'], {
+    cwd: root,
+    windowsHide: true,
+    stdio: ['inherit', 'pipe', 'inherit'],
+  });
   let ready = false;
-  child.stdout.on('data', chunk => {
+  child.stdout.on('data', (chunk) => {
     process.stdout.write(chunk);
     if (!ready && chunk.toString().includes('BOOK TASK iniciado na porta')) {
       ready = true;
       console.log(`BOOK TASK: pronto em ${origin}`);
     }
   });
-  child.on('error', error => { console.error(`ERRO: ${error.message}`); process.exitCode = 1; });
-  child.on('exit', code => { process.exitCode = code ?? 1; });
+  child.on('error', (error) => {
+    console.error(`ERRO: ${error.message}`);
+    process.exitCode = 1;
+  });
+  child.on('exit', (code) => {
+    process.exitCode = code ?? 1;
+  });
   for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => child.kill(signal));
 }
-main().catch(error => { console.error(`ERRO: ${error.message}`); process.exitCode = 1; });
+main().catch((error) => {
+  console.error(`ERRO: ${error.message}`);
+  process.exitCode = 1;
+});

@@ -1,0 +1,10 @@
+node_modules/
+artifacts/
+data/
+supabase/
+docs/
+*.md
+*.sql
+*.json
+*.yaml
+*.yml

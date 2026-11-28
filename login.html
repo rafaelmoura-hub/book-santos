@@ -1,39 +1,83 @@
-<!DOCTYPE html> 
+<!doctype html>
 <html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>BOOK TASK | Login</title>
     <script src="/assets/theme.js?v=20261107-ready8"></script>
-    <link rel="icon" href="/assets/book-task-logo.png" type="image/png">
-    <link rel="stylesheet" href="login.css?v=20261107-ready8">
-    <link rel="stylesheet" href="/assets/brand.css?v=20261107-ready8">
-    <link rel="stylesheet" href="/assets/layout.css?v=20261107-ready8">
-    <link rel="stylesheet" href="/assets/mobile.css?v=20261107-ready8">
+    <link rel="icon" href="/assets/book-task-logo.png" type="image/png" />
+    <link rel="stylesheet" href="login.css?v=20261107-ready8" />
+    <link rel="stylesheet" href="/assets/brand.css?v=20261107-ready8" />
+    <link rel="stylesheet" href="/assets/layout.css?v=20261107-ready8" />
+    <link rel="stylesheet" href="/assets/mobile.css?v=20261107-ready8" />
     <script src="assets/accessibility.js?v=20261107-ready8" defer></script>
-<script src="assets/events.js?v=20261107-ready8" defer></script>
-</head>
-<body class="login-page">
+    <script src="assets/events.js?v=20261107-ready8" defer></script>
+  </head>
+  <body class="login-page">
     <aside class="login-brand-panel" aria-label="BOOK TASK">
-        <div class="login-brand-copy"><p class="login-brand-name">BOOK TASK</p><p>Gestão operacional dos seus imóveis.<br>Mais organização para o dia a dia.</p></div>
-        <img class="login-skyline" src="/assets/login-skyline.svg" alt="" width="600" height="440">
+      <div class="login-brand-copy">
+        <p class="login-brand-name">BOOK TASK</p>
+        <p>Gestão operacional dos seus imóveis.<br />Mais organização para o dia a dia.</p>
+      </div>
+      <img class="login-skyline" src="/assets/login-skyline.svg" alt="" width="600" height="440" />
     </aside>
     <main class="login-box">
-        <h1 class="brand-heading"><img class="brand-logo" src="/assets/book-task-logo.png" width="128" height="128" alt="BOOK TASK — Gestão Operacional" decoding="async"></h1>
-        <h2><span class="login-title-desktop">Bem-vindo ao BOOK TASK</span><span class="login-title-mobile">Entrar no BOOK TASK</span></h2>
-        <p><span class="login-title-desktop">Acesse sua operação.</span><span class="login-title-mobile">Acesse sua conta</span></p>
-        <form data-on-submit="entrar(event)">
-        <label for="login"><svg class="login-field-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v14H3ZM3 5l9 8 9-8"/></svg>E-mail</label>
-        <input type="email" id="login" aria-label="E-mail" placeholder="seu@email.com" maxlength="254" autocomplete="username" required>
-        <label for="senha"><svg class="login-field-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 10h14v11H5ZM8 10V6a4 4 0 0 1 8 0v4"/></svg>Senha</label>
-        <input type="password" id="senha" placeholder="Sua senha" maxlength="100" autocomplete="current-password" required>
+      <h1 class="brand-heading">
+        <img
+          class="brand-logo"
+          src="/assets/book-task-logo.png"
+          width="128"
+          height="128"
+          alt="BOOK TASK — Gestão Operacional"
+          decoding="async"
+        />
+      </h1>
+      <h2>
+        <span class="login-title-desktop">Bem-vindo ao BOOK TASK</span
+        ><span class="login-title-mobile">Entrar no BOOK TASK</span>
+      </h2>
+      <p>
+        <span class="login-title-desktop">Acesse sua operação.</span
+        ><span class="login-title-mobile">Acesse sua conta</span>
+      </p>
+      <form data-on-submit="entrar(event)">
+        <label for="login"
+          ><svg class="login-field-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 5h18v14H3ZM3 5l9 8 9-8" /></svg
+          >E-mail</label
+        >
+        <input
+          type="email"
+          id="login"
+          aria-label="E-mail"
+          placeholder="seu@email.com"
+          maxlength="254"
+          autocomplete="username"
+          required
+        />
+        <label for="senha"
+          ><svg class="login-field-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 10h14v11H5ZM8 10V6a4 4 0 0 1 8 0v4" /></svg
+          >Senha</label
+        >
+        <input
+          type="password"
+          id="senha"
+          placeholder="Sua senha"
+          maxlength="100"
+          autocomplete="current-password"
+          required
+        />
         <button type="submit">Entrar</button>
-        </form>
-        <p id="mensagem" role="status" aria-live="polite"></p>
+      </form>
+      <p id="mensagem" role="status" aria-live="polite"></p>
     </main>
-    <noscript>Ative o JavaScript para entrar. Os documentos de <a href="/legal/privacidade">privacidade</a> estão disponíveis sem JavaScript.</noscript>
+    <noscript
+      >Ative o JavaScript para entrar. Os documentos de
+      <a href="/legal/privacidade">privacidade</a> estão disponíveis sem JavaScript.</noscript
+    >
     <script src="assets/api.js?v=20261107-ready8"></script>
     <script src="assets/auth.js?v=20261107-ready8"></script>
     <script src="login.js?v=20261107-ready8"></script>
-</body>
+  </body>
 </html>

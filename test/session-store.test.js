@@ -4,20 +4,45 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { sessionStore } = require('../server/session-store');
-test('sessões persistidas são cifradas, sobrevivem ao reinício e respeitam expiração', t => {
-  const folder=fs.mkdtempSync(path.join(os.tmpdir(),'book-sessions-'));
-  const filename=path.join(folder,'sessions.enc');
-  t.after(()=>{for(const file of fs.readdirSync(folder))fs.unlinkSync(path.join(folder,file));fs.rmdirSync(folder);});
-  let now=10;
-  const options={key:'a'.repeat(64),filename,clock:()=>now};
-  const first=sessionStore(options);first.set('cookie-hash',{userId:'user',accessToken:'private-token',refreshToken:'secret-refresh',authExpires:500,expires:1000});
-  assert.ok(!fs.readFileSync(filename,'utf8').includes('private-token'));
-  assert.equal(sessionStore(options).get('cookie-hash').refreshToken,'secret-refresh');
-  assert.throws(()=>sessionStore({...options,key:'b'.repeat(64)}),/Não foi possível/);
-  first.set('pending',{userId:'admin',accessToken:'aal1',expires:1000,pendingMfa:true,mfaVerified:false,issuedAt:10,enrollment:'factor'});
-  const pending=sessionStore(options).get('pending');assert.equal(pending.pendingMfa,true);assert.equal(pending.mfaVerified,false);assert.equal(pending.enrollment,'factor');
+test('sessões persistidas são cifradas, sobrevivem ao reinício e respeitam expiração', (t) => {
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'book-sessions-'));
+  const filename = path.join(folder, 'sessions.enc');
+  t.after(() => {
+    for (const file of fs.readdirSync(folder)) fs.unlinkSync(path.join(folder, file));
+    fs.rmdirSync(folder);
+  });
+  let now = 10;
+  const options = { key: 'a'.repeat(64), filename, clock: () => now };
+  const first = sessionStore(options);
+  first.set('cookie-hash', {
+    userId: 'user',
+    accessToken: 'private-token',
+    refreshToken: 'secret-refresh',
+    authExpires: 500,
+    expires: 1000,
+  });
+  assert.ok(!fs.readFileSync(filename, 'utf8').includes('private-token'));
+  assert.equal(sessionStore(options).get('cookie-hash').refreshToken, 'secret-refresh');
+  assert.throws(() => sessionStore({ ...options, key: 'b'.repeat(64) }), /Não foi possível/);
+  first.set('pending', {
+    userId: 'admin',
+    accessToken: 'aal1',
+    expires: 1000,
+    pendingMfa: true,
+    mfaVerified: false,
+    issuedAt: 10,
+    enrollment: 'factor',
+  });
+  const pending = sessionStore(options).get('pending');
+  assert.equal(pending.pendingMfa, true);
+  assert.equal(pending.mfaVerified, false);
+  assert.equal(pending.enrollment, 'factor');
   first.delete('pending');
-  now=1001;assert.equal(sessionStore(options).size,0);
-  now=10;const next=sessionStore(options);next.delete('cookie-hash');assert.equal(sessionStore(options).size,0);
-  assert.throws(()=>sessionStore({key:'curta',filename}));
+  now = 1001;
+  assert.equal(sessionStore(options).size, 0);
+  now = 10;
+  const next = sessionStore(options);
+  next.delete('cookie-hash');
+  assert.equal(sessionStore(options).size, 0);
+  assert.throws(() => sessionStore({ key: 'curta', filename }));
 });

@@ -1,32 +1,192 @@
-:root { --azul:#174a8b; --texto:#242b35; --suave:#65748a; --borda:#b8cde5; }
-* { box-sizing:border-box; }
-body { min-height:100vh; min-height:100svh; margin:0; padding:24px; display:grid; place-items:center; background:#f5f7fb; color:var(--texto); font-family:"Segoe UI",Arial,sans-serif; }
-.login-box { width:min(100%,410px); padding:40px; border:1px solid var(--borda); border-top:4px solid var(--azul); border-radius:16px; background:#fff; box-shadow:0 8px 32px #24324605; }
-.login-box h1 { display:flex; align-items:center; gap:12px; margin:0; color:var(--texto); font-size:25px; font-weight:650; letter-spacing:-.8px; }
-.login-box h1::before { content:'BT'; display:grid; place-items:center; width:42px; height:42px; border-radius:12px; background:var(--azul); color:#fff; font-size:14px; letter-spacing:-.3px; }
-.login-box > p { margin:14px 0 30px; color:var(--suave); font-size:14px; }
-.login-box form { display:grid; }
-label { margin:16px 0 7px; color:#65748a; font-size:13px; font-weight:500; }
-label:first-child { margin-top:0; }
-input { width:100%; padding:12px 14px; border:1px solid var(--borda); border-radius:8px; background:#fff; color:var(--texto); font:inherit; font-size:14px; }
-input::placeholder { color:#59687a; }
-input:focus { border-color:var(--azul); outline:3px solid #174a8b14; }
-button { width:100%; margin-top:26px; padding:12px; border:0; border-radius:8px; background:var(--azul); color:#fff; font:inherit; font-size:14px; font-weight:600; cursor:pointer; transition:background-color .15s; }
-button:hover { background:#103966; }
-button:focus-visible { outline:3px solid #b9d3f4; outline-offset:3px; }
-button:disabled { opacity:.6; cursor:wait; }
-#mensagem { min-height:18px; margin:16px 0 0; color:#ae4242; font-size:13px; line-height:1.5; }
-@media(max-width:480px) { body { padding:18px; } .login-box { padding:30px 24px; } }
-@media(prefers-reduced-motion:reduce) { button { transition:none; } }
-body { display:flex; flex-direction:column; justify-content:center; align-items:center; gap:24px; }
-input { border-color:#73869d; }
-.skip-link { position:fixed; top:-100px; left:12px; z-index:100; padding:12px; background:white; color:#174a8b; }
-.skip-link:focus { top:12px; }
-:focus-visible { outline:3px solid #174a8b; outline-offset:3px; }
-.legal-footer { max-width:680px; text-align:center; color:#526276; font-size:12px; line-height:1.6; }
-.legal-footer nav { display:flex; justify-content:center; flex-wrap:wrap; gap:12px; }
-.legal-footer a { color:#174a8b; padding:6px 2px; text-underline-offset:3px; }
-@media(forced-colors:active) { :focus-visible { outline:3px solid Highlight; } }
-.brand-logo.login-loading { animation:login-logo-spin 1.2s linear infinite; }
-@keyframes login-logo-spin { to { transform:rotate(360deg); } }
-@media(prefers-reduced-motion:reduce) { .brand-logo.login-loading { animation:none; } }
+:root {
+  --azul: #174a8b;
+  --texto: #242b35;
+  --suave: #65748a;
+  --borda: #b8cde5;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  min-height: 100vh;
+  min-height: 100svh;
+  margin: 0;
+  padding: 24px;
+  display: grid;
+  place-items: center;
+  background: #f5f7fb;
+  color: var(--texto);
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+.login-box {
+  width: min(100%, 410px);
+  padding: 40px;
+  border: 1px solid var(--borda);
+  border-top: 4px solid var(--azul);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 8px 32px #24324605;
+}
+.login-box h1 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  color: var(--texto);
+  font-size: 25px;
+  font-weight: 650;
+  letter-spacing: -0.8px;
+}
+.login-box h1::before {
+  content: 'BT';
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--azul);
+  color: #fff;
+  font-size: 14px;
+  letter-spacing: -0.3px;
+}
+.login-box > p {
+  margin: 14px 0 30px;
+  color: var(--suave);
+  font-size: 14px;
+}
+.login-box form {
+  display: grid;
+}
+label {
+  margin: 16px 0 7px;
+  color: #65748a;
+  font-size: 13px;
+  font-weight: 500;
+}
+label:first-child {
+  margin-top: 0;
+}
+input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--texto);
+  font: inherit;
+  font-size: 14px;
+}
+input::placeholder {
+  color: #59687a;
+}
+input:focus {
+  border-color: var(--azul);
+  outline: 3px solid #174a8b14;
+}
+button {
+  width: 100%;
+  margin-top: 26px;
+  padding: 12px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--azul);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+button:hover {
+  background: #103966;
+}
+button:focus-visible {
+  outline: 3px solid #b9d3f4;
+  outline-offset: 3px;
+}
+button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+#mensagem {
+  min-height: 18px;
+  margin: 16px 0 0;
+  color: #ae4242;
+  font-size: 13px;
+  line-height: 1.5;
+}
+@media (max-width: 480px) {
+  body {
+    padding: 18px;
+  }
+  .login-box {
+    padding: 30px 24px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  button {
+    transition: none;
+  }
+}
+body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+}
+input {
+  border-color: #73869d;
+}
+.skip-link {
+  position: fixed;
+  top: -100px;
+  left: 12px;
+  z-index: 100;
+  padding: 12px;
+  background: white;
+  color: #174a8b;
+}
+.skip-link:focus {
+  top: 12px;
+}
+:focus-visible {
+  outline: 3px solid #174a8b;
+  outline-offset: 3px;
+}
+.legal-footer {
+  max-width: 680px;
+  text-align: center;
+  color: #526276;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.legal-footer nav {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.legal-footer a {
+  color: #174a8b;
+  padding: 6px 2px;
+  text-underline-offset: 3px;
+}
+@media (forced-colors: active) {
+  :focus-visible {
+    outline: 3px solid Highlight;
+  }
+}
+.brand-logo.login-loading {
+  animation: login-logo-spin 1.2s linear infinite;
+}
+@keyframes login-logo-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .brand-logo.login-loading {
+    animation: none;
+  }
+}

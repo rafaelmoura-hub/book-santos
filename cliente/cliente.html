@@ -1,37 +1,85 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Cliente | BOOK TASK</title>
-    <link rel="stylesheet" href="cliente.css?v=20261107-ready8">
-    <link rel="stylesheet" href="../assets/ui.css?v=20261107-ready8">
+    <link rel="stylesheet" href="cliente.css?v=20261107-ready8" />
+    <link rel="stylesheet" href="../assets/ui.css?v=20261107-ready8" />
     <script src="/assets/theme.js?v=20261107-ready8"></script>
-    <link rel="icon" href="/assets/book-task-logo.png" type="image/png">
-    <link rel="stylesheet" href="/assets/brand.css?v=20261107-ready8">
-    <link rel="stylesheet" href="/assets/mobile.css?v=20261107-ready8">
+    <link rel="icon" href="/assets/book-task-logo.png" type="image/png" />
+    <link rel="stylesheet" href="/assets/brand.css?v=20261107-ready8" />
+    <link rel="stylesheet" href="/assets/mobile.css?v=20261107-ready8" />
     <script src="../assets/accessibility.js?v=20261107-ready8" defer></script>
-    <noscript><style>body[hidden]{display:block!important}body>header,body>main{display:none!important}noscript{display:block;padding:24px}</style></noscript>
-<script src="../assets/events.js?v=20261107-ready8" defer></script>
-<script src="../assets/dictation.js?v=20261107-ready8" defer></script>
-</head>
-<body hidden data-screen="cliente.js">
-    <noscript>O sistema precisa de JavaScript. Consulte <a href="/legal/privacidade">privacidade</a> ou o responsável pelo seu acesso.</noscript>
-    <header><h1 class="brand-heading"><img class="brand-logo" src="/assets/book-task-logo.png" width="48" height="48" alt="" decoding="async"><span>BOOK TASK</span></h1><button data-on-click="sair()">Sair</button></header>
+    <noscript
+      ><style>
+        body[hidden] {
+          display: block !important;
+        }
+        body > header,
+        body > main {
+          display: none !important;
+        }
+        noscript {
+          display: block;
+          padding: 24px;
+        }
+      </style></noscript
+    >
+    <script src="../assets/events.js?v=20261107-ready8" defer></script>
+    <script src="../assets/dictation.js?v=20261107-ready8" defer></script>
+  </head>
+  <body hidden data-screen="cliente.js">
+    <noscript
+      >O sistema precisa de JavaScript. Consulte <a href="/legal/privacidade">privacidade</a> ou o
+      responsável pelo seu acesso.</noscript
+    >
+    <header>
+      <h1 class="brand-heading">
+        <img
+          class="brand-logo"
+          src="/assets/book-task-logo.png"
+          width="48"
+          height="48"
+          alt=""
+          decoding="async"
+        /><span>BOOK TASK</span>
+      </h1>
+      <button data-on-click="sair()">Sair</button>
+    </header>
     <main>
-        <section class="client-panel"><h2>Novo chamado</h2>
+      <section class="client-panel">
+        <h2>Novo chamado</h2>
         <form id="formChamado" data-on-submit="abrirChamado(event)">
-        <label for="hotel">Condomínio:</label>
-        <select id="hotel" required>
+          <label for="hotel">Condomínio:</label>
+          <select id="hotel" required>
             <option value="">Selecione o condomínio</option>
-            <option value="Be Urban">Be Urban</option><option value="Conde Luciano">Conde Luciano</option><option value="Embaré">Embaré</option><option value="Helbor Stay">Helbor Stay</option><option value="Housi">Housi</option><option value="Houx">Houx</option><option value="Ipanema">Ipanema</option><option value="Lume Alto da Boa Vista">Lume Alto da Boa Vista</option><option value="Maralta">Maralta</option><option value="Marco Aurelio">Marco Aurelio</option><option value="Nexone">Nexone</option><option value="Type">Type</option><option value="Unique Residence">Unique Residence</option><option value="Universo Palace">Universo Palace</option><option value="Unlimited">Unlimited</option><option value="VN Melo">VN Melo</option><option value="Xangô">Xangô</option>
-        </select>
-        <label for="apartamento">N&uacute;mero do apartamento:</label>
-        <select id="apartamento" required disabled><option value="">Selecione primeiro o condomínio</option></select>
-        <label for="assunto">Assunto:</label>
-        <input type="text" id="assunto" maxlength="100" required>
-        <label for="categoria">Categoria:</label>
-        <select id="categoria" required>
+            <option value="Be Urban">Be Urban</option>
+            <option value="Conde Luciano">Conde Luciano</option>
+            <option value="Embaré">Embaré</option>
+            <option value="Helbor Stay">Helbor Stay</option>
+            <option value="Housi">Housi</option>
+            <option value="Houx">Houx</option>
+            <option value="Ipanema">Ipanema</option>
+            <option value="Lume Alto da Boa Vista">Lume Alto da Boa Vista</option>
+            <option value="Maralta">Maralta</option>
+            <option value="Marco Aurelio">Marco Aurelio</option>
+            <option value="Nexone">Nexone</option>
+            <option value="Type">Type</option>
+            <option value="Unique Residence">Unique Residence</option>
+            <option value="Universo Palace">Universo Palace</option>
+            <option value="Unlimited">Unlimited</option>
+            <option value="VN Melo">VN Melo</option>
+            <option value="Xangô">Xangô</option>
+          </select>
+          <label for="apartamento">N&uacute;mero do apartamento:</label>
+          <select id="apartamento" required disabled>
+            <option value="">Selecione primeiro o condomínio</option>
+          </select>
+          <label for="assunto">Assunto:</label>
+          <input type="text" id="assunto" maxlength="100" required />
+          <label for="categoria">Categoria:</label>
+          <select id="categoria" required>
             <option value="">Selecione uma categoria</option>
             <option value="Manuten&#231;&#227;o">Manuten&ccedil;&atilde;o</option>
             <option value="Limpeza">Limpeza</option>
@@ -41,34 +89,72 @@
             <option value="Hidr&#225;ulica">Hidr&aacute;ulica</option>
             <option value="Quebra">Quebra</option>
             <option value="Outro">Outro</option>
-        </select>
-        <label for="prioridade">Prioridade:</label>
-        <select id="prioridade"><option>Normal</option><option>Alta</option><option>Urgente</option></select>
-        <label for="descricao">Descri&ccedil;&atilde;o:</label>
-        <textarea id="descricao" maxlength="2000" required></textarea>
-        <label for="arquivo">Foto ou v&iacute;deo:</label>
-        <input type="file" id="arquivo" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm" data-on-change="mostrarArquivo()" required aria-describedby="ajudaArquivo">
-        <small id="ajudaArquivo">Imagem ou vídeo de até 5 MB.</small>
-        <div id="preview"></div>
-        <button type="submit">Abrir chamado</button>
-        <p id="mensagem" role="status" aria-live="polite"></p>
+          </select>
+          <label for="prioridade">Prioridade:</label>
+          <select id="prioridade">
+            <option>Normal</option>
+            <option>Alta</option>
+            <option>Urgente</option>
+          </select>
+          <label for="descricao">Descri&ccedil;&atilde;o:</label>
+          <textarea id="descricao" maxlength="2000" required></textarea>
+          <label for="arquivo">Foto ou v&iacute;deo:</label>
+          <input
+            type="file"
+            id="arquivo"
+            accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm"
+            data-on-change="mostrarArquivo()"
+            required
+            aria-describedby="ajudaArquivo"
+          />
+          <small id="ajudaArquivo">Imagem ou vídeo de até 5 MB.</small>
+          <div id="preview"></div>
+          <button type="submit">Abrir chamado</button>
+          <p id="mensagem" role="status" aria-live="polite"></p>
         </form>
-        </section><section class="client-panel"><h2>Meus chamados</h2>
-        <div id="listaChamados"></div></section>
+      </section>
+      <section class="client-panel">
+        <h2>Meus chamados</h2>
+        <div id="listaChamados"></div>
+      </section>
     </main>
-    <button id="botaoSuporte" class="botao-suporte" type="button" data-on-click="alternarChatCliente()" aria-label="Abrir chat de suporte">🎧 <span>Suporte</span></button>
+    <button
+      id="botaoSuporte"
+      class="botao-suporte"
+      type="button"
+      data-on-click="alternarChatCliente()"
+      aria-label="Abrir chat de suporte"
+    >
+      🎧 <span>Suporte</span>
+    </button>
     <aside id="chatCliente" class="chat-cliente" hidden aria-label="Chat de suporte">
-      <div class="chat-topo"><div><strong>Suporte BOOK TASK</strong><small>Converse sobre um chamado</small></div><button type="button" data-on-click="alternarChatCliente()" aria-label="Fechar chat">×</button></div>
-      <label for="chamadoChat">Chamado</label><select id="chamadoChat" data-on-change="selecionarConversaCliente()"><option value="">Selecione um chamado</option></select>
-      <div id="mensagensCliente" class="chat-mensagens"><p class="chat-vazio">Selecione um chamado para ver a conversa.</p></div>
-      <form class="chat-enviar" data-on-submit="enviarMensagemCliente(event)"><input id="textoCliente" maxlength="2000" placeholder="Escreva sua mensagem..." autocomplete="off" required><button type="submit" aria-label="Enviar mensagem">Enviar</button></form>
+      <div class="chat-topo">
+        <div><strong>Suporte BOOK TASK</strong><small>Converse sobre um chamado</small></div>
+        <button type="button" data-on-click="alternarChatCliente()" aria-label="Fechar chat">
+          ×
+        </button>
+      </div>
+      <label for="chamadoChat">Chamado</label
+      ><select id="chamadoChat" data-on-change="selecionarConversaCliente()">
+        <option value="">Selecione um chamado</option>
+      </select>
+      <div id="mensagensCliente" class="chat-mensagens">
+        <p class="chat-vazio">Selecione um chamado para ver a conversa.</p>
+      </div>
+      <form class="chat-enviar" data-on-submit="enviarMensagemCliente(event)">
+        <input
+          id="textoCliente"
+          maxlength="2000"
+          placeholder="Escreva sua mensagem..."
+          autocomplete="off"
+          required
+        /><button type="submit" aria-label="Enviar mensagem">Enviar</button>
+      </form>
     </aside>
     <script src="../assets/catalog.js?v=20261107-ready8"></script>
     <script src="../assets/mobile.js?v=20261107-ready8"></script>
     <script src="../assets/api.js?v=20261107-ready8"></script>
     <script src="../assets/notifications.js?v=20261107-ready8"></script>
     <script src="../assets/session.js?v=20261107-ready8"></script>
-</body>
+  </body>
 </html>
-
-

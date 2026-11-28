@@ -1,60 +1,275 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Condom&iacute;nios | BOOK TASK</title>
-    <link rel="stylesheet" href="hotel.css">
-    <link rel="stylesheet" href="../assets/ui.css">
+    <link rel="stylesheet" href="hotel.css" />
+    <link rel="stylesheet" href="../assets/ui.css" />
     <script src="/assets/theme.js"></script>
-    <link rel="icon" href="/assets/book-task-logo.png" type="image/png">
-    <link rel="stylesheet" href="/assets/brand.css">
+    <link rel="icon" href="/assets/book-task-logo.png" type="image/png" />
+    <link rel="stylesheet" href="/assets/brand.css" />
     <script src="../assets/accessibility.js" defer></script>
-    <noscript><style>body[hidden]{display:block!important}body>header,body>nav,body>main{display:none!important}noscript{display:block;padding:24px}</style></noscript>
-<script src="../assets/events.js" defer></script>
-<script src="../assets/dictation.js" defer></script>
-</head>
-<body hidden data-screen="hotel.js">
-    <noscript>O sistema precisa de JavaScript. Consulte <a href="/legal/privacidade">privacidade</a> ou o responsável pelo seu acesso.</noscript>
+    <noscript
+      ><style>
+        body[hidden] {
+          display: block !important;
+        }
+        body > header,
+        body > nav,
+        body > main {
+          display: none !important;
+        }
+        noscript {
+          display: block;
+          padding: 24px;
+        }
+      </style></noscript
+    >
+    <script src="../assets/events.js" defer></script>
+    <script src="../assets/dictation.js" defer></script>
+  </head>
+  <body hidden data-screen="hotel.js">
+    <noscript
+      >O sistema precisa de JavaScript. Consulte <a href="/legal/privacidade">privacidade</a> ou o
+      responsável pelo seu acesso.</noscript
+    >
     <header>
-        <h1 class="brand-heading"><img class="brand-logo" src="/assets/book-task-logo.png" width="48" height="48" alt="" decoding="async"><span>BOOK TASK</span></h1>
-        <button data-on-click="sair()">Sair</button>
+      <h1 class="brand-heading">
+        <img
+          class="brand-logo"
+          src="/assets/book-task-logo.png"
+          width="48"
+          height="48"
+          alt=""
+          decoding="async"
+        /><span>BOOK TASK</span>
+      </h1>
+      <button data-on-click="sair()">Sair</button>
     </header>
     <nav aria-label="Menu principal">
-        <a href="../adm/admin.html#chamados">Chamados</a>
-        <a href="../adm/admin.html#cards">Cards</a>
-        <a href="../adm/admin.html#vistorias">Vistorias</a>
-        <a href="../adm/admin.html#dashboard">Dashboard</a>
-        <a class="ativa" href="hotel.html" aria-current="page">Condom&iacute;nios</a>
+      <a href="../adm/admin.html#chamados">Chamados</a>
+      <a href="../adm/admin.html#cards">Cards</a>
+      <a href="../adm/admin.html#vistorias">Vistorias</a>
+      <a href="../adm/admin.html#dashboard">Dashboard</a>
+      <a class="ativa" href="hotel.html" aria-current="page">Condom&iacute;nios</a>
     </nav>
     <main>
-        <h2>Condom&iacute;nios cadastrados</h2>
-        <div class="hoteis"><article class="hotel" data-hotel="Be Urban" role="button" tabindex="0" data-on-click="mostrarHistorico('Be Urban')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarHistorico('Be Urban')}"><h2>Be Urban</h2><p>6 apartamento(s)</p><p id="totalBe Urban">0 chamados</p></article>
-<article class="hotel" data-hotel="Conde Luciano" role="button" tabindex="0" data-on-click="mostrarHistorico('Conde Luciano')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarHistorico('Conde Luciano')}"><h2>Conde Luciano</h2><p>1 apartamento(s)</p><p id="totalConde Luciano">0 chamados</p></article>
-<article class="hotel" data-hotel="Embaré" role="button" tabindex="0" data-on-click="mostrarHistorico('Embaré')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarHistorico('Embaré')}"><h2>Embaré</h2><p>2 apartamento(s)</p><p id="totalEmbaré">0 chamados</p></article>
-<article class="hotel" data-hotel="Helbor Stay" role="button" tabindex="0" data-on-click="mostrarHistorico('Helbor Stay')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarHistorico('Helbor Stay')}"><h2>Helbor Stay</h2><p>1 apartamento(s)</p><p id="totalHelbor Stay">0 chamados</p></article>
-<article class="hotel" data-hotel="Housi" role="button" tabindex="0" data-on-click="mostrarHistorico('Housi')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarHistorico('Housi')}"><h2>Housi</h2><p>6 apartamento(s)</p><p id="totalHousi">0 chamados</p></article>
-<article class="hotel" data-hotel="Houx" role="button" tabindex="0" data-on-click="mostrarHistorico('Houx')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarHistorico('Houx')}"><h2>Houx</h2><p>1 apartamento(s)</p><p id="totalHoux">0 chamados</p></article>
-<article class="hotel" data-hotel="Ipanema" role="button" tabindex="0" data-on-click="mostrarHistorico('Ipanema')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarHistorico('Ipanema')}"><h2>Ipanema</h2><p>1 apartamento(s)</p><p id="totalIpanema">0 chamados</p></article>
-<article class="hotel" data-hotel="Lume Alto da Boa Vista" role="button" tabindex="0" data-on-click="mostrarHistorico('Lume Alto da Boa Vista')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarHistorico('Lume Alto da Boa Vista')}"><h2>Lume Alto da Boa Vista</h2><p>3 apartamento(s)</p><p id="totalLume Alto da Boa Vista">0 chamados</p></article>
-<article class="hotel" data-hotel="Maralta" role="button" tabindex="0" data-on-click="mostrarHistorico('Maralta')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarHistorico('Maralta')}"><h2>Maralta</h2><p>1 apartamento(s)</p><p id="totalMaralta">0 chamados</p></article>
-<article class="hotel" data-hotel="Marco Aurelio" role="button" tabindex="0" data-on-click="mostrarHistorico('Marco Aurelio')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarHistorico('Marco Aurelio')}"><h2>Marco Aurelio</h2><p>2 apartamento(s)</p><p id="totalMarco Aurelio">0 chamados</p></article>
-<article class="hotel" data-hotel="Nexone" role="button" tabindex="0" data-on-click="mostrarHistorico('Nexone')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarHistorico('Nexone')}"><h2>Nexone</h2><p>4 apartamento(s)</p><p id="totalNexone">0 chamados</p></article>
-<article class="hotel" data-hotel="Type" role="button" tabindex="0" data-on-click="mostrarHistorico('Type')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarHistorico('Type')}"><h2>Type</h2><p>9 apartamento(s)</p><p id="totalType">0 chamados</p></article>
-<article class="hotel" data-hotel="Unique Residence" role="button" tabindex="0" data-on-click="mostrarHistorico('Unique Residence')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarHistorico('Unique Residence')}"><h2>Unique Residence</h2><p>42 apartamento(s)</p><p id="totalUnique Residence">0 chamados</p></article>
-<article class="hotel" data-hotel="Universo Palace" role="button" tabindex="0" data-on-click="mostrarHistorico('Universo Palace')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarHistorico('Universo Palace')}"><h2>Universo Palace</h2><p>2 apartamento(s)</p><p id="totalUniverso Palace">0 chamados</p></article>
-<article class="hotel" data-hotel="Unlimited" role="button" tabindex="0" data-on-click="mostrarHistorico('Unlimited')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarHistorico('Unlimited')}"><h2>Unlimited</h2><p>43 apartamento(s)</p><p id="totalUnlimited">0 chamados</p></article>
-<article class="hotel" data-hotel="VN Melo" role="button" tabindex="0" data-on-click="mostrarHistorico('VN Melo')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarHistorico('VN Melo')}"><h2>VN Melo</h2><p>1 apartamento(s)</p><p id="totalVN Melo">0 chamados</p></article>
-<article class="hotel" data-hotel="Xangô" role="button" tabindex="0" data-on-click="mostrarHistorico('Xangô')" data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarHistorico('Xangô')}"><h2>Xangô</h2><p>1 apartamento(s)</p><p id="totalXangô">0 chamados</p></article></div>
-        <section id="historico" aria-live="polite">
-            <h2>Hist&oacute;rico</h2>
-            <p>Selecione um condomínio e um apartamento para visualizar chamados e cards.</p>
-        </section>
+      <h2>Condom&iacute;nios cadastrados</h2>
+      <div class="hoteis">
+        <article
+          class="hotel"
+          data-hotel="Be Urban"
+          role="button"
+          tabindex="0"
+          data-on-click="mostrarHistorico('Be Urban')"
+          data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarHistorico('Be Urban')}"
+        >
+          <h2>Be Urban</h2>
+          <p>6 apartamento(s)</p>
+          <p id="totalBe Urban">0 chamados</p>
+        </article>
+        <article
+          class="hotel"
+          data-hotel="Conde Luciano"
+          role="button"
+          tabindex="0"
+          data-on-click="mostrarHistorico('Conde Luciano')"
+          data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarHistorico('Conde Luciano')}"
+        >
+          <h2>Conde Luciano</h2>
+          <p>1 apartamento(s)</p>
+          <p id="totalConde Luciano">0 chamados</p>
+        </article>
+        <article
+          class="hotel"
+          data-hotel="Embaré"
+          role="button"
+          tabindex="0"
+          data-on-click="mostrarHistorico('Embaré')"
+          data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarHistorico('Embaré')}"
+        >
+          <h2>Embaré</h2>
+          <p>2 apartamento(s)</p>
+          <p id="totalEmbaré">0 chamados</p>
+        </article>
+        <article
+          class="hotel"
+          data-hotel="Helbor Stay"
+          role="button"
+          tabindex="0"
+          data-on-click="mostrarHistorico('Helbor Stay')"
+          data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarHistorico('Helbor Stay')}"
+        >
+          <h2>Helbor Stay</h2>
+          <p>1 apartamento(s)</p>
+          <p id="totalHelbor Stay">0 chamados</p>
+        </article>
+        <article
+          class="hotel"
+          data-hotel="Housi"
+          role="button"
+          tabindex="0"
+          data-on-click="mostrarHistorico('Housi')"
+          data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarHistorico('Housi')}"
+        >
+          <h2>Housi</h2>
+          <p>6 apartamento(s)</p>
+          <p id="totalHousi">0 chamados</p>
+        </article>
+        <article
+          class="hotel"
+          data-hotel="Houx"
+          role="button"
+          tabindex="0"
+          data-on-click="mostrarHistorico('Houx')"
+          data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarHistorico('Houx')}"
+        >
+          <h2>Houx</h2>
+          <p>1 apartamento(s)</p>
+          <p id="totalHoux">0 chamados</p>
+        </article>
+        <article
+          class="hotel"
+          data-hotel="Ipanema"
+          role="button"
+          tabindex="0"
+          data-on-click="mostrarHistorico('Ipanema')"
+          data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarHistorico('Ipanema')}"
+        >
+          <h2>Ipanema</h2>
+          <p>1 apartamento(s)</p>
+          <p id="totalIpanema">0 chamados</p>
+        </article>
+        <article
+          class="hotel"
+          data-hotel="Lume Alto da Boa Vista"
+          role="button"
+          tabindex="0"
+          data-on-click="mostrarHistorico('Lume Alto da Boa Vista')"
+          data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarHistorico('Lume Alto da Boa Vista')}"
+        >
+          <h2>Lume Alto da Boa Vista</h2>
+          <p>3 apartamento(s)</p>
+          <p id="totalLume Alto da Boa Vista">0 chamados</p>
+        </article>
+        <article
+          class="hotel"
+          data-hotel="Maralta"
+          role="button"
+          tabindex="0"
+          data-on-click="mostrarHistorico('Maralta')"
+          data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarHistorico('Maralta')}"
+        >
+          <h2>Maralta</h2>
+          <p>1 apartamento(s)</p>
+          <p id="totalMaralta">0 chamados</p>
+        </article>
+        <article
+          class="hotel"
+          data-hotel="Marco Aurelio"
+          role="button"
+          tabindex="0"
+          data-on-click="mostrarHistorico('Marco Aurelio')"
+          data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarHistorico('Marco Aurelio')}"
+        >
+          <h2>Marco Aurelio</h2>
+          <p>2 apartamento(s)</p>
+          <p id="totalMarco Aurelio">0 chamados</p>
+        </article>
+        <article
+          class="hotel"
+          data-hotel="Nexone"
+          role="button"
+          tabindex="0"
+          data-on-click="mostrarHistorico('Nexone')"
+          data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarHistorico('Nexone')}"
+        >
+          <h2>Nexone</h2>
+          <p>4 apartamento(s)</p>
+          <p id="totalNexone">0 chamados</p>
+        </article>
+        <article
+          class="hotel"
+          data-hotel="Type"
+          role="button"
+          tabindex="0"
+          data-on-click="mostrarHistorico('Type')"
+          data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarHistorico('Type')}"
+        >
+          <h2>Type</h2>
+          <p>9 apartamento(s)</p>
+          <p id="totalType">0 chamados</p>
+        </article>
+        <article
+          class="hotel"
+          data-hotel="Unique Residence"
+          role="button"
+          tabindex="0"
+          data-on-click="mostrarHistorico('Unique Residence')"
+          data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarHistorico('Unique Residence')}"
+        >
+          <h2>Unique Residence</h2>
+          <p>42 apartamento(s)</p>
+          <p id="totalUnique Residence">0 chamados</p>
+        </article>
+        <article
+          class="hotel"
+          data-hotel="Universo Palace"
+          role="button"
+          tabindex="0"
+          data-on-click="mostrarHistorico('Universo Palace')"
+          data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarHistorico('Universo Palace')}"
+        >
+          <h2>Universo Palace</h2>
+          <p>2 apartamento(s)</p>
+          <p id="totalUniverso Palace">0 chamados</p>
+        </article>
+        <article
+          class="hotel"
+          data-hotel="Unlimited"
+          role="button"
+          tabindex="0"
+          data-on-click="mostrarHistorico('Unlimited')"
+          data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarHistorico('Unlimited')}"
+        >
+          <h2>Unlimited</h2>
+          <p>43 apartamento(s)</p>
+          <p id="totalUnlimited">0 chamados</p>
+        </article>
+        <article
+          class="hotel"
+          data-hotel="VN Melo"
+          role="button"
+          tabindex="0"
+          data-on-click="mostrarHistorico('VN Melo')"
+          data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarHistorico('VN Melo')}"
+        >
+          <h2>VN Melo</h2>
+          <p>1 apartamento(s)</p>
+          <p id="totalVN Melo">0 chamados</p>
+        </article>
+        <article
+          class="hotel"
+          data-hotel="Xangô"
+          role="button"
+          tabindex="0"
+          data-on-click="mostrarHistorico('Xangô')"
+          data-on-keydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarHistorico('Xangô')}"
+        >
+          <h2>Xangô</h2>
+          <p>1 apartamento(s)</p>
+          <p id="totalXangô">0 chamados</p>
+        </article>
+      </div>
+      <section id="historico" aria-live="polite">
+        <h2>Hist&oacute;rico</h2>
+        <p>Selecione um condomínio e um apartamento para visualizar chamados e cards.</p>
+      </section>
     </main>
     <script src="../assets/money.js"></script>
     <script src="../assets/catalog.js"></script>
     <script src="../assets/api.js"></script>
     <script src="../assets/session.js"></script>
-</body>
+  </body>
 </html>
-
