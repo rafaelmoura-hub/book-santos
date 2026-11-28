@@ -7,7 +7,7 @@ O projeto está preparado para um Web Service no Render, com banco no Supabase a
 1. Crie sua conta em https://github.com/signup.
 2. Crie um repositório **privado**, por exemplo `book-santos`. Mantenha a opção de não adicionar README ou outros arquivos, pois o projeto já os contém.
 3. Instale GitHub Desktop de https://desktop.github.com/ e entre com sua conta. Adicione esta pasta como repositório local; se ele pedir, crie o repositório nessa própria pasta. Confira os arquivos antes de confirmar e publique no repositório privado. Se preferir, clone o repositório privado em outra pasta e copie o projeto para ela, excluindo `.env`, `.env.production`, `node_modules` e `data`.
-4. Não envie arquivos `.env` pessoais, senhas, banco SQLite ou dados exportados. Os arquivos `.env.example` e `.env.production.example` são modelos. O `.gitignore` do projeto já contém as exclusões necessárias; confira se elas foram respeitadas.
+4. Não envie arquivos `.env` pessoais, senhas, cópias de banco ou dados exportados. Os arquivos `.env.example` e `.env.production.example` são modelos. O `.gitignore` do projeto já contém as exclusões necessárias; confira se elas foram respeitadas.
 5. Crie uma conta em https://dashboard.render.com/ usando seu GitHub e autorize acesso somente ao repositório necessário.
 
 ## Publicar

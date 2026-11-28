@@ -8,7 +8,7 @@
 - Metadados têm limite por registro na API e no banco: 128 KiB, ou 512 KiB para estoque. Os arquivos ficam separados no Storage. Registros históricos maiores são preservados; uma edição deve respeitar o limite. Os limites existentes de fotos/anexos não foram ampliados.
 - A migração 12 acrescenta políticas restritivas de leitura de perfis e anexos. Administradores recebem perfis necessários ao trabalho; anexos de terceiros precisam estar vinculados a registros acessíveis. Inserir a URL de um arquivo na descrição não concede acesso. Uploads exigem acesso operacional.
 - Confirmações da IA passam pela mesma autorização e auditoria das alterações manuais. A versão de estoque revisada é conferida dentro da transação que grava os dados, impedindo mudança de preço entre a conferência e a gravação. A IA continua exigindo revisão e confirmação da proposta.
-- O servidor SQLite antigo e seu assistente de configuração recusam execução direta em modo de produção. Use `npm start`, com Supabase.
+- O servidor SQLite antigo foi removido depois desta revisão. O único servidor é `npm start`, com Supabase.
 
 ## Ativação
 

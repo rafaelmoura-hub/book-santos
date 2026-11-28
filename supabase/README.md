@@ -31,8 +31,6 @@ O único pacote de desenvolvimento é PostgreSQL embutido para testes; o servido
 - `test/`: testes de SQL, API, sessão e estado das telas.
 - `docs/OPERACAO.md`: ativação, acesso por hotel, limites, piloto e operação.
 
-Os arquivos SQLite `server/index.js`, `database.js`, `passwords.js` e `setup.js` foram preservados como implementação anterior e não são usados por `npm start`. Não execute o servidor antigo para usar as telas atuais.
-
 ## Pontos ainda pendentes
 
 Não houve implantação nem execução remota do SQL nesta sessão. Backups agendados, alertas na hospedagem, recuperação de senha pela interface, importação dos dados antigos e testes com usuários no Supabase real ainda precisam ser concluídos. Totais e gráficos usam os registros carregados na tela; analítica global para grandes volumes não está implementada.
